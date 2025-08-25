@@ -1,0 +1,89 @@
+package rbac
+
+import "time"
+
+type AddRole struct {
+	Name        string
+	Description string
+	CreatedBy   int
+	CreatedAt   time.Time
+	UpdatedAt   *time.Time
+}
+
+type AddRoleV2 struct {
+	Name          string
+	Description   string
+	PermissionIDs []int
+	CreatedBy     int
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
+}
+
+type AddPermission struct {
+	Name       string
+	Operations string
+	CreatedBy  int
+	CreatedAt  time.Time
+	UpdatedAt  *time.Time
+}
+
+type AddRoleToUser struct {
+	UserID    int
+	RoleID    int
+	AddedBy   int
+	CreatedAt time.Time
+}
+
+type AddPermissionToRole struct {
+	RoleID       int
+	PermissionID int
+	AddedBy      int
+	CreatedAt    time.Time
+}
+
+type AddRolePermissions struct {
+	RoleID        int
+	PermissionIDs []int
+	AddedBy       int
+	CreatedAt     time.Time
+}
+
+type Roles struct {
+	Id       int    `db:"id"  	    json:"id"`
+	Name     string `db:"name" 	    json:"name"`
+	IsActive bool   `db:"is_active" json:"isActive"`
+}
+
+type RolesWithPermissions struct {
+	Id          int           `db:"id"           json:"id"`
+	Name        string        `db:"name"         json:"name"`
+	Description string        `db:"description"  json:"description"`
+	IsActive    bool          `db:"is_Active"    json:"isActive"`
+	CreatedAt   time.Time     `db:"created_at"   json:"createdAt"`
+	Permissions []Permissions `json:"permissions"`
+}
+
+type Permissions struct {
+	Id   int    `db:"id"  json:"id"`
+	Name string `db:"name" json:"name"`
+}
+
+type Users struct {
+	Id    int    `db:"id"  json:"id"`
+	Email string `db:"email" json:"email"`
+}
+
+type ResetPasswordReq struct {
+	UserID      int
+	OldPassword string
+	NewPassword string
+}
+
+type CreateUserV2Req struct {
+	Email     string
+	Pass      string
+	RoleIds   []int
+	IsActive  bool
+	CreatedBy int
+	CreatedAt time.Time
+}

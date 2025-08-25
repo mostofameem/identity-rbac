@@ -1,0 +1,1087 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Event Management API",
+    "description": "This is event management API swagger documentation",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5001",
+      "description": "Local"
+    },
+    {
+      "url": "http://209.97.169.25:8081",
+      "description": "Development"
+    },
+    {
+      "url": "http://localhost:5001",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/health-check": {
+      "get": {
+        "tags": ["General"],
+        "summary": "Health Check Route",
+        "description": "Simple endpoint to test if the API is working.",
+        "responses": {
+          "200": {
+            "description": "Returns success status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/v1/sign-up": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Sign Up a New User",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "schema": {
+                "$ref": "#/components/schemas/SuccessResponse"
+              }
+          }
+        }
+      }
+    },
+    "/v1/reset-password": {
+      "patch": {
+        "tags": ["User"],
+        "summary": "Reset password for a user",
+        "description": "Allows a user to reset their password by providing their old password and a new password.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "schema": {
+                "$ref": "#/components/schemas/SuccessResponse"
+              }
+          }
+        }
+      }
+    },
+
+    "/v1/users/add": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Admin Insert a New User",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddUserReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "schema": {
+                "$ref": "#/components/schemas/SuccessResponse"
+              }
+          }
+        }
+      }
+    },
+
+    "/v1/users":{
+      "get": {
+        "summary": "Get User list",
+        "description": "Returns a list of existing user with filter by email",
+        "tags": ["User"],
+        "parameters": [
+          { "name": "email", "in": "query", "schema": { "type": "string"} }
+        ],
+        "responses": {
+          "200": {
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+
+    "/v1/login": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Log In an Existing User",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful, returns authentication token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/v1/event-types": {
+      "post": {
+        "tags": ["EventType"],
+        "summary": "Create a new event type",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEventTypeReq" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "schema": {
+                "$ref": "#/components/schemas/SuccessResponse"
+              }
+          },
+          "400": { 
+            "description": "Invalid request payload or validation failed" ,            
+            "schema": {
+              "$ref":  "#/components/schemas/ErrorRes"
+            }
+          },
+          "500": { "description": "Internal server error" }
+        }
+      },
+      "get": {
+        "tags": ["EventType"],
+        "summary": "List all event types",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "name", "in": "query", "schema": { "type": "string"} }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/EventType" }
+                }
+              }
+            }
+          },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+
+    "/v1/events": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Create a New Event",
+        "description": "Allows the creation of a new event.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Event created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Events"],
+        "summary": "Retrieve events with optional filters",
+        "description": "Retrieve events using optional filters and pagination",
+        "parameters": [
+          { "name": "id", "in": "query", "schema": { "type": "integer"} },
+          { "name": "title", "in": "query", "schema": { "type": "string"} },
+          { "name": "typeId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "startTime", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "endTime", "in": "query", "schema": { "type": "string", "format": "date-time"} },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ALL", "ONGOING", "UPCOMING", "RECENT"],
+              "default": "ALL"
+            }
+          },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["","id", "startAt"],
+              "default": "id"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["","ASC", "DESC"],
+              "default": "DESC"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "totalPage": {
+                      "type": "integer",
+                      "example": 5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/v1/events/{event_id}/register": {
+      "post": {
+        "summary": "Register to an event",
+        "tags": ["Events"],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["NOT_REGISTERED","REGISTER", "CANCEL"],
+                    "example": "NOT_REGISTERED",
+                    "default": "NOT_REGISTERED"
+                  },
+                  "guestCount": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event registration successful"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+
+    "/v1/events/{event_id}/details": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Retrieve events with participants",
+        "description": "Retrieve events using optional filters and pagination",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          { "name": "userId", "in": "query", "schema": { "type": "integer"} },
+          {
+            "name": "statusMode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ALL", "REGISTERED", "CANCELED"],
+              "default": "ALL"
+            }
+          },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100 } },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["","id", "start_at", "created_at"],
+              "default": "id"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["","ASC", "DESC"],
+              "default": "DESC"
+            }
+          }
+        ],
+        "responses": {}
+      }
+    },
+
+    "/v1/events/my-events": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Retrieve single user events",
+        "description": "Retrieve events using optional filters and pagination",
+        "parameters": [
+          {
+            "name": "statusMode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ALL", "REGISTERED", "CANCELED","LATE_REGISTRATION"],
+              "default": "ALL"
+            }
+          },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer","enum": [100, 50, 20,10], "default": 100 } },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["","id", "start_at", "created_at"],
+              "default": "id"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["","ASC", "DESC"],
+              "default": "DESC"
+            }
+          }
+        ],
+        "responses": {}
+      }
+    },
+
+    "/v1/roles": {
+      "post": {
+        "summary": "Create a new role",
+        "description": "Adds a role with a name and description",
+        "tags": ["role"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRoleReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "role created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "List all roles",
+        "description": "Returns a list of existing roles",
+        "tags": ["role"],
+        "parameters": [
+          { "name": "title", "in": "query", "schema": { "type": "string"} }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Role"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+
+    "/v1/users/assign-role": {
+      "post": {
+        "summary": "Assign a role to a user",
+        "description": "Links an existing role to a user by ID",
+        "tags": ["role"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRoleToUserReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "role to user added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+
+    "/v1/permissions": {
+      "post": {
+        "summary": "Create a new Permission",
+        "tags": ["permissions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePermissionReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "permission created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "List all permissions",
+        "description": "Returns a list of existing permissions",
+        "tags": ["permissions"],
+        "parameters": [
+          { "name": "title", "in": "query", "schema": { "type": "string"} }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Permissions"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+
+    "/v1/roles/assign-permission": {
+      "post": {
+        "summary": "Assign a permission to a role",
+        "tags": ["permissions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPermissionToRoleReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "permission to role added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+
+    "/v1/users/me/permissions": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Get permissions of the currently authenticated user",
+        "description": "Returns a list of permissions assigned to the authenticated user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "example": "EVENT_CREATE"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "data": [
+                    "EVENT_TYPE_CREATE"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - user not authenticated"
+          }
+        }
+      }
+    },
+
+
+    "/v1/token/refresh":{
+      "get": {
+          "tags": ["User"],
+          "summary": "Get access token from refresh token",
+          "parameters": [
+          { "name": "token", "in": "query", "schema": { "type": "string"} ,"required":true}
+          ]
+        }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "SignUpReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "ResetPasswordReq": {
+        "type": "object",
+        "properties": {
+          "oldPassword": {
+            "type": "string",
+            "example": "123123"
+          },
+          "newPassword": {
+            "type": "string",
+            "example": "password123"
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "AddUserReq": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "integer",
+            "example": "3"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@exabyting.com"
+          }
+        },
+        "required": ["email"]
+      },
+      "LoginReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "your-jwt-token-here"
+          },
+          "refreshToken":{
+            "type": "string",
+            "example": "your-jwt-token-here"
+          }
+        }
+      },
+      "CreateEventReq": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Breakfast 02-07-2025"
+          },
+          "description": {
+            "type": "string",
+            "example": "This is a breakfast 02-07-2025 event"
+          },
+          "eventTypeId": {
+            "type": "integer",
+            "example": 2
+          },
+          "eventStartsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-07-02T10:00:00Z"
+          },
+          "registrationOpensAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-07-01T20:00:00Z"
+          },
+          "registrationClosesAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-07-02T07:30:00Z"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Error message goes here."
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Operation successful."
+          }
+        }
+      },
+      "BadRequestResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Invalid request parameters"
+          },
+          "status": {
+            "type": "string",
+            "example": "Bad Request"
+          }
+        }
+      },
+      "AddRoleReq": {
+        "type": "object",
+        "required": ["roleName", "description"],
+        "properties": {
+          "roleName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatePermissionReq": {
+        "type": "object",
+        "required": ["name", "operation"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          }
+        }
+      },
+      "AddRoleToUserReq": {
+        "type": "object",
+        "required": ["userId", "roleId"],
+        "properties": {
+          "userId": {
+            "type": "integer"
+          },
+          "roleId": {
+            "type": "integer"
+          }
+        }
+      },
+      "AddPermissionToRoleReq": {
+        "type": "object",
+        "required": ["roleId","moduleId", "permissionId"],
+        "properties": {
+          "roleId": {
+            "type": "integer"
+          },
+          "permissionId": {
+            "type": "integer"
+          }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Permissions": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "operations": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateEventTypeReq": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "autoEventCreate": { "type": "boolean", "default": false },
+          "autoEventCreateInterval": { "type": "integer", "default": 0 }
+        }
+      },
+      "EventType": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "autoEventCreate": { "type": "boolean" },
+          "autoEventIntervalInSecond": { "type": "integer" },
+          "createdBy": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Event":{
+        "type": "object",
+        "properties":{
+            "id": {"type": "integer"},
+            "title": {"type": "string"},
+            "description": {"type": "string"},
+            "eventTypeID": {"type": "integer"},
+            "startAt": { "type": "string", "format": "date-time" },
+            "registrationOpensAt": { "type": "string", "format": "date-time" },
+            "registrationClosesAt": { "type": "string", "format": "date-time" },
+            "createdBy": {"type": "string"},
+            "updatedBy": null,
+            "status": {"type": "boolean"},
+            "remarks": null,
+            "createdAt":  { "type": "string", "format": "date-time" },
+            "updatedAt":  { "type": "string", "format": "date-time" }
+        }
+      },
+      "SuccessRes": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "integer", "example": 200 },
+              "message": { "type": "string", "example": "Success" }
+            }
+          },
+          "body": {
+            "description": "Actual response data",
+            "type": "object"
+          }
+        }
+      },
+      "ErrorRes": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "example": 400
+              },
+              "message": {
+                "type": "string",
+                "example": "Invalid request"
+              }
+            },
+            "required": ["code", "message"]
+          }
+        },
+        "required": ["status"]
+      },
+      "UserPermissions": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
