@@ -1,11 +1,11 @@
 package routes
 
 import (
+	"fmt"
 	"identity-rbac/config"
 	"identity-rbac/internal/api/handlers"
 	"identity-rbac/internal/api/middlewares"
 	"identity-rbac/internal/api/swagger"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -19,15 +19,11 @@ type Server struct {
 }
 
 func NewServer(cnf *config.Config, handlers *handlers.Handlers, middleware *middlewares.Middleware) *Server {
-	server := &Server{
+	return &Server{
 		cnf:        cnf,
 		handlers:   handlers,
 		middleware: middleware,
 	}
-	return server
-}
-func (server *Server) Run() {
-	server.Start()
 }
 
 func (server *Server) Start() {
