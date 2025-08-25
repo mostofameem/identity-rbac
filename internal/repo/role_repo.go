@@ -32,11 +32,10 @@ func NewRoleRepo(db *DB) RoleRepo {
 }
 
 func (r *roleRepo) Create(ctx context.Context, req rbac.AddRole) (int, error) {
-	var id int64
-
 	query, args, err := r.psql.Insert(r.table).
 		Columns("name", "description", "created_by", "created_at").
 		Values(req.Name, req.Description, req.CreatedBy, req.CreatedAt).
+		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build query", logger.Extra(map[string]any{
@@ -46,7 +45,8 @@ func (r *roleRepo) Create(ctx context.Context, req rbac.AddRole) (int, error) {
 		return 0, err
 	}
 
-	result, err := r.db.ExecContext(ctx, query, args...)
+	var id int
+	err = r.db.QueryRowContext(ctx, query, args...).Scan(&id)
 	if err != nil {
 		slog.Error("Failed to execute insert query", logger.Extra(map[string]any{
 			"error": err.Error(),
@@ -56,15 +56,7 @@ func (r *roleRepo) Create(ctx context.Context, req rbac.AddRole) (int, error) {
 		return 0, err
 	}
 
-	id, err = result.LastInsertId()
-	if err != nil {
-		slog.Error("Failed to get last insert ID", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return 0, err
-	}
-
-	return int(id), nil
+	return id, nil
 }
 
 func (r *roleRepo) Get(ctx context.Context, title string) ([]rbac.Roles, error) {
@@ -180,10 +172,10 @@ func (r *roleRepo) GetRolesWithPermissions(ctx context.Context, title string) ([
 
 func (r *roleRepo) getRolePermissions(ctx context.Context, roleId int) ([]rbac.Permissions, error) {
 	query := `
-		SELECT p.id, p.name
+		SELECT p.id, p.name, p.resource, p.action, p.description
 		FROM permissions p
-		INNER JOIN role_has_permissions rhp ON p.id = rhp.permission_id
-		WHERE rhp.role_id = ?
+		INNER JOIN role_permissions rhp ON p.id = rhp.permission_id
+		WHERE rhp.role_id = $1
 		ORDER BY p.name
 	`
 
@@ -211,6 +203,7 @@ func (r *roleRepo) CreateRoleWithPermissionsTx(ctx context.Context, req rbac.Add
 	roleQuery, roleArgs, err := r.psql.Insert(r.table).
 		Columns("name", "description", "created_by", "created_at").
 		Values(req.Name, req.Description, req.CreatedBy, req.CreatedAt).
+		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build role insert query", logger.Extra(map[string]any{
@@ -220,7 +213,8 @@ func (r *roleRepo) CreateRoleWithPermissionsTx(ctx context.Context, req rbac.Add
 		return err
 	}
 
-	result, err := tx.ExecContext(ctx, roleQuery, roleArgs...)
+	var roleId int
+	err = tx.QueryRowContext(ctx, roleQuery, roleArgs...).Scan(&roleId)
 	if err != nil {
 		slog.Error("Failed to insert role", logger.Extra(map[string]any{
 			"error": err.Error(),
@@ -230,22 +224,14 @@ func (r *roleRepo) CreateRoleWithPermissionsTx(ctx context.Context, req rbac.Add
 		return err
 	}
 
-	roleId, err := result.LastInsertId()
-	if err != nil {
-		slog.Error("Failed to get last insert ID", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-
 	// Insert role-permission relationships
 	for _, permissionId := range req.PermissionIDs {
-		permissionQuery, permissionArgs, err := r.psql.Insert("role_has_permissions").
+		permissionQuery, permissionArgs, err := r.psql.Insert("role_permissions").
 			Columns("role_id", "permission_id", "added_by", "created_at").
 			Values(roleId, permissionId, req.CreatedBy, req.CreatedAt).
 			ToSql()
 		if err != nil {
-			slog.Error("Failed to build role_has_permissions insert", logger.Extra(map[string]any{
+			slog.Error("Failed to build role_permissions insert", logger.Extra(map[string]any{
 				"error": err.Error(),
 				"req":   req,
 			}))
@@ -253,7 +239,7 @@ func (r *roleRepo) CreateRoleWithPermissionsTx(ctx context.Context, req rbac.Add
 		}
 
 		if _, err := tx.ExecContext(ctx, permissionQuery, permissionArgs...); err != nil {
-			slog.Error("Failed to insert role_has_permissions", logger.Extra(map[string]any{
+			slog.Error("Failed to insert role_permissions", logger.Extra(map[string]any{
 				"error": err.Error(),
 				"query": permissionQuery,
 				"args":  req,

@@ -13,13 +13,6 @@ func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Ma
 		),
 	)
 
-	// mux.Handle(
-	// 	"POST /v1/login",
-	// 	manager.With(
-	// 		http.HandlerFunc(server.handlers.Login),
-	// 	),
-	// )
-
 	mux.Handle(
 		"POST /v1/login",
 		manager.With(
@@ -36,29 +29,11 @@ func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Ma
 		),
 	)
 
-	// mux.Handle(
-	// 	"POST /v1/roles/v2",
-	// 	manager.With(
-	// 		http.HandlerFunc(server.handlers.AddRoleV2),
-	// 		server.middleware.Authorization(middlewares.ROLE_CREATE_ACCESS),
-	// 		server.middleware.AuthenticateJWT,
-	// 	),
-	// )
-
 	mux.Handle(
 		"GET /v1/roles",
 		manager.With(
 			http.HandlerFunc(server.handlers.GetRoles),
 			server.middleware.Authorization(middlewares.ROLE_ASSIGN_ACCESS),
-			server.middleware.AuthenticateJWT,
-		),
-	)
-
-	mux.Handle(
-		"POST /v1/permissions",
-		manager.With(
-			http.HandlerFunc(server.handlers.AddPermission),
-			server.middleware.Authorization(middlewares.PERMISSION_CREATE_ACCESS),
 			server.middleware.AuthenticateJWT,
 		),
 	)
@@ -89,15 +64,6 @@ func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Ma
 			server.middleware.AuthenticateJWT,
 		),
 	)
-
-	// mux.Handle(
-	// 	"POST /v1/users/add",
-	// 	manager.With(
-	// 		http.HandlerFunc(server.handlers.AddUser),
-	// 		server.middleware.Authorization(middlewares.USER_CREATE_ACCESS),
-	// 		server.middleware.AuthenticateJWT,
-	// 	),
-	// )
 
 	mux.Handle(
 		"POST /v1/users/add",

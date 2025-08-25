@@ -1,3 +1,4 @@
 development:
   dialect: postgres
-  datasource: user=root password=admin host=127.0.0.1 port=5432 dbname=event-manager sslmode=disable
+  datasource: user=root password=admin host=127.0.0.1 port=5432 dbname=rbac sslmode=disable
+  dir: internal/migrations

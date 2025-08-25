@@ -34,8 +34,11 @@ prepare: install-proto-deps install-dev-deps install-deps tidy
 dev: prepare
 	air serve-rest
 
-migrate: prepare
-	air serve-migrate
+migrate-up: prepare
+	air serve-migrate-up
+
+migrate-down: prepare
+	air serve-migrate-down
 
 add-user: prepare
 	air serve-add-user

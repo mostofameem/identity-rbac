@@ -21,7 +21,6 @@ type Service interface {
 	GetRoles(ctx context.Context, title string) ([]Roles, error)
 	GetRolesWithPermissions(ctx context.Context, title string) ([]RolesWithPermissions, error)
 
-	CreateNewPermission(context.Context, *AddPermission) error
 	GetPermissions(ctx context.Context, title string) (*[]Permissions, error)
 
 	AddRoleToUser(context.Context, *AddRoleToUser) error
@@ -56,7 +55,6 @@ type UserHasRoleRepo interface {
 }
 
 type PermissionRepo interface {
-	Create(ctx context.Context, req AddPermission) (int, error)
 	Get(ctx context.Context, title string) (*[]Permissions, error)
 	GetOne(ctx context.Context, id int) (*entity.Permission, error)
 }

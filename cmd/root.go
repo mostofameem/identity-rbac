@@ -16,7 +16,8 @@ var (
 
 func init() {
 	RootCmd.AddCommand(serveRestCmd)
-	RootCmd.AddCommand(migrateCmd)
+	RootCmd.AddCommand(migrateUpCmd)
+	RootCmd.AddCommand(migrateDownCmd)
 	RootCmd.AddCommand(serveAddUserCmd)
 	RootCmd.AddCommand(serveSeedingCmd)
 }

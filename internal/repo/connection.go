@@ -55,9 +55,9 @@ func connect(cnf *config.DBConfig) (*sqlx.DB, error) {
 		return nil, err
 	}
 
-	dbCon.SetConnMaxIdleTime(
-		time.Duration(cnf.MaxIdleTimeInMinutes * int(time.Minute)),
-	)
+	dbCon.SetMaxOpenConns(cnf.MaxOpenConnections)
+	dbCon.SetMaxIdleConns(cnf.MaxIdleConnections)
+	dbCon.SetConnMaxIdleTime(time.Duration(cnf.MaxIdleTimeInMinutes) * time.Minute)
 
 	return dbCon, nil
 }

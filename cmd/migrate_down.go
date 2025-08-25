@@ -10,13 +10,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var migrateCmd = &cobra.Command{
-	Use:   "serve-migrate",
-	Short: "migrate database table",
-	RunE:  migrateDB,
+var migrateDownCmd = &cobra.Command{
+	Use:   "serve-migrate-down",
+	Short: "migrate down database tables",
+	RunE:  migrateDownDB,
 }
 
-func migrateDB(cmd *cobra.Command, args []string) error {
+func migrateDownDB(cmd *cobra.Command, args []string) error {
 	cnf := config.GetConfig()
 
 	utils.InitValidator()
@@ -32,13 +32,14 @@ func migrateDB(cmd *cobra.Command, args []string) error {
 	}
 	defer repo.CloseDB(db)
 
-	err = repo.MigrateDB(db.Db, cnf.MigrationSource)
+	err = repo.MigrateDownDB(db.Db, cnf.MigrationSource)
 	if err != nil {
-		slog.Error("Failed to Migrate Database:", logger.Extra(map[string]any{
+		slog.Error("Failed to Migrate Down Database:", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 		return err
 	}
 
+	slog.Info("Database migration down completed successfully")
 	return nil
 }
