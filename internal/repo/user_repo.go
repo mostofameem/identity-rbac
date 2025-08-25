@@ -34,12 +34,10 @@ func NewUserRepo(db *DB) UserRepo {
 }
 
 func (r *userRepo) Create(ctx context.Context, req rbac.CreateUserReq) (int, error) {
-	var id int64
-
 	query, args, err := r.psql.Insert(r.table).
-		Options("IGNORE").
-		Columns("email", "pass", "is_active", "created_at", "updated_at").
-		Values(req.Email, req.Pass, req.IsActive, req.CreatedAt, req.CreatedAt).
+		Columns("email", "pass", "first_name", "last_name", "is_active", "created_at", "updated_at").
+		Values(req.Email, req.Pass, req.FirstName, req.LastName, req.IsActive, req.CreatedAt, req.CreatedAt).
+		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build insert query", logger.Extra(map[string]any{
@@ -49,7 +47,8 @@ func (r *userRepo) Create(ctx context.Context, req rbac.CreateUserReq) (int, err
 		return 0, err
 	}
 
-	result, err := r.db.ExecContext(ctx, query, args...)
+	var id int
+	err = r.db.QueryRowContext(ctx, query, args...).Scan(&id)
 	if err != nil {
 		slog.Error("Failed to execute insert query", logger.Extra(map[string]any{
 			"error": err.Error(),
@@ -59,21 +58,7 @@ func (r *userRepo) Create(ctx context.Context, req rbac.CreateUserReq) (int, err
 		return 0, err
 	}
 
-	id, err = result.LastInsertId()
-	if err != nil {
-		slog.Error("Failed to get last insert ID", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return 0, err
-	}
-
-	if id == 0 {
-		slog.Info("Duplicate email, insert skipped", logger.Extra(map[string]any{
-			"email": req.Email,
-		}))
-	}
-
-	return int(id), nil
+	return id, nil
 }
 
 func (r *userRepo) Get(ctx context.Context, email string) (*entity.Users, error) {
@@ -191,8 +176,8 @@ func (r *userRepo) getRoleWisePermissionQueryBuilder() BuildQuery {
 			"p.name",
 		).
 			From("permissions AS p").
-			Join("role_has_permissions AS rhp ON rhp.permission_id = p.id").
-			Join("user_has_roles AS uhr ON uhr.role_id = rhp.role_id")
+			Join("role_permissions AS rhp ON rhp.permission_id = p.id").
+			Join("user_roles AS uhr ON uhr.role_id = rhp.role_id")
 	}
 }
 

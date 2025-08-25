@@ -31,41 +31,6 @@ func NewPermissionRepo(db *DB) PermissionRepo {
 	}
 }
 
-func (r *permissionRepo) Create(ctx context.Context, req rbac.AddPermission) (int, error) {
-	var id int64
-
-	query, args, err := r.psql.Insert(r.table).
-		Columns("name", "operations", "created_by", "created_at").
-		Values(req.Name, req.Operations, req.CreatedBy, req.CreatedAt).
-		ToSql()
-	if err != nil {
-		slog.Error("Failed to build insert query", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"req":   req,
-		}))
-		return 0, err
-	}
-
-	result, err := r.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		slog.Error("Failed to execute insert query", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"query": query,
-			"args":  req,
-		}))
-		return 0, err
-	}
-
-	id, err = result.LastInsertId()
-	if err != nil {
-		slog.Error("Failed to get last insert ID", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return 0, err
-	}
-
-	return int(id), nil
-}
 
 func (r *permissionRepo) Get(ctx context.Context, title string) (*[]rbac.Permissions, error) {
 	query, args, err := NewQueryBuilder(r.getPermissionsQueryBuilder()).
@@ -102,6 +67,9 @@ func (r *permissionRepo) getPermissionsQueryBuilder() BuildQuery {
 		return r.psql.Select(
 			"id",
 			"name",
+			"resource",
+			"action",
+			"description",
 		).
 			From(r.table)
 	}

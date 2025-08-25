@@ -15,6 +15,8 @@ import (
 type CreateUserReq struct {
 	Email     string
 	Pass      string
+	FirstName string
+	LastName  string
 	RoleId    int
 	IsActive  bool
 	CreatedBy int

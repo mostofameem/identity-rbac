@@ -3,12 +3,12 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"identity-rbac/config"
 	"identity-rbac/internal/rbac"
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/internal/util"
 	"identity-rbac/pkg/logger"
-	"fmt"
 	"io/ioutil"
 	"log/slog"
 	"os"
@@ -119,16 +119,17 @@ func addRoleHasPermission(db *repo.DB, userId, roleId, totalPermissionNumber int
 		return fmt.Errorf("no permissions to assign")
 	}
 
-	query := "INSERT INTO role_has_permissions (role_id, permission_id, added_by) VALUES "
+	query := "INSERT INTO role_permissions (role_id, permission_id, added_by) VALUES "
 	args := []interface{}{}
 	values := []string{}
 
 	for i := 1; i <= totalPermissionNumber; i++ {
-		values = append(values, "(?, ?, ?)")
+		paramOffset := (i-1)*3 + 1
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d)", paramOffset, paramOffset+1, paramOffset+2))
 		args = append(args, roleId, i, userId)
 	}
 
-	query += strings.Join(values, ", ") + " ON DUPLICATE KEY UPDATE role_id = role_id"
+	query += strings.Join(values, ", ") + " ON CONFLICT (role_id, permission_id) DO NOTHING"
 
 	_, err := db.Db.Exec(query, args...)
 	if err != nil {

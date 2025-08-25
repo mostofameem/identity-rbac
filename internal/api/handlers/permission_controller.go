@@ -5,17 +5,9 @@ import (
 	"identity-rbac/internal/api/middlewares"
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/rbac"
-	"identity-rbac/pkg/logger"
-	"log/slog"
 	"net/http"
 	"time"
 )
-
-type CreatePermissionReq struct {
-	Name       string `json:"name"        validate:"required"`
-	Permission string `json:"permission"   validate:"required"`
-	CreatedBy  int    `validate:"required"`
-}
 
 type AddPermissionToRoleReq struct {
 	RoleID       int `json:"roleId"          validate:"required"`
@@ -25,40 +17,6 @@ type AddPermissionToRoleReq struct {
 
 type GetPermissionsReq struct {
 	Title string `form:"title"`
-}
-
-func (handlers *Handlers) AddPermission(w http.ResponseWriter, r *http.Request) {
-	currentTime := time.Now()
-	var req CreatePermissionReq
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	req.CreatedBy, _ = r.Context().Value(middlewares.UidKey).(int)
-
-	if err := utils.Validate(req); err != nil {
-		slog.Error("validation failed", logger.Extra(map[string]any{
-			"req": req,
-		}))
-		utils.SendError(w, http.StatusBadRequest, "Invalid req params")
-		return
-	}
-
-	err := handlers.rbacSvc.CreateNewPermission(r.Context(), &rbac.AddPermission{
-		Name:       req.Name,
-		Operations: req.Permission,
-		CreatedBy:  req.CreatedBy,
-		CreatedAt:  currentTime,
-	})
-	if err != nil {
-		utils.SendError(w, http.StatusInternalServerError, "Failed to create permission")
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"message": "Successfully created permission",
-	})
 }
 
 func (handlers *Handlers) GetPermissions(w http.ResponseWriter, r *http.Request) {

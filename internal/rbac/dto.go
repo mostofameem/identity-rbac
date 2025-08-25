@@ -20,11 +20,13 @@ type AddRoleV2 struct {
 }
 
 type AddPermission struct {
-	Name       string
-	Operations string
-	CreatedBy  int
-	CreatedAt  time.Time
-	UpdatedAt  *time.Time
+	Name        string
+	Resource    string
+	Action      string
+	Description string
+	CreatedBy   int
+	CreatedAt   time.Time
+	UpdatedAt   *time.Time
 }
 
 type AddRoleToUser struct {
@@ -49,27 +51,30 @@ type AddRolePermissions struct {
 }
 
 type Roles struct {
-	Id       int    `db:"id"  	    json:"id"`
-	Name     string `db:"name" 	    json:"name"`
+	Id       int    `db:"id"        json:"id"`
+	Name     string `db:"name"      json:"name"`
 	IsActive bool   `db:"is_active" json:"isActive"`
 }
 
 type RolesWithPermissions struct {
-	Id          int           `db:"id"           json:"id"`
-	Name        string        `db:"name"         json:"name"`
-	Description string        `db:"description"  json:"description"`
-	IsActive    bool          `db:"is_Active"    json:"isActive"`
-	CreatedAt   time.Time     `db:"created_at"   json:"createdAt"`
+	Id          int           `db:"id" json:"id"`
+	Name        string        `db:"name" json:"name"`
+	Description string        `db:"description" json:"description"`
+	IsActive    bool          `db:"is_Active" json:"isActive"`
+	CreatedAt   time.Time     `db:"created_at" json:"createdAt"`
 	Permissions []Permissions `json:"permissions"`
 }
 
 type Permissions struct {
-	Id   int    `db:"id"  json:"id"`
-	Name string `db:"name" json:"name"`
+	Id          int    `db:"id" json:"id"`
+	Name        string `db:"name" json:"name"`
+	Resource    string `db:"resource" json:"resource"`
+	Action      string `db:"action" json:"action"`
+	Description string `db:"description" json:"description"`
 }
 
 type Users struct {
-	Id    int    `db:"id"  json:"id"`
+	Id    int    `db:"id" json:"id"`
 	Email string `db:"email" json:"email"`
 }
 
