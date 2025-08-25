@@ -50,7 +50,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 
 	middleware := middlewares.NewMiddleware(cnf, userRepo, roleRepo, permissionRepo, roleHasPermissionRepo, userHasRoleRepo)
 	server := web.NewServer(cnf, handlers, middleware)
-	server.Run()
+	server.Start()
 	server.Wg.Wait()
 
 	return nil
