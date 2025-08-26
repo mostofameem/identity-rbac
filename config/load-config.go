@@ -30,6 +30,10 @@ func LoadConfig() error {
 		JwtSecret:              viper.GetString("JWT_SECRET"),
 		MigrationSource:        viper.GetString("MIGRATION_SOURCE"),
 		TokenExpireTimeInHours: viper.GetInt("TOKEN_EXPIRE_TIME_IN_HOURS"),
+		EmailInvitationTTL:     viper.GetInt("EMAIL_INVITATION_TTL_IN_MINUTE"),
+		PasswordSetupTTL:       viper.GetInt("PASSWORD_SETUP_TTL_IN_MINUTE"),
+		AccessTokenTTL:         viper.GetInt("ACCESS_TOKEN_TTL_IN_MINUTE"),
+		RefreshTokenTTL:        viper.GetInt("REFRESH_TOKEN_TTL_IN_MINUTE"),
 		DB: &DBConfig{
 			Host:                 viper.GetString("DB_HOST"),
 			Port:                 viper.GetInt("DB_PORT"),
@@ -45,6 +49,12 @@ func LoadConfig() error {
 			ClientKey:     viper.GetString("CLIENT_KEY"),
 			SessionSecret: viper.GetString("SESSION_SECRET"),
 			CallBackUrl:   viper.GetString("CALL_BACK_URL"),
+		},
+		Mail: &MailConfig{
+			Host:     viper.GetString("MAIL_HOST"),
+			Port:     viper.GetInt("MAIL_PORT"),
+			Email:    viper.GetString("MAIL_EMAIL"),
+			Password: viper.GetString("MAIL_PASSWORD"),
 		},
 	}
 
