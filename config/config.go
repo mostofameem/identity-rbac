@@ -21,7 +21,6 @@ type Config struct {
 	TokenExpireTimeInHours int    `mapstructure:"TOKEN_EXPIRE_TIME_IN_HOURS" validate:"required"`
 
 	EmailInvitationTTL int `mapstructure:"EMAIL_INVITATION_TTL_IN_MINUTE" validate:"required"`
-	PasswordSetupTTL   int `mapstructure:"PASSWORD_SETUP_TTL_IN_MINUTE"   validate:"required"`
 	AccessTokenTTL     int `mapstructure:"ACCESS_TOKEN_TTL_IN_MINUTE"     validate:"required"`
 	RefreshTokenTTL    int `mapstructure:"REFRESH_TOKEN_TTL_IN_MINUTE"    validate:"required"`
 }

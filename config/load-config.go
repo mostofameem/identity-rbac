@@ -31,7 +31,6 @@ func LoadConfig() error {
 		MigrationSource:        viper.GetString("MIGRATION_SOURCE"),
 		TokenExpireTimeInHours: viper.GetInt("TOKEN_EXPIRE_TIME_IN_HOURS"),
 		EmailInvitationTTL:     viper.GetInt("EMAIL_INVITATION_TTL_IN_MINUTE"),
-		PasswordSetupTTL:       viper.GetInt("PASSWORD_SETUP_TTL_IN_MINUTE"),
 		AccessTokenTTL:         viper.GetInt("ACCESS_TOKEN_TTL_IN_MINUTE"),
 		RefreshTokenTTL:        viper.GetInt("REFRESH_TOKEN_TTL_IN_MINUTE"),
 		DB: &DBConfig{
@@ -53,6 +52,7 @@ func LoadConfig() error {
 		Mail: &MailConfig{
 			Host:     viper.GetString("MAIL_HOST"),
 			Port:     viper.GetInt("MAIL_PORT"),
+			Username: viper.GetString("MAIL_USERNAME"),
 			Email:    viper.GetString("MAIL_EMAIL"),
 			Password: viper.GetString("MAIL_PASSWORD"),
 		},
