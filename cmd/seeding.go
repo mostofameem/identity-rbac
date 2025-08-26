@@ -8,6 +8,7 @@ import (
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -126,4 +127,30 @@ func getTotalPermissionNumber(db *repo.DB) (int64, error) {
 	}
 
 	return count, nil
+}
+
+func addRoleHasPermission(db *repo.DB, userId, roleId, totalPermissionNumber int) error {
+	if totalPermissionNumber <= 0 {
+		return fmt.Errorf("no permissions to assign")
+	}
+
+	query := "INSERT INTO role_permissions (role_id, permission_id, added_by) VALUES "
+	args := []interface{}{}
+	values := []string{}
+
+	for i := 1; i <= totalPermissionNumber; i++ {
+		paramOffset := (i-1)*3 + 1
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d)", paramOffset, paramOffset+1, paramOffset+2))
+		args = append(args, roleId, i, userId)
+	}
+
+	query += strings.Join(values, ", ") + " ON CONFLICT (role_id, permission_id) DO NOTHING"
+
+	_, err := db.Db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to insert role_has_permissions: %w", err)
+	}
+
+	fmt.Println("Role has permissions added successfully.")
+	return nil
 }

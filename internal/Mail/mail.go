@@ -24,4 +24,5 @@ func NewMailService(cnf *config.MailConfig) MailService {
 
 type MailService interface {
 	SendMail(to, subject, body string) error
+	SendTemplateEmail(to, templateName string, data interface{}) error
 }
