@@ -50,11 +50,12 @@ func LoadConfig() error {
 			CallBackUrl:   viper.GetString("CALL_BACK_URL"),
 		},
 		Mail: &MailConfig{
-			Host:     viper.GetString("MAIL_HOST"),
-			Port:     viper.GetInt("MAIL_PORT"),
-			Username: viper.GetString("MAIL_USERNAME"),
-			Email:    viper.GetString("MAIL_EMAIL"),
-			Password: viper.GetString("MAIL_PASSWORD"),
+			Host:        viper.GetString("MAIL_HOST"),
+			Port:        viper.GetInt("MAIL_PORT"),
+			Username:    viper.GetString("MAIL_USERNAME"),
+			Email:       viper.GetString("MAIL_EMAIL"),
+			Password:    viper.GetString("MAIL_PASSWORD"),
+			FrontendURL: viper.GetString("FRONTEND_URL"),
 		},
 	}
 

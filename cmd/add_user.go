@@ -28,12 +28,13 @@ type User struct {
 }
 
 func serveAddUser(cmd *cobra.Command, args []string) error {
+	cnf := config.GetConfig()
+
 	userInfo, err := loadUserFromConfig("./user_config.json")
 	if err != nil {
 		return fmt.Errorf("failed to load user config: %w", err)
 	}
 
-	cnf := config.GetConfig()
 	db, err := repo.NewDB(cnf.DB)
 	if err != nil {
 		slog.Error("Failed to connect to database:", logger.Extra(map[string]any{
@@ -73,10 +74,10 @@ func serveAddUser(cmd *cobra.Command, args []string) error {
 	templateData := map[string]interface{}{
 		"UserName":      userInfo.FullName,
 		"UserEmail":     userInfo.Email,
-		"CompanyName":   "Identity RBAC", // TODO: Get from config
-		"InvitationURL": fmt.Sprintf("https://your-domain.com/invitation?token=%s", emailInvitationToken),
+		"CompanyName":   "Identity RBAC",
+		"InvitationURL": fmt.Sprintf("%s=%s", cnf.Mail.FrontendURL, emailInvitationToken),
 		"ExpiresAt":     time.Now().Add(7 * 24 * time.Hour).Format("January 2, 2006"),
-		"SupportEmail":  "support@your-company.com", // TODO: Get from config
+		"SupportEmail":  "support@your-company.com",
 	}
 
 	err = mailService.SendTemplateEmail(userInfo.Email, "email_invitation", templateData)
