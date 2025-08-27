@@ -7,9 +7,10 @@ import (
 
 func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Manager) {
 	mux.Handle(
-		"POST /v1/sign-up",
+		"POST api/v1/register",
 		manager.With(
-			http.HandlerFunc(server.handlers.SignUp),
+			http.HandlerFunc(server.handlers.Register),
+			server.middleware.AuthenticateEmailInvitationToken,
 		),
 	)
 

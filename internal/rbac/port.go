@@ -6,9 +6,7 @@ import (
 )
 
 type Service interface {
-	CreateUser(ctx context.Context, req CreateUserReq) error
-	CreateUserV2(ctx context.Context, req CreateUserReq) error
-	CreateUserV2WithMultipleRoles(ctx context.Context, req CreateUserV2Req) error
+	CreateUserWithMultipleRoles(ctx context.Context, req RegisterUserReq) error
 	Login(ctx context.Context, params LoginParams) (string, string, error)
 	LoginV2(ctx context.Context, params LoginParams) (string, string, []string, error)
 	AuthLogin(ctx context.Context, email string) (string, string, error)
@@ -31,13 +29,12 @@ type Service interface {
 }
 
 type UserRepo interface {
-	Create(ctx context.Context, req CreateUserReq) (int, error)
+	Create(ctx context.Context, req RegisterUserReq) (int, error)
 	Get(ctx context.Context, email string) (*entity.Users, error)
 	GetOne(ctx context.Context, id int) (*entity.Users, error)
 	GetUserPermission(ctx context.Context, userId int) ([]string, error)
 	GetUsers(ctx context.Context, email string) ([]Users, error)
-	CreateUserWithRoleTx(ctx context.Context, req CreateUserReq) error
-	CreateUserWithMultipleRolesTx(ctx context.Context, req CreateUserV2Req) error
+	CreateUserWithMultipleRolesTx(ctx context.Context, req RegisterUserReq) error
 	UpdatePassword(ctx context.Context, userId int, newPassword string) error
 }
 
@@ -63,4 +60,9 @@ type RoleHasPermissionRepo interface {
 	Create(ctx context.Context, req AddPermissionToRole) (int, error)
 	Get(ctx context.Context, roleId int) (*[]entity.RoleHasPermission, error)
 	AddPermissionsToRole(ctx context.Context, req AddRolePermissions) error
+}
+
+type UserOnboardingRepo interface {
+	//OnboardUser(ctx context.Context, req rbac.RegisterUserReq) error
+	GetUserOnboarding(ctx context.Context, email string) (*entity.UserOnboarding, error)
 }

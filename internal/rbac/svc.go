@@ -11,6 +11,7 @@ type service struct {
 	permissionRepo        PermissionRepo
 	userHasRoleRepo       UserHasRoleRepo
 	roleHasPermissionRepo RoleHasPermissionRepo
+	userOnboardingRepo    UserOnboardingRepo
 }
 
 func NewService(
@@ -20,6 +21,7 @@ func NewService(
 	permissionRepo PermissionRepo,
 	userHasRoleRepo UserHasRoleRepo,
 	roleHasPermissionRepo RoleHasPermissionRepo,
+	userOnboardingRepo UserOnboardingRepo,
 ) Service {
 	return &service{
 		cnf:                   cnf,
@@ -28,5 +30,6 @@ func NewService(
 		permissionRepo:        permissionRepo,
 		userHasRoleRepo:       userHasRoleRepo,
 		roleHasPermissionRepo: roleHasPermissionRepo,
+		userOnboardingRepo:    userOnboardingRepo,
 	}
 }

@@ -10,10 +10,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	emailInvitationTokenType = "email_invitation"
+	accessTokenTokenType     = "access"
+	refreshTokenTokenType    = "refresh"
+)
+
 func (s *tokenService) GenerateEmailInvitationToken(ctx context.Context, email string, roleIds []int) (string, error) {
 	claims := &EmailInvitationDto{
-		Email:   email,
-		RoleIds: roleIds,
+		Email:     email,
+		RoleIds:   roleIds,
+		TokenType: emailInvitationTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(s.EmailInvitationTokenTTLInMinutes) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -33,8 +40,9 @@ func (s *tokenService) GenerateEmailInvitationToken(ctx context.Context, email s
 
 func (s *tokenService) GenerateAccessToken(ctx context.Context, id int, jti string) (string, error) {
 	claims := &TokenDto{
-		Id:  id,
-		Jti: jti,
+		Id:        id,
+		Jti:       jti,
+		TokenType: accessTokenTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(s.AccessTokenTTLInMinutes) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -54,8 +62,9 @@ func (s *tokenService) GenerateAccessToken(ctx context.Context, id int, jti stri
 
 func (s *tokenService) GenerateRefreshToken(ctx context.Context, id int, jti string) (string, error) {
 	claims := &TokenDto{
-		Id:  id,
-		Jti: jti,
+		Id:        id,
+		Jti:       jti,
+		TokenType: refreshTokenTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(s.RefreshTokenTTLInMinutes) * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

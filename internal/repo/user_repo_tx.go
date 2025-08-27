@@ -2,16 +2,17 @@ package repo
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"identity-rbac/internal/rbac"
 	"identity-rbac/internal/util"
 	"identity-rbac/pkg/logger"
 	"log/slog"
 
-	"github.com/go-sql-driver/mysql"
+	sq "github.com/Masterminds/squirrel"
+	"github.com/lib/pq"
 )
 
-func (r *userRepo) CreateUserWithRoleTx(ctx context.Context, req rbac.CreateUserReq) error {
+func (r *userRepo) CreateUserWithMultipleRolesTx(ctx context.Context, req rbac.RegisterUserReq) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		slog.Error("Failed to start transaction", logger.Extra(map[string]any{
@@ -24,8 +25,9 @@ func (r *userRepo) CreateUserWithRoleTx(ctx context.Context, req rbac.CreateUser
 	}()
 
 	query, args, err := r.psql.Insert(r.table).
-		Columns("email", "pass", "is_active", "created_at", "updated_at").
-		Values(req.Email, req.Pass, req.IsActive, req.CreatedAt, req.CreatedAt).
+		Columns("email", "password", "first_name", "last_name", "is_active", "created_at", "updated_at").
+		Values(req.Email, req.Password, req.FirstName, req.LastName, req.IsActive, req.CreatedAt, req.CreatedAt).
+		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build user insert query", logger.Extra(map[string]any{
@@ -35,88 +37,9 @@ func (r *userRepo) CreateUserWithRoleTx(ctx context.Context, req rbac.CreateUser
 		return err
 	}
 
-	result, err := tx.ExecContext(ctx, query, args...)
-	if err != nil {
-		var mysqlErr *mysql.MySQLError
-		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
-			return util.ErrDuplicateRow
-		}
-
-		slog.Error("Failed to insert user", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"query": query,
-			"args":  req,
-		}))
-		return err
-	}
-
-	userId, err := result.LastInsertId()
-	if err != nil {
-		slog.Error("Failed to get last insert ID", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-
-	roleQuery, roleArgs, err := r.psql.Insert("user_has_roles").
-		Columns("user_id", "role_id", "added_by", "created_at").
-		Values(userId, req.RoleId, req.CreatedBy, req.CreatedAt).
-		ToSql()
-	if err != nil {
-		slog.Error("Failed to build user_has_roles insert", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"req":   req,
-		}))
-		return err
-	}
-
-	if _, err := tx.ExecContext(ctx, roleQuery, roleArgs...); err != nil {
-		slog.Error("Failed to insert user_has_roles", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"query": roleQuery,
-			"args":  req,
-		}))
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		slog.Error("Failed to commit transaction", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-
-	return nil
-}
-
-func (r *userRepo) CreateUserWithMultipleRolesTx(ctx context.Context, req rbac.CreateUserV2Req) error {
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		slog.Error("Failed to start transaction", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
-	query, args, err := r.psql.Insert(r.table).
-		Columns("email", "pass", "is_active", "created_at", "updated_at").
-		Values(req.Email, req.Pass, req.IsActive, req.CreatedAt, req.CreatedAt).
-		ToSql()
-	if err != nil {
-		slog.Error("Failed to build user insert query", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"req":   req,
-		}))
-		return err
-	}
-
-	result, err := tx.ExecContext(ctx, query, args...)
-	if err != nil {
-		var mysqlErr *mysql.MySQLError
-		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+	var userId int64
+	if err := tx.QueryRowContext(ctx, query, args...).Scan(&userId); err != nil {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
 			return util.ErrAlreadyRegistered
 		}
 
@@ -128,22 +51,13 @@ func (r *userRepo) CreateUserWithMultipleRolesTx(ctx context.Context, req rbac.C
 		return err
 	}
 
-	userId, err := result.LastInsertId()
-	if err != nil {
-		slog.Error("Failed to get last insert ID", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-
-	// Insert multiple roles for the user
 	for _, roleId := range req.RoleIds {
-		roleQuery, roleArgs, err := r.psql.Insert("user_has_roles").
-			Columns("user_id", "role_id", "added_by", "created_at").
-			Values(userId, roleId, req.CreatedBy, req.CreatedAt).
+		roleQuery, roleArgs, err := r.psql.Insert("user_roles").
+			Columns("user_id", "role_id", "added_by", "is_active", "created_at", "updated_at").
+			Values(userId, roleId, req.CreatedBy, true, req.CreatedAt, req.CreatedAt).
 			ToSql()
 		if err != nil {
-			slog.Error("Failed to build user_has_roles insert", logger.Extra(map[string]any{
+			slog.Error("Failed to build user_roles insert", logger.Extra(map[string]any{
 				"error": err.Error(),
 				"req":   req,
 			}))
@@ -151,13 +65,42 @@ func (r *userRepo) CreateUserWithMultipleRolesTx(ctx context.Context, req rbac.C
 		}
 
 		if _, err := tx.ExecContext(ctx, roleQuery, roleArgs...); err != nil {
-			slog.Error("Failed to insert user_has_roles", logger.Extra(map[string]any{
+			if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
+				return fmt.Errorf("user already has role %d: %w", roleId, err)
+			}
+
+			slog.Error("Failed to insert user_roles", logger.Extra(map[string]any{
 				"error": err.Error(),
 				"query": roleQuery,
 				"args":  req,
 			}))
 			return err
 		}
+	}
+
+	onboardingQuery, onboardingArgs, err := r.psql.Update("user_onboarding_process").
+		Set("status", "COMPLETED").
+		Set("completed", true).
+		Where(sq.Eq{"email": req.Email}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build onboarding update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"req":   req,
+		}))
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, onboardingQuery, onboardingArgs...); err != nil {
+		slog.Error("Failed to update onboarding status", logger.Extra(map[string]any{
+			"error":     err.Error(),
+			"query":     onboardingQuery,
+			"args":      onboardingArgs,
+			"email":     req.Email,
+			"status":    "COMPLETED",
+			"completed": true,
+		}))
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS user_onboarding_process (
     role_ids VARCHAR(255) NOT NULL,
     status VARCHAR(20) DEFAULT 'PENDING',
     completed BOOLEAN DEFAULT FALSE,
+    created_by INT NOT NULL,
     expired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 );

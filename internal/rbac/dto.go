@@ -84,9 +84,11 @@ type ResetPasswordReq struct {
 	NewPassword string
 }
 
-type CreateUserV2Req struct {
+type RegisterUserReq struct {
 	Email     string
-	Pass      string
+	Password  string
+	FirstName string
+	LastName  string
 	RoleIds   []int
 	IsActive  bool
 	CreatedBy int

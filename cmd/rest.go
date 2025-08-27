@@ -43,8 +43,16 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	permissionRepo := repo.NewPermissionRepo(db)
 	userHasRoleRepo := repo.NewUserHasRoleRepo(db)
 	roleHasPermissionRepo := repo.NewRoleHasPermissionRepo(db)
+	userOnboardingRepo := repo.NewUserOnboardingRepo(db)
 
-	rbacSvc := rbac.NewService(cnf, userRepo, roleRepo, permissionRepo, userHasRoleRepo, roleHasPermissionRepo)
+	rbacSvc := rbac.NewService(cnf,
+		userRepo,
+		roleRepo,
+		permissionRepo,
+		userHasRoleRepo,
+		roleHasPermissionRepo,
+		userOnboardingRepo,
+	)
 
 	handlers := handlers.NewHandlers(cnf, rbacSvc)
 

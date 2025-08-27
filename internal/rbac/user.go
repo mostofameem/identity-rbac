@@ -7,21 +7,9 @@ import (
 	"identity-rbac/internal/util"
 	"identity-rbac/pkg/logger"
 	"log/slog"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-type CreateUserReq struct {
-	Email     string
-	Pass      string
-	FirstName string
-	LastName  string
-	RoleId    int
-	IsActive  bool
-	CreatedBy int
-	CreatedAt time.Time
-}
 
 type LoginParams struct {
 	Email string
@@ -32,25 +20,6 @@ var (
 	ErrUserNotFound    = errors.New("user not found")
 	ErrInvalidPassword = errors.New("invalid password")
 )
-
-func (s *service) CreateUser(ctx context.Context, req CreateUserReq) error {
-	hashPass, err := util.HashPassword(req.Pass)
-	if err != nil {
-		slog.Error("failed to hash password", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-
-		return err
-	}
-	req.Pass = hashPass
-
-	_, err = s.userRepo.Create(ctx, req)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (svc *service) Login(ctx context.Context, params LoginParams) (string, string, error) {
 	user, err := svc.userRepo.Get(ctx, params.Email)
@@ -182,7 +151,7 @@ func (s *service) GetUsers(ctx context.Context, email string) ([]Users, error) {
 	return roles, nil
 }
 
-func (s *service) CreateUserV2(ctx context.Context, req CreateUserReq) error {
+func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterUserReq) error {
 	user, err := s.userRepo.Get(ctx, req.Email)
 	if err != nil {
 		return err
@@ -192,64 +161,48 @@ func (s *service) CreateUserV2(ctx context.Context, req CreateUserReq) error {
 		return util.ErrAlreadyRegistered
 	}
 
-	role, err := s.roleRepo.GetOne(ctx, req.RoleId)
+	roles, err := s.roleRepo.Get(ctx, "")
 	if err != nil {
 		return err
 	}
 
-	if role == nil {
+	roleMap := make(map[int]bool)
+	for _, role := range roles {
+		if role.IsActive {
+			roleMap[role.Id] = true
+		}
+	}
+
+	for _, roleId := range req.RoleIds {
+		if !roleMap[roleId] {
+			slog.Error("role is not active", logger.Extra(map[string]any{
+				"roleId": roleId,
+			}))
+
+			return util.ErrRoleNotActive
+		}
+	}
+
+	hashPass, err := util.HashPassword(req.Password)
+	if err != nil {
+		slog.Error("failed to hash password", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+
+		return err
+	}
+	req.Password = hashPass
+
+	userOnboarding, err := s.userOnboardingRepo.GetUserOnboarding(ctx, req.Email)
+	if err != nil {
+		return err
+	}
+
+	if userOnboarding == nil {
 		return util.ErrNotFound
 	}
 
-	hashPass, err := util.HashPassword(req.Pass)
-	if err != nil {
-		slog.Error("failed to hash password", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-
-		return err
-	}
-	req.Pass = hashPass
-
-	err = s.userRepo.CreateUserWithRoleTx(ctx, req)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *service) CreateUserV2WithMultipleRoles(ctx context.Context, req CreateUserV2Req) error {
-	user, err := s.userRepo.Get(ctx, req.Email)
-	if err != nil {
-		return err
-	}
-
-	if user != nil {
-		return util.ErrAlreadyRegistered
-	}
-
-	// Validate that all roles exist
-	for _, roleId := range req.RoleIds {
-		role, err := s.roleRepo.GetOne(ctx, roleId)
-		if err != nil {
-			return err
-		}
-
-		if role == nil {
-			return util.ErrNotFound
-		}
-	}
-
-	hashPass, err := util.HashPassword(req.Pass)
-	if err != nil {
-		slog.Error("failed to hash password", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-
-		return err
-	}
-	req.Pass = hashPass
+	req.CreatedBy = userOnboarding.CreatedBy
 
 	err = s.userRepo.CreateUserWithMultipleRolesTx(ctx, req)
 	if err != nil {
