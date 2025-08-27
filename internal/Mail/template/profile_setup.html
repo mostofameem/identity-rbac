@@ -1,0 +1,20 @@
+Subject: Complete Your Profile Setup - {{.CompanyName}}
+
+Hi {{.UserName}},
+
+Welcome to {{.CompanyName}}! You're almost there - just a few more steps to complete your profile setup.
+
+What's Missing:
+{{range .MissingSteps}}
+- {{.}}
+{{end}}
+
+To complete your profile, please visit: {{.ProfileSetupURL}}
+
+If you have any questions or need assistance, please contact our support team at {{.SupportEmail}}.
+
+Best regards,
+The {{.CompanyName}} Team
+
+---
+This email was sent to {{.UserEmail}}. If you didn't create this account, please contact us immediately.

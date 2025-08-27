@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"identity-rbac/config"
-	"identity-rbac/internal/rbac"
+	mail "identity-rbac/internal/Mail"
+	token "identity-rbac/internal/Token"
 	repo "identity-rbac/internal/repo"
-	"identity-rbac/internal/util"
 	"identity-rbac/pkg/logger"
-	"io/ioutil"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -26,135 +24,95 @@ var serveAddUserCmd = &cobra.Command{
 
 type User struct {
 	Email    string `json:"userEmail"`
-	Password string `json:"userPassword"`
+	FullName string `json:"fullName"`
 }
 
 func serveAddUser(cmd *cobra.Command, args []string) error {
+	cnf := config.GetConfig()
+
 	userInfo, err := loadUserFromConfig("./user_config.json")
 	if err != nil {
 		return fmt.Errorf("failed to load user config: %w", err)
 	}
 
-	userInfo.Password, err = util.HashPassword(userInfo.Password)
+	db, err := repo.NewDB(cnf.DB)
 	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	cnf := config.GetConfig()
-
-	db, err := repo.NewMysqlDB(cnf.DB)
-	if err != nil {
-		slog.Error("Failed to Connect with Database:", logger.Extra(map[string]any{
+		slog.Error("Failed to connect to database:", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 		return err
 	}
-	defer repo.CloseMysqlDB(db)
+	defer repo.CloseDB(db)
 
-	userId, err := addUser(db, *userInfo)
-	if err != nil {
-		slog.Error("Failed to add user:", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-	slog.Info("User added successful", logger.Extra(map[string]any{
-		"userId": userId,
-	}))
-
+	mailService := mail.NewMailService(cnf.Mail)
+	tokenService := token.NewTokenService(cnf)
 	roleRepo := repo.NewRoleRepo(db)
-	userHasRoleRepo := repo.NewUserHasRoleRepo(db)
 
-	roleId, err := roleRepo.Get(context.Background(), "Super Admin")
+	superAdminRole, err := roleRepo.Get(context.Background(), "Super Admin")
 	if err != nil {
-		slog.Error("Failed to get role:", logger.Extra(map[string]any{
+		slog.Error("Failed to get super admin role:", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 		return err
 	}
 
-	_, err = userHasRoleRepo.Create(context.Background(), rbac.AddRoleToUser{
-		UserID:    int(userId),
-		RoleID:    roleId[0].Id,
-		AddedBy:   1,
-		CreatedAt: time.Now(),
-	})
+	if superAdminRole == nil {
+		slog.Error("Super admin role not found:", logger.Extra(map[string]any{
+			"error": "super admin role not found",
+		}))
+		return fmt.Errorf("super admin role not found")
+	}
+
+	emailInvitationToken, err := tokenService.GenerateEmailInvitationToken(context.Background(), userInfo.Email, []int{superAdminRole[0].Id})
 	if err != nil {
-		slog.Error("Failed to add role to user:", logger.Extra(map[string]any{
+		slog.Error("Failed to generate email invitation token:", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 		return err
 	}
-	slog.Info("Role assigned to user successful", logger.Extra(map[string]any{
-		"userId": userId,
-		"roleId": roleId[0].Id,
+
+	templateData := map[string]interface{}{
+		"UserName":      userInfo.FullName,
+		"UserEmail":     userInfo.Email,
+		"CompanyName":   "Identity RBAC",
+		"InvitationURL": fmt.Sprintf("%s=%s", cnf.Mail.FrontendURL, emailInvitationToken),
+		"ExpiresAt":     time.Now().Add(7 * 24 * time.Hour).Format("January 2, 2006"),
+		"SupportEmail":  "support@your-company.com",
+	}
+
+	err = mailService.SendTemplateEmail(userInfo.Email, "email_invitation", templateData)
+	if err != nil {
+		slog.Error("Failed to send email invitation:", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return err
+	}
+
+	slog.Info("Email invitation sent successfully.", logger.Extra(map[string]any{
+		"email": userInfo.Email,
 	}))
 
 	return nil
 }
 
-func addUser(db *repo.DB, user User) (int64, error) {
-	if user.Email == "" || user.Password == "" {
-		return 0, fmt.Errorf("email and password cannot be empty")
-	}
-
-	query := "INSERT INTO users (email, pass, is_active) VALUES (?, ?, ?)"
-
-	result, err := db.Db.Exec(query, user.Email, user.Password, true)
+func loadUserFromConfig(configPath string) (*User, error) {
+	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return 0, fmt.Errorf("failed to insert user: %w", err)
-	}
-
-	userId, err := result.LastInsertId()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get last insert id: %w", err)
-	}
-
-	fmt.Println("User added successfully.")
-	return userId, nil
-}
-
-func addRoleHasPermission(db *repo.DB, userId, roleId, totalPermissionNumber int) error {
-	if totalPermissionNumber <= 0 {
-		return fmt.Errorf("no permissions to assign")
-	}
-
-	query := "INSERT INTO role_permissions (role_id, permission_id, added_by) VALUES "
-	args := []interface{}{}
-	values := []string{}
-
-	for i := 1; i <= totalPermissionNumber; i++ {
-		paramOffset := (i-1)*3 + 1
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d)", paramOffset, paramOffset+1, paramOffset+2))
-		args = append(args, roleId, i, userId)
-	}
-
-	query += strings.Join(values, ", ") + " ON CONFLICT (role_id, permission_id) DO NOTHING"
-
-	_, err := db.Db.Exec(query, args...)
-	if err != nil {
-		return fmt.Errorf("failed to insert role_has_permissions: %w", err)
-	}
-
-	fmt.Println("Role has permissions added successfully.")
-	return nil
-}
-
-func loadUserFromConfig(path string) (*User, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("could not open config file: %w", err)
-	}
-	defer file.Close()
-
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, fmt.Errorf("could not read config file: %w", err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	var user User
-	if err := json.Unmarshal(bytes, &user); err != nil {
-		return nil, fmt.Errorf("could not parse JSON: %w", err)
+	if err := json.Unmarshal(data, &user); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	if user.Email == "" {
+		slog.Error("userEmail is required in config file")
+		return nil, fmt.Errorf("userEmail is required in config file")
+	}
+	if user.FullName == "" {
+		slog.Error("fullName is required in config file")
+		return nil, fmt.Errorf("fullName is required in config file")
 	}
 
 	return &user, nil
