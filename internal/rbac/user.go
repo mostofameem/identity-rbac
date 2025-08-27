@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"identity-rbac/internal/util"
@@ -202,6 +203,18 @@ func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterU
 		return util.ErrNotFound
 	}
 
+	// Parse role_ids from JSON string to []int
+	var roleIds []int
+	if err := json.Unmarshal([]byte(userOnboarding.RoleIds), &roleIds); err != nil {
+		slog.Error("Failed to unmarshal role IDs", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"roleIds": userOnboarding.RoleIds,
+		}))
+		return err
+	}
+
+	// Override the role IDs from the token with the ones from the database
+	req.RoleIds = roleIds
 	req.CreatedBy = userOnboarding.CreatedBy
 
 	err = s.userRepo.CreateUserWithMultipleRolesTx(ctx, req)

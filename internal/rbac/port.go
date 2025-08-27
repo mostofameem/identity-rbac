@@ -63,6 +63,6 @@ type RoleHasPermissionRepo interface {
 }
 
 type UserOnboardingRepo interface {
-	//OnboardUser(ctx context.Context, req rbac.RegisterUserReq) error
+	Create(ctx context.Context, req *UserOnboardingProcess) error
 	GetUserOnboarding(ctx context.Context, email string) (*entity.UserOnboarding, error)
 }

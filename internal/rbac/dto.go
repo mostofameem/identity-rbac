@@ -94,3 +94,15 @@ type RegisterUserReq struct {
 	CreatedBy int
 	CreatedAt time.Time
 }
+
+type UserOnboardingProcess struct {
+	Id        string    `db:"id"`
+	Email     string    `db:"email"`
+	RoleIds   []int     `db:"role_ids"`
+	Status    string    `db:"status"`
+	Completed bool      `db:"completed"`
+	CreatedBy int       `db:"created_by"`
+	ExpiredAt time.Time `db:"expired_at"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+}
