@@ -51,25 +51,86 @@
       }
     },
 
-    "/v1/sign-up": {
+    "/api/v1/register": {
       "post": {
         "tags": ["User"],
-        "summary": "Sign Up a New User",
+        "summary": "Register a New User with Email Invitation Token",
+        "description": "Allows a user to complete their registration using an email invitation token. The token contains the email and role IDs that were assigned during the invitation process.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SignUpReq"
+                "$ref": "#/components/schemas/RegisterReq"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "schema": {
-                "$ref": "#/components/schemas/SuccessResponse"
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
               }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload or validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRes"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired invitation token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRes"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User onboarding process not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRes"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRes"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRes"
+                }
+              }
+            }
           }
         }
       }
@@ -771,19 +832,24 @@
       }
     },
     "schemas": {
-      "SignUpReq": {
+      "RegisterReq": {
         "type": "object",
         "properties": {
-          "email": {
+          "firstName": {
             "type": "string",
-            "example": "user@example.com"
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
           },
           "password": {
             "type": "string",
-            "example": "password123"
+            "example": "password123",
+            "minLength": 6
           }
         },
-        "required": ["email", "password"]
+        "required": ["firstName", "lastName", "password"]
       },
       "ResetPasswordReq": {
         "type": "object",
