@@ -29,7 +29,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 
 	logger.SetupLogger(cnf.ServiceName)
 
-	db, err := repo.NewMysqlDB(cnf.DB)
+	db, err := repo.NewDB(cnf.DB)
 	if err != nil {
 		slog.Error("Failed to Connect with Database:", logger.Extra(map[string]any{
 			"error": err.Error(),

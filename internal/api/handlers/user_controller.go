@@ -7,7 +7,9 @@ import (
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/rbac"
 	"identity-rbac/internal/util"
+	"identity-rbac/pkg/logger"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/markbates/goth/gothic"
@@ -23,7 +25,6 @@ type LoginReq struct {
 }
 
 type RegisterReq struct {
-	Email     string `validate:"required,email"`
 	FirstName string `json:"firstName" validate:"required"`
 	LastName  string `json:"lastName" validate:"required"`
 	Password  string `json:"password" validate:"required"`
@@ -96,6 +97,9 @@ func (handlers *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 func (handlers *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	var registerReq RegisterReq
 	if err := json.NewDecoder(r.Body).Decode(&registerReq); err != nil {
+		slog.Error("Failed to decode request body", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
 		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}

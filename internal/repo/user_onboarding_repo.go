@@ -29,7 +29,7 @@ func NewUserOnboardingRepo(db *DB) UserOnboardingRepo {
 	return &userOnboardingRepo{
 		table: "user_onboarding_process",
 		db:    db.Db,
-		psql:  sq.StatementBuilder.PlaceholderFormat(sq.Question),
+		psql:  db.Psql,
 	}
 }
 

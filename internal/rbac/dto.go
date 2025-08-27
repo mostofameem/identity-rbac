@@ -6,6 +6,7 @@ type AddRole struct {
 	Name        string
 	Description string
 	CreatedBy   int
+	IsActive    bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
 }

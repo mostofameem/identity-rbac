@@ -7,7 +7,7 @@ import (
 
 func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Manager) {
 	mux.Handle(
-		"POST api/v1/register",
+		"POST /api/v1/register",
 		manager.With(
 			http.HandlerFunc(server.handlers.Register),
 			server.middleware.AuthenticateEmailInvitationToken,
@@ -34,8 +34,8 @@ func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Ma
 		"GET /v1/roles",
 		manager.With(
 			http.HandlerFunc(server.handlers.GetRoles),
-			server.middleware.Authorization(middlewares.ROLE_ASSIGN_ACCESS),
-			server.middleware.AuthenticateJWT,
+			//server.middleware.Authorization(middlewares.ROLE_ASSIGN_ACCESS),
+			//server.middleware.AuthenticateJWT,
 		),
 	)
 
