@@ -6,6 +6,7 @@ type AddRole struct {
 	Name        string
 	Description string
 	CreatedBy   int
+	IsActive    bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
 }
@@ -84,11 +85,25 @@ type ResetPasswordReq struct {
 	NewPassword string
 }
 
-type CreateUserV2Req struct {
+type RegisterUserReq struct {
 	Email     string
-	Pass      string
+	Password  string
+	FirstName string
+	LastName  string
 	RoleIds   []int
 	IsActive  bool
 	CreatedBy int
 	CreatedAt time.Time
+}
+
+type UserOnboardingProcess struct {
+	Id        string    `db:"id"`
+	Email     string    `db:"email"`
+	RoleIds   []int     `db:"role_ids"`
+	Status    string    `db:"status"`
+	Completed bool      `db:"completed"`
+	CreatedBy int       `db:"created_by"`
+	ExpiredAt time.Time `db:"expired_at"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }

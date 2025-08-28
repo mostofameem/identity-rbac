@@ -8,6 +8,7 @@ import (
 	"identity-rbac/internal/rbac"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -33,8 +34,8 @@ func NewRoleRepo(db *DB) RoleRepo {
 
 func (r *roleRepo) Create(ctx context.Context, req rbac.AddRole) (int, error) {
 	query, args, err := r.psql.Insert(r.table).
-		Columns("name", "description", "created_by", "created_at").
-		Values(req.Name, req.Description, req.CreatedBy, req.CreatedAt).
+		Columns("name", "description", "created_by", "is_active", "created_at").
+		Values(req.Name, req.Description, req.CreatedBy, req.IsActive, req.CreatedAt).
 		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
@@ -92,8 +93,31 @@ func (r *roleRepo) getRolesQueryBuilder() BuildQuery {
 		return r.psql.Select(
 			"id",
 			"name",
+			"is_active",
 		).
 			From(r.table)
+	}
+}
+
+func (r *roleRepo) getRolesWithPermissionsQueryBuilder() BuildQuery {
+	return func() sq.SelectBuilder {
+		return r.psql.Select(
+			"r.id",
+			"r.name",
+			"r.description",
+			"r.is_active",
+			"r.created_at",
+			"p.id as permission_id",
+			"p.name as permission_name",
+			"p.resource as permission_resource",
+			"p.action as permission_action",
+			"p.description as permission_description",
+		).
+			From("roles r").
+			LeftJoin("role_permissions rp ON r.id = rp.role_id AND rp.is_active = true").
+			LeftJoin("permissions p ON rp.permission_id = p.id AND p.is_active = true").
+			Where(sq.Eq{"r.is_active": true}).
+			OrderBy("r.id", "p.name")
 	}
 }
 
@@ -127,64 +151,79 @@ func (r *roleRepo) GetOne(ctx context.Context, id int) (*entity.Role, error) {
 }
 
 func (r *roleRepo) GetRolesWithPermissions(ctx context.Context, title string) ([]rbac.RolesWithPermissions, error) {
-	// First get all roles
-	roles, err := r.Get(ctx, title)
+	query, args, err := NewQueryBuilder(r.getRolesWithPermissionsQueryBuilder()).
+		FilterByFullText("r.name", title).
+		ToSql()
+
 	if err != nil {
+		slog.Error("Failed to build roles with permissions query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"title": title,
+		}))
 		return nil, err
 	}
 
+	type rolePermissionRow struct {
+		Id                    int       `db:"id"`
+		Name                  string    `db:"name"`
+		Description           string    `db:"description"`
+		IsActive              bool      `db:"is_active"`
+		CreatedAt             time.Time `db:"created_at"`
+		PermissionId          *int      `db:"permission_id"`
+		PermissionName        *string   `db:"permission_name"`
+		PermissionResource    *string   `db:"permission_resource"`
+		PermissionAction      *string   `db:"permission_action"`
+		PermissionDescription *string   `db:"permission_description"`
+	}
+
+	var rows []rolePermissionRow
+	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []rbac.RolesWithPermissions{}, nil
+		}
+		slog.Error("Failed to execute roles with permissions query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return nil, err
+	}
+
+	roleMap := make(map[int]*rbac.RolesWithPermissions)
+
+	for _, row := range rows {
+		// Create or get existing role
+		if _, exists := roleMap[row.Id]; !exists {
+			roleMap[row.Id] = &rbac.RolesWithPermissions{
+				Id:          row.Id,
+				Name:        row.Name,
+				Description: row.Description,
+				IsActive:    row.IsActive,
+				CreatedAt:   row.CreatedAt,
+				Permissions: []rbac.Permissions{},
+			}
+		}
+
+		// Add permission if it exists (not null)
+		if row.PermissionId != nil {
+			permission := rbac.Permissions{
+				Id:          *row.PermissionId,
+				Name:        *row.PermissionName,
+				Resource:    *row.PermissionResource,
+				Action:      *row.PermissionAction,
+				Description: *row.PermissionDescription,
+			}
+			roleMap[row.Id].Permissions = append(roleMap[row.Id].Permissions, permission)
+		}
+	}
+
+	// Convert map to slice
 	var rolesWithPermissions []rbac.RolesWithPermissions
-
-	for _, role := range roles {
-		// Get permissions for each role
-		permissions, err := r.getRolePermissions(ctx, role.Id)
-		if err != nil {
-			slog.Error("Failed to get permissions for role", logger.Extra(map[string]any{
-				"roleId": role.Id,
-				"error":  err.Error(),
-			}))
-			// Continue with other roles even if one fails
-			permissions = []rbac.Permissions{}
-		}
-
-		// Get full role details including description and created_at
-		fullRole, err := r.GetOne(ctx, role.Id)
-		if err != nil {
-			slog.Error("Failed to get full role details", logger.Extra(map[string]any{
-				"roleId": role.Id,
-				"error":  err.Error(),
-			}))
-			continue
-		}
-
-		rolesWithPermissions = append(rolesWithPermissions, rbac.RolesWithPermissions{
-			Id:          role.Id,
-			Name:        role.Name,
-			Description: fullRole.Description,
-			CreatedAt:   fullRole.CreatedAt,
-			IsActive:    role.IsActive,
-			Permissions: permissions,
-		})
+	for _, role := range roleMap {
+		rolesWithPermissions = append(rolesWithPermissions, *role)
 	}
 
 	return rolesWithPermissions, nil
-}
-
-func (r *roleRepo) getRolePermissions(ctx context.Context, roleId int) ([]rbac.Permissions, error) {
-	query := `
-		SELECT p.id, p.name, p.resource, p.action, p.description
-		FROM permissions p
-		INNER JOIN role_permissions rhp ON p.id = rhp.permission_id
-		WHERE rhp.role_id = $1
-		ORDER BY p.name
-	`
-
-	var permissions []rbac.Permissions
-	if err := r.db.SelectContext(ctx, &permissions, query, roleId); err != nil {
-		return nil, err
-	}
-
-	return permissions, nil
 }
 
 func (r *roleRepo) CreateRoleWithPermissionsTx(ctx context.Context, req rbac.AddRoleV2) error {

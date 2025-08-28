@@ -33,10 +33,10 @@ func NewUserRepo(db *DB) UserRepo {
 	}
 }
 
-func (r *userRepo) Create(ctx context.Context, req rbac.CreateUserReq) (int, error) {
+func (r *userRepo) Create(ctx context.Context, req rbac.RegisterUserReq) (int, error) {
 	query, args, err := r.psql.Insert(r.table).
 		Columns("email", "pass", "first_name", "last_name", "is_active", "created_at", "updated_at").
-		Values(req.Email, req.Pass, req.FirstName, req.LastName, req.IsActive, req.CreatedAt, req.CreatedAt).
+		Values(req.Email, req.Password, req.FirstName, req.LastName, req.IsActive, req.CreatedAt, req.CreatedAt).
 		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {

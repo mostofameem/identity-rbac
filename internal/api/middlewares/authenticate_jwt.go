@@ -2,8 +2,10 @@ package middlewares
 
 import (
 	"context"
+	token "identity-rbac/internal/Token"
 	"identity-rbac/internal/api/utils"
 	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -16,13 +18,14 @@ type contextKey string
 const (
 	UidKey       contextKey = "id"
 	UserEmailKey contextKey = "email"
+	RoleIdsKey   contextKey = "roleIds"
 )
 
-type AuthClaims struct {
-	Id    int    `json:"id"`
-	Email string `json:"email"`
-	jwt.RegisteredClaims
-}
+const (
+	emailInvitationTokenType = "email_invitation"
+	accessTokenTokenType     = "access"
+	refreshTokenTokenType    = "refresh"
+)
 
 func unauthorizedResponse(w http.ResponseWriter, msg string) {
 	log.Println("Unauthorized access:", msg)
@@ -47,7 +50,7 @@ func (m *Middleware) AuthenticateJWT(next http.Handler) http.Handler {
 			unauthorizedResponse(w, "Missing token")
 			return
 		}
-		var claims AuthClaims
+		var claims token.TokenDto
 		token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
 			return []byte(m.cnf.JwtSecret), nil
 		})
@@ -64,8 +67,69 @@ func (m *Middleware) AuthenticateJWT(next http.Handler) http.Handler {
 			return
 		}
 
+		if claims.TokenType != accessTokenTokenType {
+			slog.Error("Invalid token type",
+				slog.String("tokenType", claims.TokenType),
+				slog.String("requiredTokenType", accessTokenTokenType),
+			)
+
+			unauthorizedResponse(w, "Invalid token type")
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), UidKey, claims.Id)
-		ctx = context.WithValue(ctx, UserEmailKey, claims.Email)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (m *Middleware) AuthenticateEmailInvitationToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		var tokenStr string
+		if header != "" {
+			tokens := strings.Split(header, " ")
+			if len(tokens) != 2 || tokens[0] != "Bearer" {
+				unauthorizedResponse(w, "Invalid Authorization format")
+				return
+			}
+			tokenStr = tokens[1]
+		} else {
+			tokenStr = r.URL.Query().Get("auth")
+		}
+		if tokenStr == "" {
+			slog.Error("Missing token")
+			unauthorizedResponse(w, "Missing token")
+			return
+		}
+		var claims token.EmailInvitationDto
+		token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
+			return []byte(m.cnf.JwtSecret), nil
+		})
+		if err != nil {
+			unauthorizedResponse(w, "Invalid token: "+err.Error())
+			return
+		}
+		if !token.Valid {
+			unauthorizedResponse(w, "Token is not valid")
+			return
+		}
+		if claims.ExpiresAt.Time.Before(time.Now()) {
+			unauthorizedResponse(w, "Token has expired")
+			return
+		}
+
+		if claims.TokenType != emailInvitationTokenType {
+			slog.Error("Invalid token type",
+				slog.String("tokenType", claims.TokenType),
+				slog.String("requiredTokenType", emailInvitationTokenType),
+			)
+
+			unauthorizedResponse(w, "Invalid token type")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), UserEmailKey, claims.Email)
+		ctx = context.WithValue(ctx, RoleIdsKey, claims.RoleIds)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

@@ -3,13 +3,15 @@ package token
 import "github.com/golang-jwt/jwt/v5"
 
 type EmailInvitationDto struct {
-	Email   string `json:"email"`
-	RoleIds []int  `json:"role_ids"`
+	Email     string `json:"email"`
+	RoleIds   []int  `json:"role_ids"`
+	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
 type TokenDto struct {
-	Id  int    `json:"id"`
-	Jti string `json:"jti"`
+	Id        int    `json:"id"`
+	Jti       string `json:"jti"`
+	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }

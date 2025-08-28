@@ -9,5 +9,5 @@ type Role struct {
 	CreatedBy   int        `db:"created_by"                  json:"createdBy"`
 	CreatedAt   time.Time  `db:"created_at"                  json:"createdAt"`
 	UpdatedAt   *time.Time `db:"updated_at"                  json:"updatedAt"`
-	IaActive    bool       `db:"is_active"                   json:"isActive"`
+	IsActive    bool       `db:"is_active"                   json:"isActive"`
 }

@@ -89,6 +89,7 @@ func createSuperAdminRoleAndAssignPermissions(db *repo.DB) error {
 	roleId, err := roleRepo.Create(context.Background(), rbac.AddRole{
 		Name:        "Super Admin",
 		Description: "Super Admin role with all permissions",
+		IsActive:    true,
 		CreatedBy:   1,
 		CreatedAt:   time.Now(),
 	})

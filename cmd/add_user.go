@@ -7,6 +7,7 @@ import (
 	"identity-rbac/config"
 	mail "identity-rbac/internal/Mail"
 	token "identity-rbac/internal/Token"
+	"identity-rbac/internal/rbac"
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/pkg/logger"
 	"log/slog"
@@ -47,6 +48,7 @@ func serveAddUser(cmd *cobra.Command, args []string) error {
 	mailService := mail.NewMailService(cnf.Mail)
 	tokenService := token.NewTokenService(cnf)
 	roleRepo := repo.NewRoleRepo(db)
+	userOnboardingProcessRepo := repo.NewUserOnboardingRepo(db)
 
 	superAdminRole, err := roleRepo.Get(context.Background(), "Super Admin")
 	if err != nil {
@@ -83,6 +85,23 @@ func serveAddUser(cmd *cobra.Command, args []string) error {
 	err = mailService.SendTemplateEmail(userInfo.Email, "email_invitation", templateData)
 	if err != nil {
 		slog.Error("Failed to send email invitation:", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return err
+	}
+
+	err = userOnboardingProcessRepo.Create(context.Background(), &rbac.UserOnboardingProcess{
+		Email:     userInfo.Email,
+		RoleIds:   []int{superAdminRole[0].Id},
+		Status:    "PENDING",
+		Completed: false,
+		ExpiredAt: time.Now().Add(7 * 24 * time.Hour),
+		CreatedBy: 1,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+		slog.Error("Failed to create user onboarding process:", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 		return err

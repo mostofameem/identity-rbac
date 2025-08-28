@@ -6,6 +6,7 @@ var (
 	ErrNotFound                   = fmt.Errorf("not found")
 	ErrPasswordMismatch           = fmt.Errorf("password mismatch")
 	ErrDuplicateRow               = fmt.Errorf("duplicate row found")
+	ErrRoleNotActive              = fmt.Errorf("role not active")
 	ErrRegistrationNotStarted     = fmt.Errorf("registration time not started")
 	ErrRegistrationTimeNotInRange = fmt.Errorf("registration time not in time")
 	ErrRegistrationTimeFinished   = fmt.Errorf("registration time finished")

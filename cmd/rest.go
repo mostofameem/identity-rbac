@@ -29,7 +29,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 
 	logger.SetupLogger(cnf.ServiceName)
 
-	db, err := repo.NewMysqlDB(cnf.DB)
+	db, err := repo.NewDB(cnf.DB)
 	if err != nil {
 		slog.Error("Failed to Connect with Database:", logger.Extra(map[string]any{
 			"error": err.Error(),
@@ -43,8 +43,16 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	permissionRepo := repo.NewPermissionRepo(db)
 	userHasRoleRepo := repo.NewUserHasRoleRepo(db)
 	roleHasPermissionRepo := repo.NewRoleHasPermissionRepo(db)
+	userOnboardingRepo := repo.NewUserOnboardingRepo(db)
 
-	rbacSvc := rbac.NewService(cnf, userRepo, roleRepo, permissionRepo, userHasRoleRepo, roleHasPermissionRepo)
+	rbacSvc := rbac.NewService(cnf,
+		userRepo,
+		roleRepo,
+		permissionRepo,
+		userHasRoleRepo,
+		roleHasPermissionRepo,
+		userOnboardingRepo,
+	)
 
 	handlers := handlers.NewHandlers(cnf, rbacSvc)
 
