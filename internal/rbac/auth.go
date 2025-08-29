@@ -151,10 +151,12 @@ func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterU
 		return err
 	}
 
-	if userOnboarding != nil {
-		if userOnboarding.ExpiredAt.After(req.CreatedAt) {
-			return util.ErrAlreadyInvited
-		}
+	if userOnboarding == nil {
+		slog.Info("User not invited", logger.Extra(map[string]any{
+			"email": req.Email,
+		}))
+
+		return util.ErrNotFound
 	}
 
 	roles, err := s.roleRepo.Get(ctx, "")

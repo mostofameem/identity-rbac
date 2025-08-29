@@ -133,6 +133,14 @@ func (handlers *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: util.GetCurrentTime(),
 	})
 	if err != nil {
+		if err == util.ErrNotFound {
+			utils.SendError(w, http.StatusBadRequest, "User not found")
+			return
+		} else if err == util.ErrAlreadyRegistered {
+			utils.SendError(w, http.StatusBadRequest, "User already registered")
+			return
+		}
+
 		utils.SendError(w, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
