@@ -13,9 +13,10 @@ import (
 	"strings"
 )
 
-type AddUserReq struct {
-	RoleIds []int  `json:"roleIds" validation:"required"`
-	Email   string `json:"email"  validation:"required,email"`
+type InviteUserReq struct {
+	UserName string `json:"userName" validation:"required"`
+	RoleIds  []int  `json:"roleIds" validation:"required"`
+	Email    string `json:"email"  validation:"required,email"`
 }
 
 type GetAccessToken struct {
@@ -98,46 +99,46 @@ func (handlers *Handlers) GetUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (handlers *Handlers) AddUser(w http.ResponseWriter, r *http.Request) {
-	var addUserReq AddUserReq
-	if err := json.NewDecoder(r.Body).Decode(&addUserReq); err != nil {
+func (handlers *Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
+	var inviteUserReq InviteUserReq
+	if err := json.NewDecoder(r.Body).Decode(&inviteUserReq); err != nil {
 		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := utils.Validate(addUserReq); err != nil {
+	if err := utils.Validate(inviteUserReq); err != nil {
 		utils.SendError(w, http.StatusBadRequest, "Invalid event type")
 		return
 	}
 
-	// createdBy, ok := r.Context().Value(middlewares.UidKey).(int)
-	// if !ok {
-	// 	utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
-	// 	return
-	// }
+	createdBy, ok := r.Context().Value(middlewares.UidKey).(int)
+	if !ok {
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
 
-	// err := handlers.rbacSvc.CreateUserWithMultipleRoles(r.Context(), rbac.RegisterUserReq{
-	// 	Email:     addUserReq.Email,
-	// 	Pass:      DEFAULT_PASSWORD,
-	// 	RoleIds:   addUserReq.RoleIds,
-	// 	IsActive:  true,
-	// 	CreatedBy: createdBy,
-	// 	CreatedAt: util.GetCurrentTime(),
-	// })
-	// if err != nil {
-	// 	if errors.Is(err, util.ErrAlreadyRegistered) {
-	// 		utils.SendError(w, http.StatusConflict, "Conflict: User already exists")
-	// 		return
-	// 	} else if errors.Is(err, util.ErrNotFound) {
-	// 		utils.SendError(w, http.StatusNotFound, "Not Found: Role does not exist")
-	// 		return
-	// 	}
-	// 	utils.SendError(w, http.StatusInternalServerError, "Internal Server Error: Failed to create new user")
-	// 	return
-	// }
+	err := handlers.rbacSvc.InviteUser(r.Context(), rbac.InviteUserReq{
+		UserName:  inviteUserReq.UserName,
+		Email:     inviteUserReq.Email,
+		RoleIds:   inviteUserReq.RoleIds,
+		InvitedBy: createdBy,
+		CreatedAt: util.GetCurrentTime(),
+	})
+	if err != nil {
+		if errors.Is(err, util.ErrAlreadyRegistered) {
+			utils.SendError(w, http.StatusConflict, "Conflict: User already exists")
+			return
+		} else if errors.Is(err, util.ErrNotFound) {
+			utils.SendError(w, http.StatusNotFound, "Not Found: Role does not exist")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error: Failed to create new user")
+		return
+	}
 
 	utils.SendData(w, map[string]any{
-		"message": "Successfully added new user",
+		"message": "Successfully invited new user",
+		"status":  "success",
 	})
 }
 

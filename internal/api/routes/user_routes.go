@@ -69,7 +69,7 @@ func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Ma
 	mux.Handle(
 		"POST /api/v1/users/invite",
 		manager.With(
-			http.HandlerFunc(server.handlers.AddUser),
+			http.HandlerFunc(server.handlers.InviteUser),
 			server.middleware.Authorization(middlewares.USER_CREATE_ACCESS),
 			server.middleware.AuthenticateJWT,
 		),

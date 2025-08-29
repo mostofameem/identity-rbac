@@ -121,3 +121,11 @@ type CreateUserSessionReq struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type InviteUserReq struct {
+	UserName  string
+	Email     string
+	RoleIds   []int
+	InvitedBy int
+	CreatedAt time.Time
+}

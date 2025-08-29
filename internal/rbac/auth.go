@@ -146,6 +146,17 @@ func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterU
 		return util.ErrAlreadyRegistered
 	}
 
+	userOnboarding, err := s.userOnboardingRepo.GetUserOnboarding(ctx, req.Email)
+	if err != nil {
+		return err
+	}
+
+	if userOnboarding != nil {
+		if userOnboarding.ExpiredAt.After(req.CreatedAt) {
+			return util.ErrAlreadyInvited
+		}
+	}
+
 	roles, err := s.roleRepo.Get(ctx, "")
 	if err != nil {
 		return err
@@ -177,15 +188,6 @@ func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterU
 		return err
 	}
 	req.Password = hashPass
-
-	userOnboarding, err := s.userOnboardingRepo.GetUserOnboarding(ctx, req.Email)
-	if err != nil {
-		return err
-	}
-
-	if userOnboarding == nil {
-		return util.ErrNotFound
-	}
 
 	var roleIds []int
 	if err := json.Unmarshal([]byte(userOnboarding.RoleIds), &roleIds); err != nil {
