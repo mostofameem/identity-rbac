@@ -156,7 +156,7 @@ func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterU
 			"email": req.Email,
 		}))
 
-		return util.ErrAlreadyRegistered
+		return util.ErrNotFound
 	}
 
 	roles, err := s.roleRepo.Get(ctx, "")
