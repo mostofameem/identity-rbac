@@ -1,43 +1,75 @@
+/**
+ * Main App Component
+ * 
+ * The root component that handles routing and authentication.
+ * Uses the new PageLayout and refactored page components.
+ * 
+ * Features:
+ * - Protected routes with authentication
+ * - Consistent layout across all pages
+ * - Clean routing structure
+ */
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PageLayout } from './components/layout';
+import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
 import LoginPage from './components/LoginPage';
 import HomePage from './components/HomePage';
-import AdminDashboard from './components/AdminDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useMessage } from './hooks';
 
-// Protected Route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+/**
+ * Page Wrapper Component
+ * 
+ * Wraps page components with consistent layout and message handling
+ */
+interface PageWrapperProps {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}
 
-  if (isLoading) {
-    return <div className="loading">Loading...</div>;
-  }
+const PageWrapper: React.FC<PageWrapperProps> = ({ title, subtitle, children }) => {
+  const { message, messageType, showMessage, clearMessage } = useMessage();
+  const [loading, setLoading] = React.useState(false);
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  const handleShowMessage = (msg: string, isError: boolean = false) => {
+    showMessage(msg, isError ? 'error' : 'success');
+  };
+
+  return (
+    <PageLayout title={title} subtitle={subtitle}>
+      {React.cloneElement(children as React.ReactElement, {
+        showMessage: handleShowMessage,
+        loading,
+        setLoading,
+      })}
+    </PageLayout>
+  );
 };
 
-// Public Route component (redirects to home if already logged in)
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  return user ? <Navigate to="/" replace /> : <>{children}</>;
-};
-
+/**
+ * App Routes Component
+ * 
+ * Defines all application routes with proper authentication checks
+ */
 const AppRoutes: React.FC = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        } 
-      />
+      {/* Home Route */}
       <Route 
         path="/" 
         element={
@@ -46,27 +78,83 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         } 
       />
+      
+      {/* Management Routes */}
       <Route 
-        path="/admin" 
+        path="/users" 
         element={
-          <ProtectedRoute>
-            <AdminDashboard />
+          <ProtectedRoute requiredPermission="user">
+            <PageWrapper 
+              title="User Management" 
+              subtitle="Manage users and their role assignments"
+            >
+              <UserManagement 
+                showMessage={() => {}} 
+                loading={false} 
+                setLoading={() => {}} 
+              />
+            </PageWrapper>
           </ProtectedRoute>
         } 
       />
+      
+      <Route 
+        path="/roles" 
+        element={
+          <ProtectedRoute requiredPermission="role">
+            <PageWrapper 
+              title="Role Management" 
+              subtitle="Create and manage system roles with permissions"
+            >
+              <RoleManagement 
+                showMessage={() => {}} 
+                loading={false} 
+                setLoading={() => {}} 
+              />
+            </PageWrapper>
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/permissions" 
+        element={
+          <ProtectedRoute requiredPermission="permission">
+            <PageWrapper 
+              title="Permission Management" 
+              subtitle="View and manage system permissions"
+            >
+              <PermissionManagement 
+                showMessage={() => {}} 
+                loading={false} 
+                setLoading={() => {}} 
+              />
+            </PageWrapper>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
 
+/**
+ * Main App Component
+ * 
+ * Root component with routing and authentication context
+ */
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
+        <div className="min-h-screen bg-gray-100">
+          <AppRoutes />
+        </div>
       </Router>
     </AuthProvider>
   );
 };
 
-export default App; 
+export default App;
