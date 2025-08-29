@@ -1,5 +1,4 @@
 import axios, { AxiosResponse } from 'axios';
-import { Event, EventsResponse } from '../types/events';
 
 const API_BASE_URL = 'http://localhost:5001'; // Backend running on port 5001
 
@@ -65,10 +64,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface GetUserPermissionsResponse {
+  data: string[];
+}
+
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
-  permissions: string[];
+  message: string;
+  status: string;
 }
 
 export interface GetEventsParams {
@@ -79,14 +83,41 @@ export interface GetEventsParams {
   sortOrder?: 'ASC' | 'DESC';
 }
 
+interface Event {
+  id: number;
+  name: string;
+  description: string;
+  startDate: string; // ISO date string
+  endDate: string;   // ISO date string
+  location?: string;
+  capacity?: number;
+  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;  // ISO date string
+  updatedAt: string;  // ISO date string
+}
+
+interface EventsResponse {
+  data: Event[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface RegisterEventRequest {
   action: 'REGISTER';
   guestCount: number;
 }
 
 export const apiClient = {
+  // Generic GET method
+  get: <T>(url: string, params?: any): Promise<AxiosResponse<T>> => {
+    return axiosInstance.get<T>(url, { params });
+  },
   login: (data: LoginRequest): Promise<AxiosResponse<LoginResponse>> =>
-    axiosInstance.post('/v1/login', data),
+    axiosInstance.post('/api/v1/login', data),
 
   getEvents: (params: GetEventsParams = {}): Promise<AxiosResponse<EventsResponse>> => {
     const searchParams = new URLSearchParams();
@@ -105,4 +136,7 @@ export const apiClient = {
 
   refreshToken: (refreshToken: string): Promise<AxiosResponse<{ accessToken: string }>> =>
     axiosInstance.get(`/v1/token/refresh?token=${refreshToken}`),
+
+  getUserPermissions: (): Promise<AxiosResponse<GetUserPermissionsResponse>> =>
+    axiosInstance.get('/api/v1/users/me/permissions'),
 }; 

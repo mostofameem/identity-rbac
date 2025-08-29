@@ -57,6 +57,7 @@ adminAxiosInstance.interceptors.response.use(
 // User Management Types
 export interface AddUserRequest {
   email: string;
+  userName: string;
   roleIds: number[];
 }
 
@@ -216,40 +217,40 @@ export const adminApiClient = {
   getUsers: (email?: string): Promise<AxiosResponse<GetUsersResponse>> => {
     const params = new URLSearchParams();
     if (email) params.append('email', email);
-    return adminAxiosInstance.get(`/v1/users?${params.toString()}`);
+    return adminAxiosInstance.get(`/api/v1/users?${params.toString()}`);
   },
 
   addUser: (data: AddUserRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/users/add', data),
+    adminAxiosInstance.post('/api/v1/users/invite', data),
 
   assignRoleToUser: (data: AssignRoleToUserRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/users/assign-role', data),
+    adminAxiosInstance.post('/api/v1/users/assign-role', data),
 
   // Role Management
   getRoles: (title?: string): Promise<AxiosResponse<GetRolesResponse>> => {
     const params = new URLSearchParams();
     if (title) params.append('title', title);
-    return adminAxiosInstance.get(`/v1/roles?${params.toString()}`);
+    return adminAxiosInstance.get(`/api/v1/roles?${params.toString()}`);
   },
 
   createRoleV2: (data: CreateRoleV2Request): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/roles', data),
+    adminAxiosInstance.post('/api/v1/roles', data),
 
   updateRole: (roleId: number, data: UpdateRoleRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.put(`/v1/roles/${roleId}`, data),
+    adminAxiosInstance.put(`/api/v1/roles/${roleId}`, data),
 
   // Permission Management
   getPermissions: (title?: string): Promise<AxiosResponse<GetPermissionsResponse>> => {
     const params = new URLSearchParams();
     if (title) params.append('title', title);
-    return adminAxiosInstance.get(`/v1/permissions?${params.toString()}`);
+    return adminAxiosInstance.get(`/api/v1/permissions?${params.toString()}`);
   },
 
   createPermission: (data: CreatePermissionRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/permissions', data),
+    adminAxiosInstance.post('/api/v1/permissions', data),
 
   assignPermissionToRole: (data: AssignPermissionToRoleRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/roles/assign-permission', data),
+    adminAxiosInstance.post('/api/v1/roles/assign-permission', data),
 
   // Event Management
   getEvents: (filters: GetEventFilters = {}): Promise<AxiosResponse<GetEventsResponse>> => {

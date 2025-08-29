@@ -48,60 +48,20 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ showMessage, loading, s
 
   const fetchPermissions = async () => {
     try {
-      setLoading(true);
-      const response = await adminApiClient.getPermissions('');
-      const permissions = response.data.data || [];
-      setPermissions(permissions);
+      const response = await adminApiClient.getPermissions();
+      setPermissions(response.data.data || []);
     } catch (err: any) {
       showMessage(err.response?.data?.message || 'Failed to fetch permissions', true);
       setPermissions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddRoleV2 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newRoleV2.name || !newRoleV2.description || newRoleV2.permissionIds.length === 0) {
-      showMessage('Please fill in all fields and select at least one permission', true);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await adminApiClient.createRoleV2({
-        roleName: newRoleV2.name,
-        description: newRoleV2.description,
-        permissionIds: newRoleV2.permissionIds
-      });
-      showMessage('Role created successfully with permissions');
-      setNewRoleV2({ name: '', description: '', permissionIds: [] });
-      fetchRoles();
-    } catch (err: any) {
-      showMessage(err.response?.data?.message || 'Failed to create role', true);
-    } finally {
-      setLoading(false);
     }
   };
 
   const searchPermissionsForRole = async (searchTerm: string) => {
-    if (!searchTerm.trim()) {
-      setSearchedPermissionsForRole([]);
-      setShowPermissionForRoleDropdown(false);
-      setIsSearchingPermissionsForRole(false);
-      return;
-    }
-
+    setIsSearchingPermissionsForRole(true);
+    setShowPermissionForRoleDropdown(true);
     try {
-      setIsSearchingPermissionsForRole(true);
       const response = await adminApiClient.getPermissions(searchTerm);
-      const permissions = response.data.data || [];
-      // Filter out already selected permissions
-      const filteredPermissions = permissions.filter(
-        permission => !newRoleV2.permissionIds.includes(permission.id)
-      );
-      setSearchedPermissionsForRole(filteredPermissions);
-      setShowPermissionForRoleDropdown(true);
+      setSearchedPermissionsForRole(response.data.data || []);
     } catch (err: any) {
       showMessage(err.response?.data?.message || 'Failed to search permissions', true);
       setSearchedPermissionsForRole([]);
@@ -112,28 +72,46 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ showMessage, loading, s
 
   const handlePermissionSearchForRole = (value: string) => {
     setPermissionSearchForRole(value);
-    
     if (value.length === 0) {
-      setSearchedPermissionsForRole([]);
       setShowPermissionForRoleDropdown(false);
-    } else if (value.length >= 1) {
-      setShowPermissionForRoleDropdown(true);
-      if (value.length < 2) {
-        setSearchedPermissionsForRole([]);
-      }
+      setSearchedPermissionsForRole([]);
     }
   };
 
   const selectPermissionForRole = (permission: Permission) => {
-    // Add permission to selected list
-    setNewRoleV2({
-      ...newRoleV2,
-      permissionIds: [...newRoleV2.permissionIds, permission.id]
-    });
-    // Clear search
+    if (!newRoleV2.permissionIds.includes(permission.id)) {
+      setNewRoleV2({
+        ...newRoleV2,
+        permissionIds: [...newRoleV2.permissionIds, permission.id]
+      });
+    }
     setPermissionSearchForRole('');
     setShowPermissionForRoleDropdown(false);
     setSearchedPermissionsForRole([]);
+  };
+
+  const handleAddRoleV2 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoleV2.name || !newRoleV2.description) {
+      showMessage('Please fill in all required fields', true);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await adminApiClient.createRoleV2({
+        roleName: newRoleV2.name,
+        description: newRoleV2.description,
+        permissionIds: newRoleV2.permissionIds
+      });
+      showMessage('Role created successfully');
+      setNewRoleV2({ name: '', description: '', permissionIds: [] });
+      fetchRoles();
+    } catch (err: any) {
+      showMessage(err.response?.data?.message || 'Failed to create role', true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const removePermissionFromRole = (permissionId: number) => {
@@ -144,173 +122,267 @@ const RoleManagement: React.FC<RoleManagementProps> = ({ showMessage, loading, s
   };
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header Section */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-white mb-2">Role Management</h2>
-        <p className="text-blue-100">Create and manage roles with permissions</p>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Role Management</h1>
+        <p className="text-lg text-gray-600">Create and manage system roles with permissions</p>
       </div>
 
-      {/* Add Role with Permissions Form */}
-      <div className="card bg-base-100 shadow-xl">
-        <div className="card-body">
-          <h3 className="card-title text-primary">Add New Role with Permissions</h3>
-          <form onSubmit={handleAddRoleV2} className="space-y-4">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold">Name</span>
+      {/* Create New Role Section - Compact */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Create New Role
+          </h2>
+        </div>
+        
+        <form onSubmit={handleAddRoleV2} className="px-6 py-4 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Role Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Role Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                className="input input-bordered w-full"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                 value={newRoleV2.name}
                 onChange={(e) => setNewRoleV2({ ...newRoleV2, name: e.target.value })}
-                placeholder="Enter role name"
+                placeholder="e.g., Admin, Editor"
                 required
               />
             </div>
-            
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold">Description</span>
+
+            {/* Role Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description <span className="text-red-500">*</span>
               </label>
-              <textarea
-                className="textarea textarea-bordered h-24"
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                 value={newRoleV2.description}
                 onChange={(e) => setNewRoleV2({ ...newRoleV2, description: e.target.value })}
-                placeholder="Enter role description"
+                placeholder="Brief role description"
                 required
               />
             </div>
-            
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold">Permissions</span>
+
+            {/* Permissions Search */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Add Permissions
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  className="input input-bordered w-full"
+                  className="w-full px-3 py-2 pl-8 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                   value={permissionSearchForRole}
                   onChange={(e) => handlePermissionSearchForRole(e.target.value)}
-                  placeholder="Search permissions by name..."
+                  placeholder="Search permissions..."
                 />
+                <svg className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                
                 {showPermissionForRoleDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-base-100 border border-base-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {isSearchingPermissionsForRole ? (
-                      <div className="p-4 text-center">
-                        <span className="loading loading-spinner loading-sm"></span>
-                        <span className="ml-2">Searching permissions...</span>
+                      <div className="p-3 text-center">
+                        <div className="inline-flex items-center text-sm">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Searching...
+                        </div>
                       </div>
                     ) : searchedPermissionsForRole.length > 0 ? (
                       searchedPermissionsForRole.map(permission => (
                         <div
                           key={permission.id}
-                          className="p-3 hover:bg-base-200 cursor-pointer border-b border-base-300 last:border-b-0"
+                          className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                           onClick={() => selectPermissionForRole(permission)}
                         >
-                          <div className="font-semibold">{permission.name}</div>
-                          <div className="text-sm text-base-content/60">{permission.description}</div>
+                          <div className="font-medium text-gray-900 text-sm">{permission.name}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{permission.description}</div>
                         </div>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-base-content/60">
+                      <div className="p-3 text-center text-gray-500 text-sm">
                         {permissionSearchForRole.length === 0 
-                          ? "Start typing to search permissions..."
+                          ? "Start typing to search..."
                           : permissionSearchForRole.length < 2 
-                            ? "Type at least 2 characters to search..."
-                            : `No permissions found matching "${permissionSearchForRole}"`
+                            ? "Type at least 2 characters..."
+                            : `No permissions found`
                         }
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              
-              {newRoleV2.permissionIds.length > 0 && (
-                <div className="mt-4">
-                  <span className="label-text font-semibold">Selected Permissions:</span>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newRoleV2.permissionIds.map(permissionId => {
-                      const permission = permissions.find(p => p.id === permissionId);
-                      return permission ? (
-                        <div key={permissionId} className="badge badge-primary gap-2 p-3">
-                          {permission.name}
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs text-white hover:text-error"
-                            onClick={() => removePermissionFromRole(permissionId)}
-                            title="Remove permission"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
-            
-            <button type="submit" disabled={loading} className="btn btn-primary w-full">
-              {loading ? <span className="loading loading-spinner"></span> : 'Create Role'}
+          </div>
+
+          {/* Selected Permissions - Compact Display */}
+          {newRoleV2.permissionIds.length > 0 && (
+            <div className="p-3 bg-gray-50 rounded-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Selected ({newRoleV2.permissionIds.length})</span>
+                <button
+                  type="button"
+                  onClick={() => setNewRoleV2({ ...newRoleV2, permissionIds: [] })}
+                  className="text-xs text-gray-500 hover:text-red-600 transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {newRoleV2.permissionIds.map(permissionId => {
+                  const permission = permissions.find(p => p.id === permissionId);
+                  return permission ? (
+                    <span 
+                      key={permissionId} 
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                      {permission.name}
+                      <button
+                        type="button"
+                        className="ml-1 inline-flex items-center justify-center w-3 h-3 rounded-full text-blue-600 hover:bg-blue-200 transition-colors"
+                        onClick={() => removePermissionFromRole(permissionId)}
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Submit Button */}
+          <div className="flex justify-end pt-3 border-t border-gray-200">
+            <button 
+              type="submit" 
+              disabled={loading || !newRoleV2.name || !newRoleV2.description}
+              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {loading ? (
+                <span className="inline-flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating...
+                </span>
+              ) : (
+                'Create Role'
+              )}
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
 
-      {/* Roles List */}
-      <div className="card bg-base-100 shadow-xl">
-        <div className="card-body">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="card-title">Roles</h3>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className="input input-bordered input-sm"
-                placeholder="Filter by name"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              />
-              <button onClick={fetchRoles} className="btn btn-outline btn-sm">
-                Filter
+      {/* Roles List Section */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+        <div className="px-8 py-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <h2 className="text-2xl font-semibold text-gray-800 flex items-center">
+              <svg className="w-6 h-6 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+              Existing Roles ({roles.length})
+            </h2>
+            
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Filter roles..."
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                />
+                <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <button 
+                onClick={fetchRoles} 
+                className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors text-sm"
+              >
+                Refresh
               </button>
             </div>
           </div>
-          
-          <div className="overflow-x-auto">
-            <table className="table table-zebra">
-              <thead>
+        </div>
+        
+        <div className="overflow-x-auto">
+          {roles.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8V4a1 1 0 00-1-1H7a1 1 0 00-1 1v1m8 0V4.5" />
+              </svg>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No roles found</h3>
+              <p className="mt-2 text-gray-500">Get started by creating your first role.</p>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th>Name</th>
-                  <th>Description</th>
-                  <th>Permissions</th>
-                  <th>Created At</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {roles.map(role => (
-                  <tr key={role.id}>
-                    <td className="font-semibold">{role.name}</td>
-                    <td>{role.description}</td>
-                    <td>
+                  <tr key={role.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{role.name}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-700 max-w-xs">{role.description}</div>
+                    </td>
+                    <td className="px-6 py-4">
                       {role.permissions && role.permissions.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {role.permissions.map(permission => (
-                            <div key={permission.id} className="badge badge-outline badge-sm">
+                          {role.permissions.slice(0, 3).map(permission => (
+                            <span 
+                              key={permission.id} 
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                            >
                               {permission.name}
-                            </div>
+                            </span>
                           ))}
+                          {role.permissions.length > 3 && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              +{role.permissions.length - 3} more
+                            </span>
+                          )}
                         </div>
                       ) : (
-                        <span className="text-base-content/60">No permissions</span>
+                        <span className="text-sm text-gray-400 italic">No permissions assigned</span>
                       )}
                     </td>
-                    <td>{new Date(role.createdAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(role.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          )}
         </div>
       </div>
     </div>

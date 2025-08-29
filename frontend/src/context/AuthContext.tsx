@@ -5,6 +5,7 @@ interface User {
   id: number;
   email: string;
   name: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -12,6 +13,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
+  hasResourcePermission: (resource: string, action?: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,26 +39,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await apiClient.login({
+      const loginResponse = await apiClient.login({
         email,
         password,
       });
 
-      const { accessToken, refreshToken, permissions } = response.data;
+      const { accessToken, refreshToken } = loginResponse.data;
       
       localStorage.setItem('token', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
       
-      // Create user object from email since backend doesn't return user details
+      // Fetch user permissions after successful login
+      const permissionsResponse = await apiClient.getUserPermissions();
+      const permissions = permissionsResponse.data.data || [];
+      
+      // Debug: Log permissions to console
+      console.log('User permissions:', permissions);
+      
       const userData: User = {
         id: 0, // We don't have user ID from backend
         email,
         name: email.split('@')[0], // Use email prefix as name
+        permissions,
       };
       
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('permissions', JSON.stringify(permissions));
-      
       setUser(userData);
     } catch (error: any) {
       console.error('Login failed:', error);
@@ -87,11 +96,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const hasPermission = (permission: string): boolean => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes(permission);
+  };
+
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    if (!user || !user.permissions) return false;
+    return permissions.some(permission => user.permissions?.includes(permission));
+  };
+
+  const hasResourcePermission = (resource: string, action?: string): boolean => {
+    if (!user || !user.permissions) return false;
+    if (action) {
+      return user.permissions.includes(`${resource}.${action}`);
+    }
+    return user.permissions.some(permission => permission.startsWith(`${resource}.`));
+  };
+
   const value = {
     user,
     login,
     logout,
     isLoading,
+    hasPermission,
+    hasAnyPermission,
+    hasResourcePermission,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
