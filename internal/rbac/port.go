@@ -7,6 +7,7 @@ import (
 
 type Service interface {
 	CreateUserWithMultipleRoles(ctx context.Context, req RegisterUserReq) error
+	InviteUser(ctx context.Context, req InviteUserReq) error
 	Login(ctx context.Context, params LoginWithSessionParams) (string, string, error)
 	AuthLogin(ctx context.Context, email string) (string, string, error)
 

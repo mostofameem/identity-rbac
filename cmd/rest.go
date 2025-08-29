@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"identity-rbac/config"
+	mail "identity-rbac/internal/Mail"
 	"identity-rbac/internal/api/handlers"
 	"identity-rbac/internal/api/middlewares"
 	web "identity-rbac/internal/api/routes"
@@ -47,6 +48,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	userOnboardingRepo := repo.NewUserOnboardingRepo(db)
 	tokenService := token.NewTokenService(cnf)
 	userSessionRepo := repo.NewUserSessionRepo(db)
+	mailService := mail.NewMailService(cnf.Mail)
 
 	rbacSvc := rbac.NewService(cnf,
 		userRepo,
@@ -57,6 +59,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		userOnboardingRepo,
 		userSessionRepo,
 		tokenService,
+		mailService,
 	)
 
 	handlers := handlers.NewHandlers(cnf, rbacSvc)

@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"identity-rbac/config"
+	mail "identity-rbac/internal/Mail"
 	"identity-rbac/internal/token"
 )
 
@@ -15,6 +16,7 @@ type service struct {
 	userOnboardingRepo    UserOnboardingRepo
 	userSessionRepo       UserSessionRepo
 	tokenService          token.TokenService
+	mailService           mail.MailService
 }
 
 func NewService(
@@ -27,6 +29,7 @@ func NewService(
 	userOnboardingRepo UserOnboardingRepo,
 	userSessionRepo UserSessionRepo,
 	tokenService token.TokenService,
+	mailService mail.MailService,
 ) Service {
 	return &service{
 		cnf:                   cnf,
@@ -38,5 +41,6 @@ func NewService(
 		userOnboardingRepo:    userOnboardingRepo,
 		userSessionRepo:       userSessionRepo,
 		tokenService:          tokenService,
+		mailService:           mailService,
 	}
 }
