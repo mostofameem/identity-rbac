@@ -9,6 +9,7 @@ import (
 	"identity-rbac/internal/rbac"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -156,9 +157,9 @@ func (r *userRepo) getRoleWisePermissionQueryBuilder() BuildQuery {
 }
 
 func (r *userRepo) GetUsers(ctx context.Context, email string) ([]rbac.Users, error) {
-	query, args, err := NewQueryBuilder(r.getUserQueryBuilder()).
-		FilterByFullText("email", email).
-		Limit(5).
+	query, args, err := NewQueryBuilder(r.getUsersWithRolesQueryBuilder()).
+		FilterByFullText("u.email", email).
+		Limit(50).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build query", logger.Extra(map[string]any{
@@ -167,8 +168,19 @@ func (r *userRepo) GetUsers(ctx context.Context, email string) ([]rbac.Users, er
 		return nil, err
 	}
 
-	var roles []rbac.Users
-	if err := r.db.SelectContext(ctx, &roles, query, args...); err != nil {
+	type UserRoleResult struct {
+		UserId        int       `db:"user_id"`
+		UserName      string    `db:"user_name"`
+		UserEmail     string    `db:"user_email"`
+		UserIsActive  bool      `db:"user_is_active"`
+		UserCreatedAt time.Time `db:"user_created_at"`
+		RoleId        *int      `db:"role_id"`
+		RoleName      *string   `db:"role_name"`
+		RoleIsActive  *bool     `db:"role_is_active"`
+	}
+
+	var results []UserRoleResult
+	if err := r.db.SelectContext(ctx, &results, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -181,16 +193,55 @@ func (r *userRepo) GetUsers(ctx context.Context, email string) ([]rbac.Users, er
 		return nil, err
 	}
 
-	return roles, nil
+	userMap := make(map[int]*rbac.Users)
+	for _, result := range results {
+		user, exists := userMap[result.UserId]
+		if !exists {
+			user = &rbac.Users{
+				Id:        result.UserId,
+				Name:      result.UserName,
+				Email:     result.UserEmail,
+				IsActive:  result.UserIsActive,
+				CreatedAt: result.UserCreatedAt,
+				Roles:     []rbac.Roles{},
+			}
+			userMap[result.UserId] = user
+		}
+
+		if result.RoleId != nil && result.RoleName != nil && result.RoleIsActive != nil {
+			role := rbac.Roles{
+				Id:       *result.RoleId,
+				Name:     *result.RoleName,
+				IsActive: *result.RoleIsActive,
+			}
+			user.Roles = append(user.Roles, role)
+		}
+	}
+
+	users := make([]rbac.Users, 0, len(userMap))
+	for _, user := range userMap {
+		users = append(users, *user)
+	}
+
+	return users, nil
 }
 
-func (r *userRepo) getUserQueryBuilder() BuildQuery {
+func (r *userRepo) getUsersWithRolesQueryBuilder() BuildQuery {
 	return func() sq.SelectBuilder {
 		return r.psql.Select(
-			"id",
-			"email",
+			"u.id as user_id",
+			"CONCAT(u.first_name, ' ', u.last_name) as user_name",
+			"u.email as user_email",
+			"u.is_active as user_is_active",
+			"u.created_at as user_created_at",
+			"r.id as role_id",
+			"r.name as role_name",
+			"r.is_active as role_is_active",
 		).
-			From(r.table)
+			From(r.table + " AS u").
+			LeftJoin("user_roles AS ur ON ur.user_id = u.id").
+			LeftJoin("roles AS r ON r.id = ur.role_id AND r.is_active = true").
+			OrderBy("u.id, r.id")
 	}
 }
 
