@@ -79,8 +79,12 @@ type Permissions struct {
 }
 
 type Users struct {
-	Id    int    `db:"id" json:"id"`
-	Email string `db:"email" json:"email"`
+	Id        int       `db:"id"             json:"id"`
+	Name      string    `                    json:"name"`
+	Email     string    `db:"email"          json:"email"`
+	IsActive  bool      `db:"is_active"      json:"isActive"`
+	CreatedAt time.Time `db:"created_at"     json:"createdAt"`
+	Roles     []Roles   `                    json:"roles"`
 }
 
 type ResetPasswordReq struct {

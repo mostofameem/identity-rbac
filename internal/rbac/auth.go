@@ -128,12 +128,12 @@ func (s *service) GetUserPermission(ctx context.Context, userId int) ([]string, 
 }
 
 func (s *service) GetUsers(ctx context.Context, email string) ([]Users, error) {
-	roles, err := s.userRepo.GetUsers(ctx, email)
+	users, err := s.userRepo.GetUsers(ctx, email)
 	if err != nil {
 		return nil, err
 	}
 
-	return roles, nil
+	return users, nil
 }
 
 func (s *service) CreateUserWithMultipleRoles(ctx context.Context, req RegisterUserReq) error {
