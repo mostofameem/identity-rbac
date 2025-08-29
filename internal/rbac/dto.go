@@ -1,6 +1,10 @@
 package rbac
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type AddRole struct {
 	Name        string
@@ -106,4 +110,14 @@ type UserOnboardingProcess struct {
 	ExpiredAt time.Time `db:"expired_at"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
+}
+
+type CreateUserSessionReq struct {
+	UserId    int
+	Jti       uuid.UUID
+	IpAddress *string
+	UserAgent *string
+	ExpiresAt time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

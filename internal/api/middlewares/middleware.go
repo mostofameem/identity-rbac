@@ -6,7 +6,7 @@ import (
 )
 
 type UserRepo interface {
-	GetRoleWisePermission(ctx context.Context, userId int) ([]string, error)
+	GetUserPermission(ctx context.Context, userId int) ([]string, error)
 }
 
 type RoleRepo interface {

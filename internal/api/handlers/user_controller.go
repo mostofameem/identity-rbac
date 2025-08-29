@@ -7,34 +7,13 @@ import (
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/rbac"
 	"identity-rbac/internal/util"
-	"identity-rbac/pkg/logger"
 	"log"
-	"log/slog"
+	"net"
 	"net/http"
-
-	"github.com/markbates/goth/gothic"
+	"strings"
 )
-
-const (
-	DEFAULT_PASSWORD = "123123"
-)
-
-type LoginReq struct {
-	Email string `json:"email" validate:"required"`
-	Pass  string `json:"password" validate:"required"`
-}
-
-type RegisterReq struct {
-	FirstName string `json:"firstName" validate:"required"`
-	LastName  string `json:"lastName" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-}
 
 type AddUserReq struct {
-	Email string `json:"email" validation:"required"`
-}
-
-type AddUserV2Req struct {
 	RoleIds []int  `json:"roleIds" validation:"required"`
 	Email   string `json:"email"  validation:"required,email"`
 }
@@ -51,145 +30,6 @@ type ResetPasswordReq struct {
 	UserID      int    `validation:"required"`
 	OldPassword string `json:"oldPassword"  validation:"required"`
 	NewPassword string `json:"newPassword"  validation:"required,min=6"`
-}
-
-func (handlers *Handlers) Login(w http.ResponseWriter, r *http.Request) {
-	var loginReq LoginReq
-	if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if err := utils.Validate(loginReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid req params")
-		return
-	}
-
-	accessToken, refreshToken, err := handlers.rbacSvc.Login(r.Context(), rbac.LoginParams{
-		Email: loginReq.Email,
-		Pass:  loginReq.Pass,
-	})
-	if err != nil {
-		if err == rbac.ErrInvalidPassword {
-			utils.SendError(w, 401, "email and password didn't match")
-			return
-		}
-		if err == rbac.ErrUserNotFound {
-			utils.SendError(w, 401, "you are not a user")
-			return
-		}
-
-		utils.SendError(w, http.StatusInternalServerError, "Failed to get user")
-		return
-	}
-
-	if accessToken == "" || refreshToken == "" {
-		utils.SendError(w, http.StatusNotFound, "User not found")
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
-	})
-}
-
-func (handlers *Handlers) Register(w http.ResponseWriter, r *http.Request) {
-	var registerReq RegisterReq
-	if err := json.NewDecoder(r.Body).Decode(&registerReq); err != nil {
-		slog.Error("Failed to decode request body", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	userEmail, ok := r.Context().Value(middlewares.UserEmailKey).(string)
-	if !ok {
-		utils.SendError(w, http.StatusBadRequest, "User ID not found in context")
-		return
-	}
-
-	roleIds, ok := r.Context().Value(middlewares.RoleIdsKey).([]int)
-	if !ok {
-		utils.SendError(w, http.StatusBadRequest, "Role IDs not found in context")
-		return
-	}
-
-	if err := utils.Validate(registerReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid event type")
-		return
-	}
-
-	err := handlers.rbacSvc.CreateUserWithMultipleRoles(r.Context(), rbac.RegisterUserReq{
-		Email:     userEmail,
-		Password:  registerReq.Password,
-		FirstName: registerReq.FirstName,
-		LastName:  registerReq.LastName,
-		RoleIds:   roleIds,
-		IsActive:  true,
-		CreatedAt: util.GetCurrentTime(),
-	})
-	if err != nil {
-		utils.SendError(w, http.StatusInternalServerError, "Failed to create user")
-		return
-	}
-
-	utils.SendDataWithStatus(w, map[string]any{
-		"message": "User Registered successfully",
-	}, http.StatusCreated)
-}
-
-func (handlers *Handlers) AddUser(w http.ResponseWriter, r *http.Request) {
-	var addUserReq AddUserReq
-	if err := json.NewDecoder(r.Body).Decode(&addUserReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if err := utils.Validate(addUserReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid event type")
-		return
-	}
-
-	// err := handlers.rbacSvc.CreateUser(r.Context(), rbac.RegisterUserReq{
-	// 	Email:     addUserReq.Email,
-	// 	Pass:      "123123",
-	// 	IsActive:  true,
-	// 	CreatedAt: util.GetCurrentTime(),
-	// })
-	// if err != nil {
-	// 	utils.SendError(w, http.StatusInternalServerError, "Failed to create user")
-	// 	return
-	// }
-
-	utils.SendData(w, map[string]any{
-		"message": "Successfully added new user",
-	})
-}
-
-func (handlers *Handlers) AuthLogin(w http.ResponseWriter, r *http.Request) {
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	accessToken, refreshToken, err := handlers.rbacSvc.AuthLogin(r.Context(), user.Email)
-	if err != nil {
-		utils.SendError(w, http.StatusNotFound, "Failed to get user")
-		return
-	}
-
-	if accessToken == "" || refreshToken == "" {
-		utils.SendError(w, http.StatusNotFound, "User not found")
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
-	})
 }
 
 func (handlers *Handlers) GetUserPermissions(w http.ResponseWriter, r *http.Request) {
@@ -238,48 +78,6 @@ func (handlers *Handlers) GetAccessToken(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-func (handlers *Handlers) LoginV2(w http.ResponseWriter, r *http.Request) {
-	var loginReq LoginReq
-	if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if err := utils.Validate(loginReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid req params")
-		return
-	}
-
-	accessToken, refreshToken, permissions, err := handlers.rbacSvc.LoginV2(r.Context(), rbac.LoginParams{
-		Email: loginReq.Email,
-		Pass:  loginReq.Pass,
-	})
-	if err != nil {
-		if err == rbac.ErrInvalidPassword {
-			utils.SendError(w, 401, "email and password didn't match")
-			return
-		}
-		if err == rbac.ErrUserNotFound {
-			utils.SendError(w, 401, "you are not a user")
-			return
-		}
-
-		utils.SendError(w, http.StatusInternalServerError, "Failed to get user")
-		return
-	}
-
-	if accessToken == "" || refreshToken == "" {
-		utils.SendError(w, http.StatusNotFound, "User not found")
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
-		"permissions":  permissions,
-	})
-}
-
 func (handlers *Handlers) GetUsers(w http.ResponseWriter, r *http.Request) {
 	var getUsersReq GetUsersReq
 
@@ -300,8 +98,8 @@ func (handlers *Handlers) GetUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (handlers *Handlers) AddUserV2(w http.ResponseWriter, r *http.Request) {
-	var addUserReq AddUserV2Req
+func (handlers *Handlers) AddUser(w http.ResponseWriter, r *http.Request) {
+	var addUserReq AddUserReq
 	if err := json.NewDecoder(r.Body).Decode(&addUserReq); err != nil {
 		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -318,7 +116,7 @@ func (handlers *Handlers) AddUserV2(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	// err := handlers.rbacSvc.CreateUserV2WithMultipleRoles(r.Context(), rbac.CreateUserV2Req{
+	// err := handlers.rbacSvc.CreateUserWithMultipleRoles(r.Context(), rbac.RegisterUserReq{
 	// 	Email:     addUserReq.Email,
 	// 	Pass:      DEFAULT_PASSWORD,
 	// 	RoleIds:   addUserReq.RoleIds,
@@ -383,4 +181,36 @@ func (handlers *Handlers) ResetPassword(w http.ResponseWriter, r *http.Request) 
 	utils.SendData(w, map[string]any{
 		"message": "Successfully Updated new password",
 	})
+}
+
+func getClientIP(r *http.Request) net.IP {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			ip := strings.TrimSpace(ips[0])
+			if parsedIP := net.ParseIP(ip); parsedIP != nil {
+				return parsedIP
+			}
+		}
+	}
+
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		if parsedIP := net.ParseIP(xri); parsedIP != nil {
+			return parsedIP
+		}
+	}
+
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		if parsedIP := net.ParseIP(r.RemoteAddr); parsedIP != nil {
+			return parsedIP
+		}
+		return nil
+	}
+
+	if parsedIP := net.ParseIP(ip); parsedIP != nil {
+		return parsedIP
+	}
+
+	return nil
 }

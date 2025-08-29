@@ -3,8 +3,7 @@
 CREATE TABLE IF NOT EXISTS user_sessions (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    session_token VARCHAR(255) NOT NULL UNIQUE,
-    refresh_token VARCHAR(255),
+    jti UUID NOT NULL,
     ip_address INET,
     user_agent TEXT,
     is_active BOOLEAN DEFAULT TRUE,
@@ -14,5 +13,5 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(jti);
 

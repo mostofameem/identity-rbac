@@ -7,8 +7,7 @@ import (
 
 type Service interface {
 	CreateUserWithMultipleRoles(ctx context.Context, req RegisterUserReq) error
-	Login(ctx context.Context, params LoginParams) (string, string, error)
-	LoginV2(ctx context.Context, params LoginParams) (string, string, []string, error)
+	Login(ctx context.Context, params LoginWithSessionParams) (string, string, error)
 	AuthLogin(ctx context.Context, email string) (string, string, error)
 
 	GetUsers(ctx context.Context, email string) ([]Users, error)
@@ -65,4 +64,13 @@ type RoleHasPermissionRepo interface {
 type UserOnboardingRepo interface {
 	Create(ctx context.Context, req *UserOnboardingProcess) error
 	GetUserOnboarding(ctx context.Context, email string) (*entity.UserOnboarding, error)
+}
+
+type UserSessionRepo interface {
+	Create(ctx context.Context, req CreateUserSessionReq) (int, error)
+	GetByJti(ctx context.Context, jti string) (*entity.UserSession, error)
+	GetByUserId(ctx context.Context, userId int) ([]entity.UserSession, error)
+	DeactivateSession(ctx context.Context, sessionId int) error
+	DeactivateAllUserSessions(ctx context.Context, userId int) error
+	DeleteExpiredSessions(ctx context.Context) error
 }

@@ -15,9 +15,8 @@ func (m *Middleware) Authorization(requiredPermissions ...string) func(http.Hand
 				return
 			}
 
-			userPermissions, err := m.userRepo.GetRoleWisePermission(r.Context(), userId)
+			userPermissions, err := m.userRepo.GetUserPermission(r.Context(), userId)
 			if err != nil {
-				//utils.SendData(w, userPermissions)
 				unauthorizedResponse(w, "You are not authorized")
 				return
 			}

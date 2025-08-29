@@ -2,8 +2,8 @@ package middlewares
 
 import (
 	"context"
-	token "identity-rbac/internal/Token"
 	"identity-rbac/internal/api/utils"
+	"identity-rbac/internal/token"
 	"log"
 	"log/slog"
 	"net/http"
@@ -19,6 +19,7 @@ const (
 	UidKey       contextKey = "id"
 	UserEmailKey contextKey = "email"
 	RoleIdsKey   contextKey = "roleIds"
+	JtiKey       contextKey = "jti"
 )
 
 const (
@@ -78,6 +79,7 @@ func (m *Middleware) AuthenticateJWT(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), UidKey, claims.Id)
+		ctx = context.WithValue(ctx, JtiKey, claims.Jti)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
