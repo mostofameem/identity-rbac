@@ -1,8 +1,0 @@
-.env
-.air.toml
-main
-.DS_Store
-.vscode
-tmp
-user_config.json
-event_management
