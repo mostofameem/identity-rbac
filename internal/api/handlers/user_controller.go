@@ -125,7 +125,10 @@ func (handlers *Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: util.GetCurrentTime(),
 	})
 	if err != nil {
-		if errors.Is(err, util.ErrAlreadyRegistered) {
+		if errors.Is(err, util.ErrAlreadyInvited) {
+			utils.SendError(w, http.StatusConflict, "Conflict: User already invited")
+			return
+		} else if errors.Is(err, util.ErrAlreadyRegistered) {
 			utils.SendError(w, http.StatusConflict, "Conflict: User already exists")
 			return
 		} else if errors.Is(err, util.ErrNotFound) {
