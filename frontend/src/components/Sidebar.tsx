@@ -6,11 +6,7 @@ const Sidebar: React.FC = () => {
   const { pathname } = useLocation();
   const { user, hasResourcePermission, logout } = useAuth();
 
-  // Helper functions to check for specific permission patterns
-  const hasRolePermission = (): boolean => {
-    return hasResourcePermission('role') || hasResourcePermission('permission');
-  };
-
+  // Helper function to check for user permissions
   const hasUserPermission = (): boolean => {
     return hasResourcePermission('user');
   };
@@ -34,44 +30,34 @@ const Sidebar: React.FC = () => {
             Home
           </Link>
           
-          {/* Role Management - Show if user has role or permission related permissions */}
-          {hasRolePermission() && (
-            <div className="mt-2">
-              <div className="text-gray-400 text-sm font-semibold px-4 py-2">
-                Role Management
-              </div>
-              <div className="ml-4 space-y-1">
-                <Link 
-                  to="/roles" 
-                  className={`block px-4 py-2 text-sm rounded hover:bg-gray-700 ${isActive('/roles')}`}
-                >
-                  View Roles
-                </Link>
-                <Link 
-                  to="/permissions" 
-                  className={`block px-4 py-2 text-sm rounded hover:bg-gray-700 ${isActive('/permissions')}`}
-                >
-                  View Permissions
-                </Link>
-              </div>
-            </div>
+          {/* User Management */}
+          {hasUserPermission() && (
+            <Link 
+              to="/users" 
+              className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/users')}`}
+            >
+              Users
+            </Link>
           )}
 
-          {/* User Management - Show if user has user related permissions */}
-          {hasUserPermission() && (
-            <div className="mt-2">
-              <div className="text-gray-400 text-sm font-semibold px-4 py-2">
-                User Management
-              </div>
-              <div className="ml-4 space-y-1">
-                <Link 
-                  to="/users" 
-                  className={`block px-4 py-2 text-sm rounded hover:bg-gray-700 ${isActive('/users')}`}
-                >
-                  View Users
-                </Link>
-              </div>
-            </div>
+          {/* Role Management */}
+          {hasResourcePermission('role') && (
+            <Link 
+              to="/roles" 
+              className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/roles')}`}
+            >
+              Roles
+            </Link>
+          )}
+
+          {/* Permission Management */}
+          {hasResourcePermission('permission') && (
+            <Link 
+              to="/permissions" 
+              className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/permissions')}`}
+            >
+              Permissions
+            </Link>
           )}
         </div>
       </nav>

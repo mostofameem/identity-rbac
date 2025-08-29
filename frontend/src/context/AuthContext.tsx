@@ -12,6 +12,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshToken: () => Promise<boolean>;
   isLoading: boolean;
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
@@ -81,6 +82,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      if (!storedRefreshToken) {
+        return false;
+      }
+
+      const response = await apiClient.refreshToken(storedRefreshToken);
+      const { accessToken } = response.data;
+      
+      localStorage.setItem('token', accessToken);
+      console.log('✅ Manual token refresh successful');
+      return true;
+    } catch (error) {
+      console.error('❌ Manual token refresh failed:', error);
+      logout(); // Clear all tokens and redirect
+      return false;
+    }
+  };
+
   // Check if user is already logged in on app start
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -118,6 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     logout,
+    refreshToken,
     isLoading,
     hasPermission,
     hasAnyPermission,

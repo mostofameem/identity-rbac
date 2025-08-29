@@ -35,17 +35,25 @@ axiosInstance.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
+          console.log('🔄 Token expired, attempting refresh...');
+          
           // Backend expects GET request with query parameter
-          const response = await axios.get(`${API_BASE_URL}/v1/token/refresh?token=${refreshToken}`);
+          const response = await axios.get(`${API_BASE_URL}/api/v1/token/refresh?token=${refreshToken}`);
 
           const { accessToken } = response.data;
           localStorage.setItem('token', accessToken);
+          
+          console.log('✅ Token refreshed successfully');
 
           // Update the authorization header and retry the request
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return axiosInstance(originalRequest);
+        } else {
+          console.log('❌ No refresh token available');
         }
       } catch (refreshError) {
+        console.error('❌ Token refresh failed:', refreshError);
+        
         // Refresh token is invalid, redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
@@ -135,7 +143,7 @@ export const apiClient = {
     axiosInstance.post(`/v1/events/${eventId}/register`, data),
 
   refreshToken: (refreshToken: string): Promise<AxiosResponse<{ accessToken: string }>> =>
-    axiosInstance.get(`/v1/token/refresh?token=${refreshToken}`),
+    axiosInstance.get(`/api/v1/token/refresh?token=${refreshToken}`),
 
   getUserPermissions: (): Promise<AxiosResponse<GetUserPermissionsResponse>> =>
     axiosInstance.get('/api/v1/users/me/permissions'),

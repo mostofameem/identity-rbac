@@ -1,174 +1,75 @@
+/**
+ * Main App Component
+ * 
+ * The root component that handles routing and authentication.
+ * Uses the new PageLayout and refactored page components.
+ * 
+ * Features:
+ * - Protected routes with authentication
+ * - Consistent layout across all pages
+ * - Clean routing structure
+ */
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PageLayout } from './components/layout';
+import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
 import LoginPage from './components/LoginPage';
 import HomePage from './components/HomePage';
-import AdminDashboard from './components/AdminDashboard';
-import UserManagement from './components/UserManagement';
-import RoleManagement from './components/RoleManagement';
-import PermissionManagement from './components/PermissionManagement';
-import Sidebar from './components/Sidebar';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useMessage } from './hooks';
 
-// Protected Route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+/**
+ * Page Wrapper Component
+ * 
+ * Wraps page components with consistent layout and message handling
+ */
+interface PageWrapperProps {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}
 
-  if (isLoading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
-};
-
-// Public Route component (redirects to home if already logged in)
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  return user ? <Navigate to="/" replace /> : <>{children}</>;
-};
-
-// Wrapper components for management pages
-const UserManagementPage: React.FC = () => {
+const PageWrapper: React.FC<PageWrapperProps> = ({ title, subtitle, children }) => {
+  const { message, messageType, showMessage, clearMessage } = useMessage();
   const [loading, setLoading] = React.useState(false);
-  const [message, setMessage] = React.useState('');
-  const [isError, setIsError] = React.useState(false);
-  const { user } = useAuth();
 
-  const showMessage = (msg: string, error: boolean = false) => {
-    setMessage(msg);
-    setIsError(error);
-    setTimeout(() => {
-      setMessage('');
-      setIsError(false);
-    }, 5000);
+  const handleShowMessage = (msg: string, isError: boolean = false) => {
+    showMessage(msg, isError ? 'error' : 'success');
   };
 
   return (
-    <div className="h-screen bg-gray-100">
-      <Sidebar />
-      <div className="ml-64 h-full overflow-auto">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="p-6">
-          {message && (
-            <div className={`mb-4 p-4 rounded-lg ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {message}
-            </div>
-          )}
-          <UserManagement showMessage={showMessage} loading={loading} setLoading={setLoading} />
-        </main>
-      </div>
-    </div>
+    <PageLayout title={title} subtitle={subtitle}>
+      {React.cloneElement(children as React.ReactElement, {
+        showMessage: handleShowMessage,
+        loading,
+        setLoading,
+      })}
+    </PageLayout>
   );
 };
 
-const RoleManagementPage: React.FC = () => {
-  const [loading, setLoading] = React.useState(false);
-  const [message, setMessage] = React.useState('');
-  const [isError, setIsError] = React.useState(false);
-  const { user } = useAuth();
-
-  const showMessage = (msg: string, error: boolean = false) => {
-    setMessage(msg);
-    setIsError(error);
-    setTimeout(() => {
-      setMessage('');
-      setIsError(false);
-    }, 5000);
-  };
-
-  return (
-    <div className="h-screen bg-gray-100">
-      <Sidebar />
-      <div className="ml-64 h-full overflow-auto">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="p-6">
-          {message && (
-            <div className={`mb-4 p-4 rounded-lg ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {message}
-            </div>
-          )}
-          <RoleManagement showMessage={showMessage} loading={loading} setLoading={setLoading} />
-        </main>
-      </div>
-    </div>
-  );
-};
-
-const PermissionManagementPage: React.FC = () => {
-  const [loading, setLoading] = React.useState(false);
-  const [message, setMessage] = React.useState('');
-  const [isError, setIsError] = React.useState(false);
-  const { user } = useAuth();
-
-  const showMessage = (msg: string, error: boolean = false) => {
-    setMessage(msg);
-    setIsError(error);
-    setTimeout(() => {
-      setMessage('');
-      setIsError(false);
-    }, 5000);
-  };
-
-  return (
-    <div className="h-screen bg-gray-100">
-      <Sidebar />
-      <div className="ml-64 h-full overflow-auto">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold text-gray-900">Permission Management</h1>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="p-6">
-          {message && (
-            <div className={`mb-4 p-4 rounded-lg ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {message}
-            </div>
-          )}
-          <PermissionManagement showMessage={showMessage} loading={loading} setLoading={setLoading} />
-        </main>
-      </div>
-    </div>
-  );
-};
-
+/**
+ * App Routes Component
+ * 
+ * Defines all application routes with proper authentication checks
+ */
 const AppRoutes: React.FC = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        } 
-      />
+      {/* Home Route */}
       <Route 
         path="/" 
         element={
@@ -177,51 +78,83 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } 
-      />
+      
+      {/* Management Routes */}
       <Route 
         path="/users" 
         element={
-          <ProtectedRoute>
-            <UserManagementPage />
+          <ProtectedRoute requiredPermission="user">
+            <PageWrapper 
+              title="User Management" 
+              subtitle="Manage users and their role assignments"
+            >
+              <UserManagement 
+                showMessage={() => {}} 
+                loading={false} 
+                setLoading={() => {}} 
+              />
+            </PageWrapper>
           </ProtectedRoute>
         } 
       />
+      
       <Route 
         path="/roles" 
         element={
-          <ProtectedRoute>
-            <RoleManagementPage />
+          <ProtectedRoute requiredPermission="role">
+            <PageWrapper 
+              title="Role Management" 
+              subtitle="Create and manage system roles with permissions"
+            >
+              <RoleManagement 
+                showMessage={() => {}} 
+                loading={false} 
+                setLoading={() => {}} 
+              />
+            </PageWrapper>
           </ProtectedRoute>
         } 
       />
+      
       <Route 
         path="/permissions" 
         element={
-          <ProtectedRoute>
-            <PermissionManagementPage />
+          <ProtectedRoute requiredPermission="permission">
+            <PageWrapper 
+              title="Permission Management" 
+              subtitle="View and manage system permissions"
+            >
+              <PermissionManagement 
+                showMessage={() => {}} 
+                loading={false} 
+                setLoading={() => {}} 
+              />
+            </PageWrapper>
           </ProtectedRoute>
         } 
       />
+
+      {/* Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
 
+/**
+ * Main App Component
+ * 
+ * Root component with routing and authentication context
+ */
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
+        <div className="min-h-screen bg-gray-100">
+          <AppRoutes />
+        </div>
       </Router>
     </AuthProvider>
   );
 };
 
-export default App; 
+export default App;
