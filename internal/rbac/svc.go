@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"identity-rbac/config"
+	"identity-rbac/internal/token"
 )
 
 type service struct {
@@ -12,6 +13,8 @@ type service struct {
 	userHasRoleRepo       UserHasRoleRepo
 	roleHasPermissionRepo RoleHasPermissionRepo
 	userOnboardingRepo    UserOnboardingRepo
+	userSessionRepo       UserSessionRepo
+	tokenService          token.TokenService
 }
 
 func NewService(
@@ -22,6 +25,8 @@ func NewService(
 	userHasRoleRepo UserHasRoleRepo,
 	roleHasPermissionRepo RoleHasPermissionRepo,
 	userOnboardingRepo UserOnboardingRepo,
+	userSessionRepo UserSessionRepo,
+	tokenService token.TokenService,
 ) Service {
 	return &service{
 		cnf:                   cnf,
@@ -31,5 +36,7 @@ func NewService(
 		userHasRoleRepo:       userHasRoleRepo,
 		roleHasPermissionRepo: roleHasPermissionRepo,
 		userOnboardingRepo:    userOnboardingRepo,
+		userSessionRepo:       userSessionRepo,
+		tokenService:          tokenService,
 	}
 }

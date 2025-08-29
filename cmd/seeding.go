@@ -66,6 +66,9 @@ func seedPermissions(db *repo.DB) error {
 		{"role.delete", "role", "delete", "Role delete access"},
 		{"role.view", "role", "view", "Role view access"},
 		{"role.assign", "role", "assign", "Role assign access"},
+
+		{"permission.view", "permission", "view", "Permission view access"},
+		{"permission.assign", "permission", "assign", "Permission assign access"},
 	}
 
 	query := "INSERT INTO permissions (name, resource, action, description, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING id"

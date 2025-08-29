@@ -8,13 +8,17 @@ import (
 	"identity-rbac/internal/util"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type LoginParams struct {
-	Email string
-	Pass  string
+type LoginWithSessionParams struct {
+	Email     string
+	Pass      string
+	IpAddress *string
+	UserAgent *string
 }
 
 var (
@@ -22,7 +26,7 @@ var (
 	ErrInvalidPassword = errors.New("invalid password")
 )
 
-func (svc *service) Login(ctx context.Context, params LoginParams) (string, string, error) {
+func (svc *service) Login(ctx context.Context, params LoginWithSessionParams) (string, string, error) {
 	user, err := svc.userRepo.Get(ctx, params.Email)
 	if err != nil {
 		return "", "", err
@@ -39,7 +43,9 @@ func (svc *service) Login(ctx context.Context, params LoginParams) (string, stri
 		return "", "", ErrInvalidPassword
 	}
 
-	accessToken, err := svc.genAccessToken(user.Id, user.Email)
+	jti := uuid.New()
+
+	accessToken, err := svc.tokenService.GenerateAccessToken(ctx, user.Id, jti.String())
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to generate jwt", logger.Extra(map[string]any{
 			"error": err.Error(),
@@ -47,10 +53,31 @@ func (svc *service) Login(ctx context.Context, params LoginParams) (string, stri
 		return "", "", err
 	}
 
-	refreshToken, err := svc.genRefreshToken(user.Id, user.Email)
+	refreshToken, err := svc.tokenService.GenerateRefreshToken(ctx, user.Id, jti.String())
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to generate jwt", logger.Extra(map[string]any{
 			"error": err.Error(),
+		}))
+		return "", "", err
+	}
+
+	now := time.Now()
+
+	sessionReq := CreateUserSessionReq{
+		UserId:    user.Id,
+		Jti:       jti,
+		IpAddress: params.IpAddress,
+		UserAgent: params.UserAgent,
+		ExpiresAt: now.Add(time.Duration(svc.cnf.AccessTokenTTL) * time.Minute),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	_, err = svc.userSessionRepo.Create(ctx, sessionReq)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to create user session", logger.Extra(map[string]any{
+			"error":  err.Error(),
+			"userId": user.Id,
 		}))
 		return "", "", err
 	}
@@ -98,49 +125,6 @@ func (s *service) GetUserPermission(ctx context.Context, userId int) ([]string, 
 	}
 
 	return permissions, nil
-}
-
-func (svc *service) LoginV2(ctx context.Context, params LoginParams) (string, string, []string, error) {
-	user, err := svc.userRepo.Get(ctx, params.Email)
-	if err != nil {
-		return "", "", []string{}, err
-	}
-
-	if user == nil {
-		return "", "", []string{}, ErrUserNotFound
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Pass), []byte(params.Pass)); err != nil {
-		slog.ErrorContext(ctx, "Invalid password", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return "", "", []string{}, ErrInvalidPassword
-	}
-
-	accessToken, err := svc.genAccessToken(user.Id, user.Email)
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to generate jwt", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return "", "", []string{}, err
-	}
-
-	refreshToken, err := svc.genRefreshToken(user.Id, user.Email)
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to generate jwt", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return "", "", []string{}, err
-	}
-
-	permissions, err := svc.userRepo.GetUserPermission(ctx, user.Id)
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to get user permissions", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return "", "", []string{}, err
-	}
-	return accessToken, refreshToken, permissions, nil
 }
 
 func (s *service) GetUsers(ctx context.Context, email string) ([]Users, error) {

@@ -135,7 +135,7 @@
         }
       }
     },
-    "/v1/reset-password": {
+    "/api/v1/reset-password": {
       "patch": {
         "tags": ["User"],
         "summary": "Reset password for a user",
@@ -165,7 +165,7 @@
       }
     },
 
-    "/v1/users/add": {
+    "/api/v1/users/invite": {
       "post": {
         "tags": ["User"],
         "summary": "Admin Insert a New User",
@@ -189,7 +189,7 @@
       }
     },
 
-    "/v1/users":{
+    "/api/v1/users":{
       "get": {
         "summary": "Get User list",
         "description": "Returns a list of existing user with filter by email",
@@ -212,7 +212,7 @@
       }
     },
 
-    "/v1/login": {
+    "/api/v1/login": {
       "post": {
         "tags": ["User"],
         "summary": "Log In an Existing User",
@@ -241,312 +241,7 @@
       }
     },
 
-    "/v1/event-types": {
-      "post": {
-        "tags": ["EventType"],
-        "summary": "Create a new event type",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateEventTypeReq" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "schema": {
-                "$ref": "#/components/schemas/SuccessResponse"
-              }
-          },
-          "400": { 
-            "description": "Invalid request payload or validation failed" ,            
-            "schema": {
-              "$ref":  "#/components/schemas/ErrorRes"
-            }
-          },
-          "500": { "description": "Internal server error" }
-        }
-      },
-      "get": {
-        "tags": ["EventType"],
-        "summary": "List all event types",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "name", "in": "query", "schema": { "type": "string"} }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/EventType" }
-                }
-              }
-            }
-          },
-          "500": { "description": "Internal server error" }
-        }
-      }
-    },
-
-    "/v1/events": {
-      "post": {
-        "tags": ["Events"],
-        "summary": "Create a New Event",
-        "description": "Allows the creation of a new event.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateEventReq"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Event created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": ["Events"],
-        "summary": "Retrieve events with optional filters",
-        "description": "Retrieve events using optional filters and pagination",
-        "parameters": [
-          { "name": "id", "in": "query", "schema": { "type": "integer"} },
-          { "name": "title", "in": "query", "schema": { "type": "string"} },
-          { "name": "typeId", "in": "query", "schema": { "type": "integer" } },
-          { "name": "startTime", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "endTime", "in": "query", "schema": { "type": "string", "format": "date-time"} },
-          {
-            "name": "mode",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["ALL", "ONGOING", "UPCOMING", "RECENT"],
-              "default": "ALL"
-            }
-          },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["","id", "startAt"],
-              "default": "id"
-            }
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["","ASC", "DESC"],
-              "default": "DESC"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Events retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "events": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    },
-                    "totalPage": {
-                      "type": "integer",
-                      "example": 5
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request parameters",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" }
-              }
-            }
-          }
-        }
-      }
-    },
-
-    "/v1/events/{event_id}/register": {
-      "post": {
-        "summary": "Register to an event",
-        "tags": ["Events"],
-        "parameters": [
-          {
-            "name": "event_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "action": {
-                    "type": "string",
-                    "enum": ["NOT_REGISTERED","REGISTER", "CANCEL"],
-                    "example": "NOT_REGISTERED",
-                    "default": "NOT_REGISTERED"
-                  },
-                  "guestCount": {
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Event registration successful"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-
-    "/v1/events/{event_id}/details": {
-      "get": {
-        "tags": ["Events"],
-        "summary": "Retrieve events with participants",
-        "description": "Retrieve events using optional filters and pagination",
-        "parameters": [
-          {
-            "name": "event_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          { "name": "userId", "in": "query", "schema": { "type": "integer"} },
-          {
-            "name": "statusMode",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["ALL", "REGISTERED", "CANCELED"],
-              "default": "ALL"
-            }
-          },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100 } },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["","id", "start_at", "created_at"],
-              "default": "id"
-            }
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["","ASC", "DESC"],
-              "default": "DESC"
-            }
-          }
-        ],
-        "responses": {}
-      }
-    },
-
-    "/v1/events/my-events": {
-      "get": {
-        "tags": ["Events"],
-        "summary": "Retrieve single user events",
-        "description": "Retrieve events using optional filters and pagination",
-        "parameters": [
-          {
-            "name": "statusMode",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["ALL", "REGISTERED", "CANCELED","LATE_REGISTRATION"],
-              "default": "ALL"
-            }
-          },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer","enum": [100, 50, 20,10], "default": 100 } },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["","id", "start_at", "created_at"],
-              "default": "id"
-            }
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": ["","ASC", "DESC"],
-              "default": "DESC"
-            }
-          }
-        ],
-        "responses": {}
-      }
-    },
-
-    "/v1/roles": {
+    "/api/v1/roles": {
       "post": {
         "summary": "Create a new role",
         "description": "Adds a role with a name and description",
@@ -618,7 +313,7 @@
       }
     },
 
-    "/v1/users/assign-role": {
+    "/api/v1/users/assign-role": {
       "post": {
         "summary": "Assign a role to a user",
         "description": "Links an existing role to a user by ID",
@@ -659,7 +354,7 @@
       }
     },
 
-    "/v1/permissions": {
+    "/api/v1/permissions": {
       "post": {
         "summary": "Create a new Permission",
         "tags": ["permissions"],
@@ -730,7 +425,7 @@
       }
     },
 
-    "/v1/roles/assign-permission": {
+    "/api/v1/roles/assign-permission": {
       "post": {
         "summary": "Assign a permission to a role",
         "tags": ["permissions"],
@@ -770,7 +465,7 @@
       }
     },
 
-    "/v1/users/me/permissions": {
+    "/api/v1/users/me/permissions": {
       "get": {
         "tags": ["User"],
         "summary": "Get permissions of the currently authenticated user",
@@ -906,38 +601,6 @@
           }
         }
       },
-      "CreateEventReq": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "example": "Breakfast 02-07-2025"
-          },
-          "description": {
-            "type": "string",
-            "example": "This is a breakfast 02-07-2025 event"
-          },
-          "eventTypeId": {
-            "type": "integer",
-            "example": 2
-          },
-          "eventStartsAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2025-07-02T10:00:00Z"
-          },
-          "registrationOpensAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2025-07-01T20:00:00Z"
-          },
-          "registrationClosesAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2025-07-02T07:30:00Z"
-          }
-        }
-      },
       "Error": {
         "type": "object",
         "properties": {
@@ -977,18 +640,6 @@
             "type": "string"
           },
           "description": {
-            "type": "string"
-          }
-        }
-      },
-      "CreatePermissionReq": {
-        "type": "object",
-        "required": ["name", "operation"],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "operation": {
             "type": "string"
           }
         }
@@ -1061,46 +712,6 @@
             "type": "string",
             "format": "date-time"
           }
-        }
-      },
-      "CreateEventTypeReq": {
-        "type": "object",
-        "required": ["name", "description"],
-        "properties": {
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "autoEventCreate": { "type": "boolean", "default": false },
-          "autoEventCreateInterval": { "type": "integer", "default": 0 }
-        }
-      },
-      "EventType": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "autoEventCreate": { "type": "boolean" },
-          "autoEventIntervalInSecond": { "type": "integer" },
-          "createdBy": { "type": "integer" },
-          "createdAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "Event":{
-        "type": "object",
-        "properties":{
-            "id": {"type": "integer"},
-            "title": {"type": "string"},
-            "description": {"type": "string"},
-            "eventTypeID": {"type": "integer"},
-            "startAt": { "type": "string", "format": "date-time" },
-            "registrationOpensAt": { "type": "string", "format": "date-time" },
-            "registrationClosesAt": { "type": "string", "format": "date-time" },
-            "createdBy": {"type": "string"},
-            "updatedBy": null,
-            "status": {"type": "boolean"},
-            "remarks": null,
-            "createdAt":  { "type": "string", "format": "date-time" },
-            "updatedAt":  { "type": "string", "format": "date-time" }
         }
       },
       "SuccessRes": {

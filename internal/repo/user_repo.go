@@ -144,32 +144,6 @@ func (r *userRepo) GetUserPermission(ctx context.Context, userId int) ([]string,
 	return res, nil
 }
 
-func (r *userRepo) GetRoleWisePermission(ctx context.Context, userId int) ([]string, error) {
-	query, args, err := NewQueryBuilder(r.getRoleWisePermissionQueryBuilder()).
-		FilterByIntEq("uhr.user_id", userId).
-		ToSql()
-
-	if err != nil {
-		slog.ErrorContext(ctx, "Failed to create role-wise permission query", logger.Extra(map[string]any{
-			"error":  err.Error(),
-			"userId": userId,
-		}))
-		return nil, err
-	}
-
-	var res []string
-	if err := r.db.SelectContext(ctx, &res, query, args...); err != nil {
-		slog.ErrorContext(ctx, "Failed to execute role-wise permission query", logger.Extra(map[string]any{
-			"error": err.Error(),
-			"query": query,
-			"args":  args,
-		}))
-		return nil, err
-	}
-
-	return res, nil
-}
-
 func (r *userRepo) getRoleWisePermissionQueryBuilder() BuildQuery {
 	return func() sq.SelectBuilder {
 		return r.psql.Select(

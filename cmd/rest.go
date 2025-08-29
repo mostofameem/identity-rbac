@@ -9,6 +9,7 @@ import (
 	"identity-rbac/internal/auth"
 	"identity-rbac/internal/rbac"
 	repo "identity-rbac/internal/repo"
+	"identity-rbac/internal/token"
 	"identity-rbac/pkg/logger"
 	"log/slog"
 
@@ -44,6 +45,8 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	userHasRoleRepo := repo.NewUserHasRoleRepo(db)
 	roleHasPermissionRepo := repo.NewRoleHasPermissionRepo(db)
 	userOnboardingRepo := repo.NewUserOnboardingRepo(db)
+	tokenService := token.NewTokenService(cnf)
+	userSessionRepo := repo.NewUserSessionRepo(db)
 
 	rbacSvc := rbac.NewService(cnf,
 		userRepo,
@@ -52,6 +55,8 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		userHasRoleRepo,
 		roleHasPermissionRepo,
 		userOnboardingRepo,
+		userSessionRepo,
+		tokenService,
 	)
 
 	handlers := handlers.NewHandlers(cnf, rbacSvc)

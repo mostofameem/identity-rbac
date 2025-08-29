@@ -12,12 +12,6 @@ import (
 )
 
 type AddRoleReq struct {
-	Name        string `json:"roleName"    validate:"required"`
-	Description string `json:"description" validate:"required"`
-	CreatedBy   int    `validate:"required"`
-}
-
-type AddRoleV2Req struct {
 	Name          string `json:"roleName"     validate:"required"`
 	Description   string `json:"description"  validate:"required"`
 	PermissionIDs []int  `json:"permissionIds" validate:"required"`
@@ -49,42 +43,11 @@ func (handlers *Handlers) AddRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := handlers.rbacSvc.CreateNewRole(r.Context(), &rbac.AddRole{
-		Name:        addRoleReq.Name,
-		Description: addRoleReq.Description,
-		CreatedBy:   addRoleReq.CreatedBy,
-		CreatedAt:   currentTime,
-	})
-	if err != nil {
-		utils.SendError(w, http.StatusInternalServerError, "Failed to create role")
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"message": "Successfully added new role",
-	})
-}
-
-func (handlers *Handlers) AddRoleV2(w http.ResponseWriter, r *http.Request) {
-	currentTime := time.Now()
-	var addRoleV2Req AddRoleV2Req
-
-	if err := json.NewDecoder(r.Body).Decode(&addRoleV2Req); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	addRoleV2Req.CreatedBy, _ = r.Context().Value(middlewares.UidKey).(int)
-
-	if err := utils.Validate(addRoleV2Req); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid req params")
-		return
-	}
-
 	err := handlers.rbacSvc.CreateNewRoleV2(r.Context(), &rbac.AddRoleV2{
-		Name:          addRoleV2Req.Name,
-		Description:   addRoleV2Req.Description,
-		PermissionIDs: addRoleV2Req.PermissionIDs,
-		CreatedBy:     addRoleV2Req.CreatedBy,
+		Name:          addRoleReq.Name,
+		Description:   addRoleReq.Description,
+		PermissionIDs: addRoleReq.PermissionIDs,
+		CreatedBy:     addRoleReq.CreatedBy,
 		CreatedAt:     currentTime,
 	})
 	if err != nil {
@@ -123,7 +86,7 @@ func (handlers *Handlers) GetRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handlers *Handlers) AddRoleToUser(w http.ResponseWriter, r *http.Request) {
-	currentTime := time.Now()
+	currentTime := util.GetCurrentTime()
 	var addRoleToUserReq AddRoleToUserReq
 
 	if err := json.NewDecoder(r.Body).Decode(&addRoleToUserReq); err != nil {
