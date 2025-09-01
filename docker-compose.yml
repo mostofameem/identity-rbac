@@ -1,12 +1,29 @@
-version: "3.9"
-
 services:
-  app:
-    container_name: identity-rbac
+  # Backend API
+  backend:
+    container_name: rbac-backend
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${HTTP_PORT:-5001}:${HTTP_PORT:-5001}"
     env_file:
       - .env
+    networks:
+      - rbac-network
+
+  frontend:
+    container_name: rbac-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - rbac-network
+
+networks:
+  rbac-network:
+    driver: bridge

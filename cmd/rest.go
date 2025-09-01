@@ -12,6 +12,7 @@ import (
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/internal/token"
 	"identity-rbac/pkg/logger"
+	"log"
 	"log/slog"
 
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ var serveRestCmd = &cobra.Command{
 
 func serveRest(cmd *cobra.Command, args []string) error {
 	cnf := config.GetConfig()
+	log.Println(cnf)
 
 	utils.InitValidator()
 	auth.InitAuthSetting(cnf.Auth)
