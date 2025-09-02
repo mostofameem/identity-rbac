@@ -1,8 +1,70 @@
+# Environment files
 .env
-.air.toml
+.env.local
+.env.production
+.env.staging
+
+# Build artifacts
 main
+tmp/
+dist/
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
 .DS_Store
-.vscode
-tmp
+Thumbs.db
+
+# Configuration files with sensitive data
 user_config.json
+.air.toml
+
+# Logs
+*.log
+logs/
+
+# Dependencies (already handled by package managers)
+node_modules/
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories (Go modules)
+vendor/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database files (if using local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+
+# Archive files
+*.tar.gz
+*.zip
+*.rar
+
+# Old project name references
 event_management

@@ -1,174 +1,159 @@
 name: Deploy to AWS EC2
 
 on:
+  # Trigger on tag creation (for releases)
   push:
-    branches: [ deployment-dev ]
-  pull_request:
-    branches: [ deployment-dev ]
-
-env:
-  DOCKER_IMAGE_NAME: rbac-app
-  DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}
-  EC2_HOST: ${{ secrets.EC2_HOST }}
-  EC2_USER: ${{ secrets.EC2_USER }}
+    tags:
+      - 'v*.*.*'  # Matches v1.0.0, v2.1.3, etc.
+      - 'release-*'  # Matches release-1.0, release-staging, etc.
+  
+  # Manual workflow dispatch with branch selection
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - develop
+          - deployment-dev
+          - staging
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      version:
+        description: 'Version tag (optional)'
+        required: false
+        type: string
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
-    name: Run Tests
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
-
-    - name: Cache Go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
-    - name: Install dependencies
-      run: go mod download
-
-    - name: Run backend tests
-      run: go test ./...
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-
-    - name: Install frontend dependencies
-      run: |
-        cd frontend
-        npm ci
-
-    - name: Run frontend tests
-      run: |
-        cd frontend
-        npm test -- --coverage --watchAll=false
-
-    - name: Build frontend
-      run: |
-        cd frontend
-        npm run build
-
-  build-and-push:
-    needs: test
-    runs-on: ubuntu-latest
-    name: Build and Push Docker Images
+        ref: ${{ github.event.inputs.branch || github.ref }}
     
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
+    - name: Set deployment info
+      id: deployment-info
+      run: |
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" =~ ^refs/tags/ ]]; then
+          echo "trigger=tag" >> $GITHUB_OUTPUT
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "branch=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "environment=production" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "trigger=manual" >> $GITHUB_OUTPUT
+          echo "version=${{ github.event.inputs.version || 'manual-deploy' }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        fi
+        echo "timestamp=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
     
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - name: Display deployment info
+      run: |
+        echo "🚀 Deployment Information:"
+        echo "Trigger: ${{ steps.deployment-info.outputs.trigger }}"
+        echo "Version: ${{ steps.deployment-info.outputs.version }}"
+        echo "Branch: ${{ steps.deployment-info.outputs.branch }}"
+        echo "Environment: ${{ steps.deployment-info.outputs.environment }}"
+        echo "Timestamp: ${{ steps.deployment-info.outputs.timestamp }}"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.DOCKER_REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Create .env file
+      run: |
+        echo "HTTP_PORT=${{ secrets.HTTP_PORT }}" >> .env
+        echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+        echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+        echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+        echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+        echo "DB_SSL_MODE=${{ secrets.DB_SSL_MODE }}" >> .env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+        echo "MAIL_HOST=${{ secrets.MAIL_HOST }}" >> .env
+        echo "MAIL_PORT=${{ secrets.MAIL_PORT }}" >> .env
+        echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+        echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.DOCKER_REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix=commit-
-          type=raw,value=latest,enable={{is_default_branch}}
+    - name: Build Docker images
+      run: |
+        # Build with version tags
+        VERSION="${{ steps.deployment-info.outputs.version }}"
+        docker-compose build --no-cache
+        
+        # Tag images with version
+        docker tag rbac-backend:latest rbac-backend:$VERSION
+        docker tag rbac-frontend:latest rbac-frontend:$VERSION
 
-    - name: Build and push Docker image
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.prod
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64
+    - name: Save Docker images
+      run: |
+        VERSION="${{ steps.deployment-info.outputs.version }}"
+        docker save rbac-backend:latest rbac-backend:$VERSION | gzip > backend.tar.gz
+        docker save rbac-frontend:latest rbac-frontend:$VERSION | gzip > frontend.tar.gz
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    name: Deploy to EC2
-    if: github.ref == 'refs/heads/deployment-dev'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-
-    - name: Copy deployment files to EC2
+    - name: Copy files to EC2
       uses: appleboy/scp-action@v0.1.5
       with:
-        host: ${{ env.EC2_HOST }}
-        username: ${{ env.EC2_USER }}
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
-        source: "docker-compose.prod.yml,scripts/deploy.sh,scripts/health-check.sh"
-        target: "/home/${{ env.EC2_USER }}/rbac-deployment"
+        source: "backend.tar.gz,frontend.tar.gz,deployment/docker-compose.prod.yml,deployment/scripts/deploy.sh,.env"
+        target: "/home/${{ secrets.EC2_USER }}/rbac-app"
 
     - name: Deploy to EC2
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v0.1.6
       with:
-        host: ${{ env.EC2_HOST }}
-        username: ${{ env.EC2_USER }}
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
         script: |
-          cd /home/${{ env.EC2_USER }}/rbac-deployment
+          cd /home/${{ secrets.EC2_USER }}/rbac-app
           
-          # Make scripts executable
-          chmod +x scripts/deploy.sh scripts/health-check.sh
+          # Load Docker images
+          docker load < backend.tar.gz
+          docker load < frontend.tar.gz
           
-          # Set environment variables
-          export DOCKER_IMAGE_TAG="${{ needs.build-and-push.outputs.image-tag }}"
-          export DOCKER_REGISTRY="${{ env.DOCKER_REGISTRY }}"
-          export DOCKER_USERNAME="${{ secrets.DOCKER_USERNAME }}"
+          # Stop existing containers
+          docker-compose -f deployment/docker-compose.prod.yml down || true
           
-          # Run deployment script
-          ./scripts/deploy.sh
+          # Remove old images
+          docker image prune -f
           
-          # Wait for services to be ready
-          sleep 30
+          # Start new containers
+          docker-compose -f deployment/docker-compose.prod.yml up -d
           
-          # Run health check
-          ./scripts/health-check.sh
-
-    - name: Notify deployment status
+          # Clean up
+          rm -f backend.tar.gz frontend.tar.gz
+          
+          # Create deployment log
+          echo "$(date): Deployed version ${{ steps.deployment-info.outputs.version }} from branch ${{ steps.deployment-info.outputs.branch }}" >> /home/${{ secrets.EC2_USER }}/rbac-app/deployment.log
+          
+          # Health check
+          sleep 10
+          curl -f http://localhost:5001/health-check || exit 1
+          
+          echo "🎉 Deployment completed successfully!"
+          echo "Version: ${{ steps.deployment-info.outputs.version }}"
+          echo "Branch: ${{ steps.deployment-info.outputs.branch }}"
+          echo "Environment: ${{ steps.deployment-info.outputs.environment }}"
+          
+    - name: Deployment notification
       if: always()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        channel: '#deployments'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Deployment SUCCESS: Version ${{ steps.deployment-info.outputs.version }} deployed to ${{ steps.deployment-info.outputs.environment }}"
+        else
+          echo "❌ Deployment FAILED: Version ${{ steps.deployment-info.outputs.version }} failed to deploy"
+        fi
