@@ -3,12 +3,12 @@ services:
   backend:
     container_name: rbac-backend
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "${HTTP_PORT:-5001}:${HTTP_PORT:-5001}"
     env_file:
-      - .env
+      - ./backend/.env
     networks:
       - rbac-network
 
