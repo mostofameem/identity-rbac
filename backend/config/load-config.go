@@ -10,6 +10,7 @@ import (
 )
 
 func LoadConfig() error {
+	var err error
 
 	exit := func(err error) {
 		slog.Error(err.Error())
@@ -19,8 +20,7 @@ func LoadConfig() error {
 	// Only try to load .env file if we're not in a containerized environment
 	// In Docker, environment variables are provided by docker-compose
 	if _, err := os.Stat(".env"); err == nil {
-		err := godotenv.Load()
-		if err != nil {
+		if err = godotenv.Load(); err != nil {
 			slog.Warn("Failed to load .env file:", err)
 		} else {
 			slog.Info("Loaded configuration from .env file")
