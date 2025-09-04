@@ -7,8 +7,6 @@ RUN go mod download
 
 COPY . .
 
-RUN mkdir -p internal/api/swagger/dist
-
 RUN go build -o main ./main.go
 
 FROM alpine:3.14
