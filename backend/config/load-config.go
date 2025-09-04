@@ -16,9 +16,17 @@ func LoadConfig() error {
 		os.Exit(1)
 	}
 
-	err := godotenv.Load()
-	if err != nil {
-		slog.Warn(".env not found, that's okay!")
+	// Only try to load .env file if we're not in a containerized environment
+	// In Docker, environment variables are provided by docker-compose
+	if _, err := os.Stat(".env"); err == nil {
+		err := godotenv.Load()
+		if err != nil {
+			slog.Warn("Failed to load .env file:", err)
+		} else {
+			slog.Info("Loaded configuration from .env file")
+		}
+	} else {
+		slog.Info("Using environment variables (no .env file found)")
 	}
 
 	viper.AutomaticEnv()
