@@ -1,10 +1,15 @@
 FROM golang:1.24.2-alpine3.20 AS builder
 
 WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy all source code including swagger dist files
 COPY . .
 
-COPY go.mod go.sum ./
-RUN go mod tidy
+# Build the application
 RUN go build -o main ./main.go
 
 FROM alpine:3.14
