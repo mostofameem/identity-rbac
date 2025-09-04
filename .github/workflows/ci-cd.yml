@@ -1,0 +1,84 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    tags:
+      - "v*.*.*"   # Runs only on tag push like v1.0.0
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build & push backend
+      - name: Build & Push Backend
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG
+
+      # Build & push frontend
+      - name: Build & Push Frontend
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG
+
+      # Deploy on Server
+      - name: Deploy on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            TAG=${GITHUB_REF_NAME}
+            mkdir -p /services/rbac
+            cd /services/rbac
+
+            # Generate docker-compose.yml with the new tag
+            cat > docker-compose.yml <<EOL
+            services:
+              backend:
+                container_name: rbac-backend
+                image: ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG
+                env_file:
+                  - .env
+                ports:
+                  - "\${HTTP_PORT}:\${HTTP_PORT}"
+                networks:
+                  - rbac-network
+
+              frontend:
+                container_name: rbac-frontend
+                image: ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG
+                ports:
+                  - "3000:80"
+                depends_on:
+                  - backend
+                networks:
+                  - rbac-network
+
+            networks:
+              rbac-network:
+                driver: bridge
+            EOL
+
+            # Pull new images & restart
+            docker-compose pull
+            docker-compose up -d

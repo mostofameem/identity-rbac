@@ -8,6 +8,7 @@ RBAC is a web-based application designed to help efficiently manage and monitor 
 
 - [Installation](#installation)
 - [Usage](#usage)
+- [Deployment](#deployment)
 - [Credits](#credits)
 - [Contributing](#contributing)
 
@@ -115,6 +116,20 @@ This will create the super admin user with full system access.
 - **Database**: PostgreSQL
 
 Developed by Mostofa Meem
+
+## Deployment
+
+For production deployment to AWS EC2 with CI/CD, see the **[deployment](deployment/)** folder:
+
+- 🚀 **[Quick Start Guide](deployment/docs/DEPLOYMENT_QUICKSTART.md)** - 10-minute setup
+- 📖 **[Complete Deployment Guide](deployment/docs/DEPLOYMENT.md)** - Comprehensive instructions
+- 🗄️ **[Database Setup Guide](deployment/docs/DATABASE_SETUP.md)** - PostgreSQL configuration
+
+### Quick Deploy Summary:
+1. Set up PostgreSQL database (AWS RDS, DigitalOcean, etc.)
+2. Launch EC2 instance and run setup script
+3. Configure GitHub secrets
+4. Push to main branch → automatic deployment!
 
 ## 6. Contributing
 

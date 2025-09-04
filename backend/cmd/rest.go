@@ -25,7 +25,6 @@ var serveRestCmd = &cobra.Command{
 
 func serveRest(cmd *cobra.Command, args []string) error {
 	cnf := config.GetConfig()
-
 	utils.InitValidator()
 	auth.InitAuthSetting(cnf.Auth)
 
