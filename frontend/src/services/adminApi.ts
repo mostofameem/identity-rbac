@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
+import { config } from '../config/env';
 
-const API_BASE_URL = 'http://localhost:5001';
+const API_BASE_URL = config.apiBaseUrl;
 
 const adminAxiosInstance = axios.create({
   baseURL: API_BASE_URL,

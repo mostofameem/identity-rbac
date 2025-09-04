@@ -1,20 +1,17 @@
 # 🏷️ Tag-Based Release & Deployment Guide
 
-This guide explains how to deploy your RBAC application using tags and manual branch selection for better release control.
+This guide explains how to deploy your RBAC application using the **automated CI/CD pipeline** with tag-based deployments.
 
-## 🎯 Deployment Methods
+## 🎯 Deployment Method
 
-Your CI/CD pipeline supports two deployment methods:
+Your CI/CD pipeline supports **Tag-Based Automatic Deployment**:
 
-### 1. **Tag-Based Automatic Deployment** (Recommended for Production)
-- Create a tag → Automatic deployment
-- Perfect for production releases
-- Follows semantic versioning
-
-### 2. **Manual Branch Deployment** 
-- Choose any branch to deploy
-- Select target environment
-- Great for testing and staging
+- ✅ Create a tag → Automatic deployment
+- ✅ Perfect for production releases  
+- ✅ Follows semantic versioning (v1.0.0, v2.1.3, etc.)
+- ✅ Builds Docker images automatically
+- ✅ Pushes to Docker Hub
+- ✅ Deploys to server via SSH
 
 ---
 
@@ -45,28 +42,33 @@ git push origin release-production
 6. Click **"Publish release"**
 
 ### **Supported Tag Formats:**
-- `v1.0.0`, `v2.1.3` (semantic versioning)
-- `release-production`, `release-staging`
-- `release-1.0`, `release-hotfix`
+- `v1.0.0`, `v2.1.3` (semantic versioning - **Required format**)
 
-### **What Happens:**
-✅ Automatic deployment to production  
-✅ Docker images tagged with version  
-✅ Deployment logs created  
-✅ Health checks performed  
+### **What Happens Automatically:**
+✅ **Build** backend and frontend Docker images  
+✅ **Push** images to Docker Hub with tag  
+✅ **SSH** to your server  
+✅ **Generate** docker-compose.yml with new tag  
+✅ **Pull** and start new containers  
+✅ **Health checks** performed  
 
 ---
 
-## 🎮 Method 2: Manual Branch Deployment
+## 🔧 Manual Deployment (Backup Method)
 
-### **Step 1: Trigger Manual Deployment**
-1. Go to your repository → **Actions** tab
-2. Click **"Deploy to AWS EC2"** workflow
-3. Click **"Run workflow"** button
-4. Fill in the form:
-   - **Branch**: Choose which branch to deploy
-   - **Environment**: production/staging/development  
-   - **Version**: Optional version tag
+If CI/CD is unavailable, you can deploy manually using the deployment scripts:
+
+### **Step 1: SSH to Your Server**
+```bash
+ssh -i your-key.pem ubuntu@your-server-ip
+cd /services/rbac
+```
+
+### **Step 2: Manual Deploy**
+```bash
+# Set your Docker Hub username and desired tag
+DOCKER_USERNAME=your_dockerhub_username TAG=v1.0.0 ./deploy.sh
+```
 
 ### **Available Options:**
 

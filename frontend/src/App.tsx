@@ -10,7 +10,7 @@
  * - Clean routing structure
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PageLayout } from './components/layout';
@@ -18,6 +18,7 @@ import { UserManagement, RoleManagement, PermissionManagement } from './componen
 import LoginPage from './components/LoginPage';
 import HomePage from './components/HomePage';
 import ProtectedRoute from './components/ProtectedRoute';
+import { logConfig, validateConfig } from './config/env';
 import { useMessage } from './hooks';
 
 /**
@@ -146,6 +147,16 @@ const AppRoutes: React.FC = () => {
  * Root component with routing and authentication context
  */
 const App: React.FC = () => {
+  useEffect(() => {
+    // Initialize configuration
+    try {
+      validateConfig();
+      logConfig();
+    } catch (error) {
+      console.error('Configuration error:', error);
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

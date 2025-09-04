@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Deployment script for RBAC application on AWS EC2
+# Manual deployment script for RBAC application (Backup for CI/CD)
+# This script is used for manual deployments when CI/CD is not available
 set -e
 
-echo "🚀 Starting deployment process..."
+echo "🚀 Starting manual deployment process..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,13 +13,29 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-APP_DIR="/home/ubuntu/rbac-app"
-DOCKER_COMPOSE_FILE="deployment/docker-compose.prod.yml"
-BACKUP_DIR="/home/ubuntu/backups"
+APP_DIR="/services/rbac"
+DOCKER_COMPOSE_FILE="docker-compose.yml"
+BACKUP_DIR="/services/rbac/backups"
+
+# Default values
+DOCKER_USERNAME=${DOCKER_USERNAME:-""}
+TAG=${TAG:-"latest"}
+
+# Validate required environment variables
+if [ -z "$DOCKER_USERNAME" ]; then
+    print_error "DOCKER_USERNAME environment variable is required"
+    echo "Usage: DOCKER_USERNAME=your_username TAG=v1.0.0 $0"
+    exit 1
+fi
 
 # Create necessary directories
 mkdir -p $APP_DIR
 mkdir -p $BACKUP_DIR
+
+echo "📋 Deployment Configuration:"
+echo "   Docker Username: $DOCKER_USERNAME"
+echo "   Tag: $TAG"
+echo "   App Directory: $APP_DIR"
 
 # Function to print colored output
 print_status() {
@@ -76,6 +93,35 @@ deploy() {
     print_status "Changing to application directory: $APP_DIR"
     cd $APP_DIR
 
+    # Generate docker-compose.yml with the specified tag
+    print_status "Generating docker-compose.yml with tag: $TAG"
+    cat > docker-compose.yml <<EOL
+services:
+  backend:
+    container_name: rbac-backend
+    image: ${DOCKER_USERNAME}/rbac-backend:${TAG}
+    env_file:
+      - .env
+    ports:
+      - "\${HTTP_PORT}:\${HTTP_PORT}"
+    networks:
+      - rbac-network
+
+  frontend:
+    container_name: rbac-frontend
+    image: ${DOCKER_USERNAME}/rbac-frontend:${TAG}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - rbac-network
+
+networks:
+  rbac-network:
+    driver: bridge
+EOL
+
     # Stop existing containers
     print_status "Stopping existing containers..."
     docker-compose -f $DOCKER_COMPOSE_FILE down --remove-orphans || true
@@ -83,20 +129,10 @@ deploy() {
     # Remove unused Docker resources
     print_status "Cleaning up Docker resources..."
     docker system prune -f || true
-    docker volume prune -f || true
 
-    # Load new Docker images (if they exist)
-    if [ -f "backend.tar.gz" ]; then
-        print_status "Loading backend Docker image..."
-        docker load < backend.tar.gz
-        rm -f backend.tar.gz
-    fi
-
-    if [ -f "frontend.tar.gz" ]; then
-        print_status "Loading frontend Docker image..."
-        docker load < frontend.tar.gz
-        rm -f frontend.tar.gz
-    fi
+    # Pull latest Docker images from Docker Hub
+    print_status "Pulling Docker images for tag: $TAG"
+    docker-compose -f $DOCKER_COMPOSE_FILE pull
 
     # Start services
     print_status "Starting services..."

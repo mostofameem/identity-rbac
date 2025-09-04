@@ -1,23 +1,27 @@
 # 🚀 RBAC Deployment
 
-This folder contains all the deployment-related files and documentation for the RBAC application.
+This folder contains deployment files and documentation for the RBAC application with **automated CI/CD pipeline**.
+
+## 🎯 Deployment Overview
+
+**Primary Method**: Automated CI/CD with GitHub Actions (tag-based)
+**Backup Method**: Manual deployment scripts in this folder
 
 ## 📁 Folder Structure
 
 ```
 deployment/
 ├── README.md                      # This file
-├── docker-compose.prod.yml        # Production Docker Compose configuration
+├── docker-compose.prod.yml        # Production Docker Compose template
 ├── env.production.example         # Environment variables template
 ├── scripts/
-│   ├── deploy.sh                  # Main deployment script
+│   ├── deploy.sh                  # Manual deployment script (backup)
 │   └── setup-ec2.sh              # EC2 instance setup script
-├── nginx/
-│   └── nginx.conf                 # Nginx reverse proxy configuration
 └── docs/
     ├── DEPLOYMENT.md              # Complete deployment guide
-    ├── DEPLOYMENT_QUICKSTART.md   # Quick start guide (10 minutes)
-    └── DATABASE_SETUP.md          # PostgreSQL database setup guide
+    ├── DEPLOYMENT_QUICKSTART.md   # Quick start guide
+    ├── TAG_BASED_DEPLOYMENT.md    # CI/CD workflow guide
+    └── DATABASE_SETUP.md          # PostgreSQL database setup
 ```
 
 ## 📖 Documentation
@@ -43,40 +47,73 @@ deployment/
 - `scripts/setup-ec2.sh` - One-time EC2 instance setup
 - `scripts/deploy.sh` - Deployment automation with rollback support
 
-## 🚀 Quick Deploy
+## 🚀 Quick Deploy (Automated CI/CD)
 
-1. **Set up database** (PostgreSQL - AWS RDS, DigitalOcean, etc.)
-2. **Launch EC2 instance** (Ubuntu 22.04, t3.small+)
-3. **Run setup script:**
+### Prerequisites
+1. **Database**: PostgreSQL (AWS RDS, DigitalOcean, etc.)
+2. **Server**: Ubuntu 22.04+ with Docker & Docker Compose
+3. **Docker Hub**: Account for image storage
+
+### Setup Steps
+1. **Prepare your server:**
    ```bash
    curl -fsSL https://raw.githubusercontent.com/your-username/your-repo/main/deployment/scripts/setup-ec2.sh | bash
    ```
-4. **Configure GitHub secrets** (database credentials, EC2 details)
-5. **Create a release tag** → automatic deployment!
+
+2. **Configure GitHub Secrets:**
+   - `DOCKER_USERNAME` & `DOCKER_PASSWORD`
+   - `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`
+
+3. **Deploy with a tag:**
    ```bash
    git tag v1.0.0 && git push origin v1.0.0
    ```
 
+**That's it!** 🎉 Your CI/CD pipeline will automatically:
+- Build Docker images
+- Push to Docker Hub
+- Deploy to your server
+- Start services
+
+## 🔧 Manual Deployment (Backup Method)
+
+If CI/CD is unavailable, use the manual deployment script:
+
+```bash
+# On your server
+cd /services/rbac
+DOCKER_USERNAME=your_username TAG=v1.0.0 ./deploy.sh
+```
+
 ## 🏗️ Architecture
 
 ```
-Internet → Nginx (80/443) → Frontend (React) + Backend (Go API) → External PostgreSQL
+Internet → Frontend:3000 (React) ↔ Backend:5001 (Go API) → External PostgreSQL
 ```
 
 ## 🔍 Health Checks
 
-- **Backend**: `http://your-server:5001/health-check`
-- **Frontend**: `http://your-server:80`
+- **Backend**: `http://your-server:5001/health`
+- **Frontend**: `http://your-server:3000`
 
-## 💡 Features
+## 💡 CI/CD Features
 
+- ✅ **Tag-based deployment** (v1.0.0, v2.1.3, etc.)
+- ✅ **Automated Docker builds**
 - ✅ **Zero-downtime deployment**
-- ✅ **Automatic rollback on failure**
-- ✅ **SSL/HTTPS ready**
-- ✅ **Database backup integration**
-- ✅ **Monitoring & health checks**
-- ✅ **Security hardening**
+- ✅ **Docker Hub integration**
+- ✅ **SSH-based deployment**
+- ✅ **Health checks & validation**
+- ✅ **Manual deployment backup**
+
+## 🔄 Deployment Workflow
+
+1. **Developer** pushes a tag: `git tag v1.0.0 && git push origin v1.0.0`
+2. **GitHub Actions** triggers CI/CD pipeline
+3. **Docker images** built and pushed to Docker Hub
+4. **Server deployment** via SSH
+5. **Services** automatically started and health-checked
 
 ---
 
-**Need help?** Start with [DEPLOYMENT_QUICKSTART.md](docs/DEPLOYMENT_QUICKSTART.md) for a 10-minute setup guide.
+**Need help?** Check the [docs/](docs/) folder for detailed guides!

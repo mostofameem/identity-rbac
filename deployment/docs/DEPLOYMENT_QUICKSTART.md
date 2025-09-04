@@ -24,16 +24,26 @@ sudo reboot
 
 Go to `GitHub Repository > Settings > Secrets and variables > Actions` and add:
 
+**Docker Hub:**
 ```
-EC2_HOST=your-ec2-public-ip
-EC2_USER=ubuntu
-EC2_SSH_KEY=your-private-ssh-key-content
+DOCKER_USERNAME=your_dockerhub_username
+DOCKER_PASSWORD=your_dockerhub_password
+```
+
+**Server Access:**
+```
+SERVER_HOST=your-ec2-public-ip
+SERVER_USER=ubuntu
+SERVER_SSH_KEY=your-private-ssh-key-content
+```
+
+**Environment Variables (.env file on server):**
+```
 DB_HOST=your-postgres-host.amazonaws.com
 DB_PORT=5432
 DB_USER=rbac_user
 DB_PASSWORD=your-secure-password
 DB_NAME=rbac_db
-DB_SSL_MODE=require
 JWT_SECRET=your-jwt-secret-min-32-chars
 HTTP_PORT=5001
 MAIL_HOST=smtp.gmail.com
@@ -44,31 +54,31 @@ MAIL_PASSWORD=your-app-password
 
 ## 3. Deploy (1 minute)
 
-### Option A: Tag-Based Release (Recommended)
+### Tag-Based Automatic Deployment
 ```bash
-# Create and push a release tag
+# Create and push a release tag (triggers CI/CD automatically)
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-### Option B: Manual Deployment
-1. Go to GitHub → Actions → "Deploy to AWS EC2"
-2. Click "Run workflow"
-3. Select branch and environment
-4. Click "Run workflow"
+**What happens automatically:**
+1. 🏗️ Builds Docker images for backend & frontend
+2. 📤 Pushes images to Docker Hub  
+3. 🚀 SSHs to your server and deploys
+4. ✅ Performs health checks
 
-### Option C: Push to Main (Auto-deploy disabled)
+### Manual Deployment (Backup)
+If CI/CD fails, SSH to your server:
 ```bash
-git add .
-git commit -m "Deploy to production"
-git push origin main
-# Then create a tag for deployment
+ssh -i your-key.pem ubuntu@your-server-ip
+cd /services/rbac
+DOCKER_USERNAME=your_username TAG=v1.0.0 ./deploy.sh
 ```
 
 ## 4. Verify Deployment
 
-- Backend: `http://your-ec2-ip:5001/health-check`
-- Frontend: `http://your-ec2-ip:80`
+- Backend: `http://your-ec2-ip:5001/health`
+- Frontend: `http://your-ec2-ip:3000`
 - Check GitHub Actions for deployment status
 
 ## Quick Commands
@@ -78,13 +88,13 @@ git push origin main
 ssh -i your-key.pem ubuntu@your-ec2-ip
 
 # Check status
-cd /home/ubuntu/rbac-app && ./deployment/scripts/deploy.sh status
+cd /services/rbac && docker-compose ps
 
 # View logs  
-cd /home/ubuntu/rbac-app && ./deployment/scripts/deploy.sh logs
+cd /services/rbac && docker-compose logs -f
 
-# Rollback
-cd /home/ubuntu/rbac-app && ./deployment/scripts/deploy.sh rollback
+# Manual deployment
+cd /services/rbac && DOCKER_USERNAME=your_username TAG=v1.0.0 ./deploy.sh
 ```
 
 ## Troubleshooting
@@ -98,13 +108,15 @@ cd /home/ubuntu/rbac-app && ./deployment/scripts/deploy.sh rollback
 ```bash
 docker ps                    # Check running containers
 docker logs rbac-backend     # Check backend logs
-curl http://localhost:5001/health-check  # Test backend
+curl http://localhost:5001/health  # Test backend
+curl http://localhost:3000   # Test frontend
 ```
 
-**Need help?** Check the full [DEPLOYMENT.md](docs/DEPLOYMENT.md) guide.
+**Need help?** Check the full [DEPLOYMENT.md](DEPLOYMENT.md) guide.
 
 ---
 
 ✅ **Total setup time: ~10 minutes**  
-🔄 **Auto-deploy on every push to main branch**  
-📊 **Built-in monitoring and health checks**
+🔄 **Auto-deploy on tag creation (v1.0.0)**  
+📊 **Built-in monitoring and health checks**  
+🐳 **Docker Hub integration**
