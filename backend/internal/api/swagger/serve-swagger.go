@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-//go:embed dist/*
+//go:embed dist
 var distFS embed.FS
 
 //go:embed swagger.json
