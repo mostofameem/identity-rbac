@@ -73,47 +73,64 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "🚀 Starting deployment with tag: ${{ env.TAG }}"
+            TAG="${{ github.ref_name }}"
+            echo "🚀 Starting deployment with tag: $TAG"
             
             # Create directory
             mkdir -p /services/rbac
             cd /services/rbac
 
+            # Stop and clean up existing containers
+            echo "🛑 Stopping existing containers..."
+            docker-compose down --remove-orphans || true
+            docker container prune -f || true
+            
             # Generate docker-compose.yml with the new tag
             echo "📝 Generating docker-compose.yml"
             cat > docker-compose.yml <<EOL
             services:
               backend:
                 container_name: rbac-backend
-                image: ${{ secrets.DOCKER_USERNAME }}/rbac-backend:${{ env.TAG }}
+                image: ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG
                 env_file:
                   - .env
                 ports:
                   - "\${HTTP_PORT}:\${HTTP_PORT}"
                 networks:
                   - rbac-network
+                restart: unless-stopped
 
               frontend:
                 container_name: rbac-frontend
-                image: ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:${{ env.TAG }}
+                image: ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG
                 ports:
                   - "3000:80"
                 depends_on:
                   - backend
                 networks:
                   - rbac-network
+                restart: unless-stopped
 
             networks:
               rbac-network:
                 driver: bridge
             EOL
 
-            # Pull new images & restart
+            # Pull new images
             echo "📦 Pulling new images..."
             docker-compose pull
             
-            echo "🔄 Restarting services..."
-            docker-compose up -d
+            # Start services with force recreate
+            echo "🔄 Starting services..."
+            docker-compose up -d --force-recreate
+            
+            # Wait for services to start
+            echo "⏳ Waiting for services to start..."
+            sleep 10
+            
+            # Check if containers are running
+            echo "📊 Container status:"
+            docker-compose ps
             
             echo "✅ Deployment completed successfully!"
 
