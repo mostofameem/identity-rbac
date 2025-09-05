@@ -15,6 +15,7 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 COPY --from=builder /app/internal/migrations /app/internal/migrations
+COPY --from=builder /app/internal/Mail/template /app/internal/Mail/template
 
 EXPOSE 5001
 
