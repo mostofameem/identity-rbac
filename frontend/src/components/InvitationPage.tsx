@@ -7,6 +7,7 @@ interface RegistrationForm {
   lastName: string;
   password: string;
   confirmPassword: string;
+  acceptTerms: boolean;
 }
 
 const InvitationPage: React.FC = () => {
@@ -18,7 +19,8 @@ const InvitationPage: React.FC = () => {
     firstName: '',
     lastName: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    acceptTerms: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,10 +42,10 @@ const InvitationPage: React.FC = () => {
   }, [token]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setForm(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     setError(''); // Clear error when user types
   };
@@ -63,6 +65,10 @@ const InvitationPage: React.FC = () => {
     }
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
+      return false;
+    }
+    if (!form.acceptTerms) {
+      setError('You must accept the Terms and Conditions to register');
       return false;
     }
     return true;
@@ -100,7 +106,7 @@ const InvitationPage: React.FC = () => {
         setTimeout(() => {
           navigate('/login', { 
             state: { 
-              message: 'Registration successful! Please login with your credentials.',
+              message: 'Account created successfully! Please login with your new credentials.',
               email: email 
             }
           });
@@ -254,11 +260,37 @@ const InvitationPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Terms and Conditions Checkbox */}
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="acceptTerms"
+                  name="acceptTerms"
+                  type="checkbox"
+                  checked={form.acceptTerms}
+                  onChange={handleInputChange}
+                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="acceptTerms" className="text-gray-700">
+                  I agree to the{' '}
+                  <a href="#" className="text-blue-600 hover:text-blue-500">
+                    Terms and Conditions
+                  </a>{' '}
+                  and{' '}
+                  <a href="#" className="text-blue-600 hover:text-blue-500">
+                    Privacy Policy
+                  </a>
+                </label>
+              </div>
+            </div>
+
             {/* Submit Button */}
             <div>
               <button
                 type="submit"
-                disabled={loading || !token}
+                disabled={loading || !token || !form.acceptTerms}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -279,7 +311,7 @@ const InvitationPage: React.FC = () => {
           <div className="mt-6">
             <div className="text-center">
               <p className="text-xs text-gray-500">
-                By registering, you agree to our Terms of Service and Privacy Policy
+                Complete your registration to access the RBAC System
               </p>
             </div>
           </div>
