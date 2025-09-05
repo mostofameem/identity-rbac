@@ -18,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiredPermission 
 }) => {
-  const { user, isLoading, hasResourcePermission } = useAuth();
+  const { user, isLoading, hasResourcePermission, hasPermission } = useAuth();
 
   if (isLoading) {
     return (
@@ -38,7 +38,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredPermission && !hasResourcePermission(requiredPermission)) {
+  // Check for exact permission match first, then fallback to resource permission
+  const hasRequiredPermission = requiredPermission && (
+    hasPermission(requiredPermission) || 
+    hasResourcePermission(requiredPermission.split('.')[0])
+  );
+
+  if (requiredPermission && !hasRequiredPermission) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

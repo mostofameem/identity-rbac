@@ -36,19 +36,33 @@ adminAxiosInstance.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const response = await axios.get(`${API_BASE_URL}/v1/token/refresh?token=${refreshToken}`);
+          console.log('🔄 Admin API: Token expired, attempting refresh...');
+          const response = await axios.get(`${API_BASE_URL}/api/v1/token/refresh?token=${refreshToken}`);
           const { accessToken } = response.data;
           localStorage.setItem('token', accessToken);
+          console.log('✅ Admin API: Token refreshed successfully');
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return adminAxiosInstance(originalRequest);
         }
       } catch (refreshError) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        console.error('❌ Admin API: Token refresh failed:', refreshError);
+        
+        // Only redirect to login if refresh token is invalid
+        if ((refreshError as any).response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
+    }
+
+    // For 403 (Forbidden) or other authorization errors, don't redirect to login
+    // Let the component handle the error gracefully
+    if (error.response?.status === 403) {
+      console.log('❌ Admin API: Access denied - insufficient permissions');
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);

@@ -122,7 +122,7 @@ const AppRoutes: React.FC = () => {
       <Route 
         path="/permissions" 
         element={
-          <ProtectedRoute requiredPermission="permission">
+          <ProtectedRoute requiredPermission="permission.view">
             <PageWrapper 
               title="Permission Management" 
               subtitle="View and manage system permissions"

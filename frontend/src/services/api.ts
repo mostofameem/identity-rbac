@@ -55,13 +55,23 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         console.error('❌ Token refresh failed:', refreshError);
         
-        // Refresh token is invalid, redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Only redirect to login if refresh token is invalid
+        // For access denied errors, let the component handle it
+        if ((refreshError as any).response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
+    }
+
+    // For 403 (Forbidden) or other authorization errors, don't redirect to login
+    // Let the component handle the error gracefully
+    if (error.response?.status === 403) {
+      console.log('❌ Access denied - insufficient permissions');
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);
