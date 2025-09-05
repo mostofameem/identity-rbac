@@ -52,7 +52,10 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       const response = await adminApiClient.getPermissions(permissionFilter);
       setPermissions(response.data.data || []);
     } catch (err: any) {
-      showLocalMessage(err.response?.data?.message || 'Failed to fetch permissions', 'error');
+      const errorMessage = err.response?.status === 403 
+        ? 'You are not authorized to view permissions. Please contact your administrator.'
+        : err.response?.data?.message || 'Failed to fetch permissions';
+      showLocalMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

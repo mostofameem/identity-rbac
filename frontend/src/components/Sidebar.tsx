@@ -51,7 +51,7 @@ const Sidebar: React.FC = () => {
           )}
 
           {/* Permission Management */}
-          {hasResourcePermission('permission') && (
+          {hasResourcePermission('permission', 'view') && (
             <Link 
               to="/permissions" 
               className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/permissions')}`}
