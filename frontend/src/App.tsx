@@ -17,6 +17,7 @@ import { PageLayout } from './components/layout';
 import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
 import LoginPage from './components/LoginPage';
 import HomePage from './components/HomePage';
+import InvitationPage from './components/InvitationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { logConfig, validateConfig } from './config/env';
 import { useMessage } from './hooks';
@@ -63,6 +64,7 @@ const AppRoutes: React.FC = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/invitation" element={<InvitationPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
