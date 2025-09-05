@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { apiClient } from '../services/api';
+import { config } from '../config/env';
 
 interface RegistrationForm {
   firstName: string;
@@ -80,7 +80,7 @@ const InvitationPage: React.FC = () => {
 
     try {
       // Call the registration API with the invitation token
-      const response = await fetch(`${apiClient.defaults.baseURL}/api/v1/register`, {
+      const response = await fetch(`${config.apiBaseUrl}/api/v1/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
