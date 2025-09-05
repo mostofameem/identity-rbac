@@ -11,12 +11,8 @@
       "description": "Local"
     },
     {
-      "url": "http://209.97.169.25:8081",
+      "url": "http://3.110.127.93:5001",
       "description": "Development"
-    },
-    {
-      "url": "http://localhost:5001",
-      "description": "Production"
     }
   ],
   "security": [
