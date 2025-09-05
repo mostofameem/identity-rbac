@@ -8,6 +8,8 @@
 main
 tmp/
 dist/
+# Exception: Keep swagger UI dist files
+!backend/internal/api/swagger/dist/
 build/
 
 # IDE and editor files

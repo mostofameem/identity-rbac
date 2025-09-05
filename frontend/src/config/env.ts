@@ -3,7 +3,12 @@
 
 export const config = {
   // API Configuration
-  apiBaseUrl: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001',
+  apiBaseUrl: process.env.REACT_APP_API_BASE_URL || (
+    // In production, backend runs on same host but port 5001
+    window.location.hostname !== 'localhost' 
+      ? `http://${window.location.hostname}:5001`
+      : 'http://localhost:5001'
+  ),
   
   // App Configuration  
   appName: process.env.REACT_APP_APP_NAME || 'RBAC Identity System',

@@ -5,58 +5,87 @@ on:
     tags:
       - "v*.*.*"   # Runs only on tag push like v1.0.0
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+env:
+  TAG: ${{ github.ref_name }}
 
+jobs:
+  # Job 1: Build Backend
+  build-backend:
+    name: 🏗️ Build Backend
+    runs-on: ubuntu-latest
+    
     steps:
-      # Checkout code
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v3
 
-      # Set up Docker
-      - name: Set up Docker Buildx
+      - name: 🐳 Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Log in to Docker Hub
-      - name: Log in to Docker Hub
+      - name: 🔑 Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build & push backend
-      - name: Build & Push Backend
+      - name: 🏗️ Build & Push Backend Image
         run: |
-          TAG=${GITHUB_REF_NAME}
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG ./backend
-          docker push ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG
+          echo "Building backend with tag: ${{ env.TAG }}"
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/rbac-backend:${{ env.TAG }} ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/rbac-backend:${{ env.TAG }}
+          echo "✅ Backend image pushed successfully"
 
-      # Build & push frontend
-      - name: Build & Push Frontend
+  # Job 2: Build Frontend  
+  build-frontend:
+    name: 🎨 Build Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: 🔑 Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🎨 Build & Push Frontend Image
         run: |
-          TAG=${GITHUB_REF_NAME}
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG ./frontend
-          docker push ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG
+          echo "Building frontend with tag: ${{ env.TAG }}"
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:${{ env.TAG }} ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:${{ env.TAG }}
+          echo "✅ Frontend image pushed successfully"
 
-      # Deploy on Server
-      - name: Deploy on Server
+  # Job 3: Deploy to Server
+  deploy:
+    name: 🚀 Deploy to Server
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    
+    steps:
+      - name: 🚀 Deploy on Server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            TAG=${GITHUB_REF_NAME}
+            echo "🚀 Starting deployment with tag: ${{ env.TAG }}"
+            
+            # Create directory
             mkdir -p /services/rbac
             cd /services/rbac
 
             # Generate docker-compose.yml with the new tag
+            echo "📝 Generating docker-compose.yml"
             cat > docker-compose.yml <<EOL
             services:
               backend:
                 container_name: rbac-backend
-                image: ${{ secrets.DOCKER_USERNAME }}/rbac-backend:$TAG
+                image: ${{ secrets.DOCKER_USERNAME }}/rbac-backend:${{ env.TAG }}
                 env_file:
                   - .env
                 ports:
@@ -66,7 +95,7 @@ jobs:
 
               frontend:
                 container_name: rbac-frontend
-                image: ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:$TAG
+                image: ${{ secrets.DOCKER_USERNAME }}/rbac-frontend:${{ env.TAG }}
                 ports:
                   - "3000:80"
                 depends_on:
@@ -80,5 +109,55 @@ jobs:
             EOL
 
             # Pull new images & restart
+            echo "📦 Pulling new images..."
             docker-compose pull
+            
+            echo "🔄 Restarting services..."
             docker-compose up -d
+            
+            echo "✅ Deployment completed successfully!"
+
+  # Job 4: Health Check
+  health-check:
+    name: 🩺 Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    
+    steps:
+      - name: 🩺 Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            echo "🩺 Running health checks..."
+            
+            # Wait for services to start
+            sleep 30
+            
+            # Check if containers are running
+            echo "📊 Container status:"
+            cd /services/rbac && docker-compose ps
+            
+            # Health check backend (retry up to 5 times)
+            echo "🔍 Checking backend health..."
+            for i in {1..5}; do
+              if curl -f http://localhost:5001/health >/dev/null 2>&1; then
+                echo "✅ Backend is healthy!"
+                break
+              else
+                echo "⏳ Backend not ready yet (attempt $i/5)..."
+                sleep 10
+              fi
+            done
+            
+            # Health check frontend
+            echo "🔍 Checking frontend health..."
+            if curl -f http://localhost:3000 >/dev/null 2>&1; then
+              echo "✅ Frontend is healthy!"
+            else
+              echo "⚠️ Frontend might need more time to start"
+            fi
+            
+            echo "🎉 Health check completed!"
