@@ -54,7 +54,7 @@ func (s *service) InviteUser(ctx context.Context, req InviteUserReq) error {
 		"UserName":      req.UserName,
 		"UserEmail":     req.Email,
 		"CompanyName":   "Identity RBAC",
-		"InvitationURL": fmt.Sprintf("%s=%s", s.cnf.Mail.FrontendURL, emailInvitationToken),
+		"InvitationURL": fmt.Sprintf("%s%s", s.cnf.Mail.FrontendURL, emailInvitationToken),
 		"ExpiresAt":     time.Now().Add(7 * 24 * time.Hour).Format("January 2, 2006"),
 		"SupportEmail":  "support@your-company.com",
 	}
