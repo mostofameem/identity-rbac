@@ -43,7 +43,7 @@ func (server *Server) initUserRoutes(mux *http.ServeMux, manager *middlewares.Ma
 		"GET /api/v1/permissions",
 		manager.With(
 			http.HandlerFunc(server.handlers.GetPermissions),
-			server.middleware.Authorization(middlewares.ROLE_ASSIGN_ACCESS),
+			server.middleware.Authorization(middlewares.PERMISSION_VIEW_ACCESS),
 			server.middleware.AuthenticateJWT,
 		),
 	)
