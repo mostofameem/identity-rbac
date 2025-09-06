@@ -8,6 +8,7 @@ import (
 	web "identity-rbac/internal/api/routes"
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/auth"
+	"identity-rbac/internal/event"
 	"identity-rbac/internal/rbac"
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/internal/token"
@@ -61,7 +62,13 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		mailService,
 	)
 
-	handlers := handlers.NewHandlers(cnf, rbacSvc)
+	eventRepo := repo.NewEventRepo(db)
+	eventTypeRepo := repo.NewEventTypeRepo(db)
+	perticipantRepo := repo.NewPerticipantRepo(db)
+	eventSettingRepo := repo.NewEventSettingRepo(db)
+	eventSvc := event.NewEventSerVice(cnf, eventRepo, eventTypeRepo, perticipantRepo, eventSettingRepo)
+
+	handlers := handlers.NewHandlers(cnf, rbacSvc, eventSvc)
 
 	middleware := middlewares.NewMiddleware(cnf, userRepo, roleRepo, permissionRepo, roleHasPermissionRepo, userHasRoleRepo)
 	server := web.NewServer(cnf, handlers, middleware)

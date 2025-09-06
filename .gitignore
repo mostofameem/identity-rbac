@@ -69,4 +69,4 @@ vendor/
 *.rar
 
 # Old project name references
-event_management
+.cursor
