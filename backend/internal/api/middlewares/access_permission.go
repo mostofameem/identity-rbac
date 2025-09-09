@@ -16,4 +16,10 @@ const (
 	// Permission
 	PERMISSION_VIEW_ACCESS   = "permission.view"
 	PERMISSION_ASSIGN_ACCESS = "permission.assign"
+
+	// Event
+	EVENT_CREATE_ACCESS = "event.create"
+	EVENT_UPDATE_ACCESS = "event.update"
+	EVENT_DELETE_ACCESS = "event.delete"
+	EVENT_VIEW_ACCESS   = "event.view"
 )

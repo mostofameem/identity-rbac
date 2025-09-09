@@ -8,12 +8,11 @@ CREATE TABLE IF NOT EXISTS events (
     start_at DATETIME NOT NULL,
     registration_opens_at DATETIME,
     registration_closes_at DATETIME,
-    auto_event_create BOOLEAN DEFAULT FALSE,
-    created_by INT,
-    updated_by INT,
+    total_participants INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
     remarks VARCHAR(250),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 

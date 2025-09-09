@@ -467,7 +467,7 @@
     },
 
 
-    "/v1/token/refresh":{
+    "/api/v1/token/refresh":{
       "get": {
           "tags": ["User"],
           "summary": "Get access token from refresh token",
@@ -475,6 +475,166 @@
           { "name": "token", "in": "query", "schema": { "type": "string"} ,"required":true}
           ]
         }
+    },
+
+    "/api/v1/events": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Create a new event",
+        "description": "Creates a new event with the provided details. Requires authentication and event.create permission.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "eventTypeId", "startAt"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The title of the event",
+                    "example": "Annual Tech Conference"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Detailed description of the event",
+                    "example": "A comprehensive technology conference featuring the latest innovations"
+                  },
+                  "eventTypeId": {
+                    "type": "integer",
+                    "description": "ID of the event type",
+                    "example": 1
+                  },
+                  "startAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Event start date and time",
+                    "example": "2024-03-15T09:00:00Z"
+                  },
+                  "registrationOpensAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When registration opens (optional)",
+                    "example": "2024-02-15T09:00:00Z"
+                  },
+                  "registrationClosesAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When registration closes (optional)",
+                    "example": "2024-03-10T23:59:59Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Event created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "Annual Tech Conference"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "A comprehensive technology conference featuring the latest innovations"
+                        },
+                        "eventTypeId": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "startAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-03-15T09:00:00Z"
+                        },
+                        "registrationOpensAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-02-15T09:00:00Z"
+                        },
+                        "registrationClosesAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-03-10T23:59:59Z"
+                        },
+                        "autoEventCreate": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "createdBy": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "updatedBy": {
+                          "type": "integer",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "remarks": {
+                          "type": "string",
+                          "example": ""
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-01-15T10:30:00Z"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "example": "2024-01-15T10:30:00Z"
+                        },
+                        "isActive": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Validation error or invalid request payload"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions (event.create required)"
+          },
+          "404": {
+            "description": "Not Found - Event type not found"
+          },
+          "500": {
+            "description": "Internal Server Error - Failed to create event"
+          }
+        }
+      }
     }
   },
   "components": {
