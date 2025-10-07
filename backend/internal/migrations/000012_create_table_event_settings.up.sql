@@ -1,6 +1,4 @@
 -- +migrate Up
-
-
 CREATE TABLE IF NOT EXISTS event_settings (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     event_id BIGINT UNSIGNED NOT NULL,
