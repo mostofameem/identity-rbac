@@ -15,4 +15,5 @@ func (server *Server) initRoutes(mux *http.ServeMux, manager *middlewares.Manage
 
 	server.initAuthRoutes(mux)
 	server.initUserRoutes(mux, manager)
+	server.initEventRoutes(mux, manager)
 }
