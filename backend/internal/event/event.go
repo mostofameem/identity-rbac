@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"fmt"
 	"identity-rbac/config"
 	"identity-rbac/internal/util"
 )
@@ -31,7 +32,7 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 		return nil, err
 	}
 	if eventType == nil {
-		return nil, util.ErrNotFound
+		return nil, fmt.Errorf("Event type not found.")
 	}
 
 	// Create the event

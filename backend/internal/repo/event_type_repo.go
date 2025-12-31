@@ -127,6 +127,7 @@ func (r *eventTypeRepo) GetAllWithPagination(ctx context.Context, req event.GetE
 
 	query, args, err := NewQueryBuilder(r.getEventTypeQueryBuilder()).
 		FilterByPrefix("name", req.Name).
+		FilterByBoolean("is_active", true).
 		Limit(limit).
 		Offset(Offset).
 		ToSql()
@@ -153,11 +154,14 @@ func (r *eventTypeRepo) GetAllWithPagination(ctx context.Context, req event.GetE
 
 	return eventTypes, nil
 }
-
-func (r *eventTypeRepo) GetTotalEventTypeCount(ctx context.Context, req event.GetEventTypesReq) (int, error) {
+func (r *eventTypeRepo) GetTotalEventTypeCount(
+	ctx context.Context,
+	req event.GetEventTypesReq,
+) (int, error) {
 
 	query, args, err := NewQueryBuilder(r.getEventTypeCountQueryBuilder()).
 		FilterByPrefix("name", req.Name).
+		FilterByBoolean("is_active", true).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build query", logger.Extra(map[string]any{
@@ -167,11 +171,7 @@ func (r *eventTypeRepo) GetTotalEventTypeCount(ctx context.Context, req event.Ge
 	}
 
 	var totalItem int
-	if err := r.db.SelectContext(ctx, &totalItem, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-
+	if err := r.db.GetContext(ctx, &totalItem, query, args...); err != nil {
 		slog.Error("Failed to execute query", logger.Extra(map[string]any{
 			"error": err.Error(),
 			"query": query,
@@ -197,7 +197,7 @@ func (r *eventTypeRepo) getEventTypeQueryBuilder() BuildQuery {
 func (r *eventTypeRepo) getEventTypeCountQueryBuilder() BuildQuery {
 	return func() sq.SelectBuilder {
 		return r.psql.Select(
-			"Count(id) as total_item",
+			"COUNT(*)",
 		).
 			From(r.table)
 	}

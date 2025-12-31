@@ -43,6 +43,11 @@ func (q *queryBuilder) FilterByPrefix(key, val string) *queryBuilder {
 	return q
 }
 
+func (q *queryBuilder) FilterByBoolean(key string, val bool) *queryBuilder {
+	q.query = q.query.Where(sq.Eq{key: val})
+	return q
+}
+
 func (q *queryBuilder) FilterByFullText(key, val string) *queryBuilder {
 	if val != "" {
 		q.query = q.query.Where(sq.Like{key: "%" + val + "%"})
