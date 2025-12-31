@@ -66,3 +66,43 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 
 	return response, nil
 }
+
+func (s *service) CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error) {
+
+	eventType, err := s.eventTypeRepo.GetByName(ctx, req.Name)
+	if err != nil {
+		return 0, err
+	}
+	if eventType != nil {
+		return 0, util.ErrAlreadyExist
+	}
+
+	id, err := s.eventTypeRepo.Create(ctx, req)
+
+	return id, err
+}
+
+func (s *service) GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error) {
+
+	eventTypes, err := s.eventTypeRepo.GetAllWithPagination(ctx, req)
+	if err != nil {
+		return []GetEventTypeResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+
+	eventTypeRes := make([]GetEventTypeResponse, 0, len(eventTypes))
+	for i, eventType := range eventTypes {
+		eventTypeRes[i] = GetEventTypeResponse{
+			Id:          eventType.Id,
+			Name:        eventType.Name,
+			Description: eventType.Description,
+		}
+	}
+
+	totalItem, err := s.eventTypeRepo.GetTotalEventTypeCount(ctx, req)
+	if err != nil {
+		return []GetEventTypeResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+	pagination := util.GetPaginationResponse(totalItem, req.Page, req.Limit)
+
+	return eventTypeRes, pagination, nil
+}

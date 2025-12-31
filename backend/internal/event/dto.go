@@ -29,3 +29,23 @@ type EventResponse struct {
 	UpdatedAt            *time.Time `json:"updatedAt"`
 	IsActive             bool       `json:"isActive"`
 }
+
+type CreateEventTypeReq struct {
+	Name        string
+	Description string
+	CreatedAt   time.Time
+	CreatedBy   int
+	IsActive    bool
+}
+
+type GetEventTypesReq struct {
+	Name  string
+	Page  int
+	Limit int
+}
+
+type GetEventTypeResponse struct {
+	Id          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
