@@ -117,7 +117,7 @@ func ConfigPageSize(page, limit int) (int, int) {
 	Offset := 0
 
 	PageLimit = min(limit, PageLimit)
-	Offset = PageLimit * page
+	Offset = PageLimit * max(0, page-1)
 
 	return PageLimit, Offset
 }

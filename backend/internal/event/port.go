@@ -29,5 +29,5 @@ type EventTypeRepo interface {
 type PerticipantRepo interface {
 }
 
-type EventSettingRepo interface {
+type EventTypeSettingRepo interface {
 }
