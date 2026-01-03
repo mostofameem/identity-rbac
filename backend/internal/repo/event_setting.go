@@ -7,19 +7,19 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type EventSettingRepo interface {
-	event.EventSettingRepo
+type EventTypeSettingRepo interface {
+	event.EventTypeSettingRepo
 }
 
-type eventSettingRepo struct {
+type eventTypeSettingRepo struct {
 	table string
 	db    *sqlx.DB
 	psql  sq.StatementBuilderType
 }
 
-func NewEventSettingRepo(db *DB) EventSettingRepo {
-	return &eventSettingRepo{
-		table: "event_settings",
+func NewEventSettingRepo(db *DB) EventTypeSettingRepo {
+	return &eventTypeSettingRepo{
+		table: "event_type_settings",
 		db:    db.Db,
 		psql:  db.Psql,
 	}

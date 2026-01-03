@@ -14,9 +14,9 @@ type CreateEventTypeRequest struct {
 }
 
 type GetEventTypes struct {
-	Name  string `json:"name"`
-	Page  int    `json:"page"`
-	Limit int    `json:"limit"`
+	Name  string `form:"name" json:"name"`
+	Page  int    `form:"page" json:"page"`
+	Limit int    `form:"limit" json:"limit"`
 }
 
 func (handlers *Handlers) CreateEventType(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +73,7 @@ func (handlers *Handlers) GetEventTypes(w http.ResponseWriter, r *http.Request) 
 		Limit: request.Limit,
 	})
 	if err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Failed to extract query params")
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
 		return
 	}
 

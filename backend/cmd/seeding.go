@@ -67,6 +67,21 @@ func seedPermissions(db *repo.DB) error {
 		{"role.view", "role", "view", "Role view access"},
 		{"role.assign", "role", "assign", "Role assign access"},
 
+		{"event.create", "event", "create", "Event create permission"},
+		{"event.update", "event", "update", "Event update permission"},
+		{"event.delete", "event", "delete", "Event delete permission"},
+		{"event.view", "event", "view", "Event view permission"},
+
+		{"event_type.create", "event_type", "create", "Event type create permission"},
+		{"event_type.update", "event_type", "update", "Event type update permission"},
+		{"event_type.delete", "event_type", "delete", "Event type delete permission"},
+		{"event_type.view", "event_type", "view", "Event type view access"},
+
+		{"perticipent.create", "perticipent", "create", "Perticipent creation access"},
+		{"perticipent.update", "perticipent", "update", "Perticipent update access"},
+		{"perticipent.delete", "perticipent", "delete", "Perticipent delete access"},
+		{"perticipent.view", "perticipent", "view", "perticipent view access"},
+
 		{"permission.view", "permission", "view", "Permission view access"},
 		{"permission.assign", "permission", "assign", "Permission assign access"},
 	}

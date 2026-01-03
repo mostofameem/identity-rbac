@@ -12,10 +12,16 @@ type service struct {
 	eventRepo        EventRepo
 	eventTypeRepo    EventTypeRepo
 	perticipantRepo  PerticipantRepo
-	eventSettingRepo EventSettingRepo
+	eventSettingRepo EventTypeSettingRepo
 }
 
-func NewEventSerVice(cnf *config.Config, eventRepo EventRepo, eventTypeRepo EventTypeRepo, perticipantRepo PerticipantRepo, eventSettingRepo EventSettingRepo) Service {
+func NewEventSerVice(
+	cnf *config.Config,
+	eventRepo EventRepo,
+	eventTypeRepo EventTypeRepo,
+	perticipantRepo PerticipantRepo,
+	eventSettingRepo EventTypeSettingRepo,
+) Service {
 	return &service{
 		cnf:              cnf,
 		eventRepo:        eventRepo,
@@ -90,7 +96,7 @@ func (s *service) GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]Ge
 		return []GetEventTypeResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
 	}
 
-	eventTypeRes := make([]GetEventTypeResponse, 0, len(eventTypes))
+	eventTypeRes := make([]GetEventTypeResponse, len(eventTypes))
 	for i, eventType := range eventTypes {
 		eventTypeRes[i] = GetEventTypeResponse{
 			Id:          eventType.Id,
