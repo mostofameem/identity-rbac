@@ -19,3 +19,11 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE INDEX IF NOT EXISTS idx_events_registration
 ON events (registration_opens_at, registration_closes_at);
+
+-- Add is_active column with default true
+ALTER TABLE events 
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+-- Add is_deleted column with default false
+ALTER TABLE events 
+ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;

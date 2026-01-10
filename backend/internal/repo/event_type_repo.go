@@ -154,6 +154,7 @@ func (r *eventTypeRepo) GetAllWithPagination(ctx context.Context, req event.GetE
 
 	return eventTypes, nil
 }
+
 func (r *eventTypeRepo) GetTotalEventTypeCount(
 	ctx context.Context,
 	req event.GetEventTypesReq,
@@ -181,6 +182,41 @@ func (r *eventTypeRepo) GetTotalEventTypeCount(
 	}
 
 	return totalItem, nil
+}
+
+func (r *eventTypeRepo) GetByIDs(
+	ctx context.Context,
+	ids []int,
+) ([]entity.EventType, error) {
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := r.psql.
+		Select("*").
+		From(r.table).
+		Where(sq.Eq{"id": ids}).
+		Where(sq.Eq{"is_active": true}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build select query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"ids":   ids,
+		}))
+		return nil, err
+	}
+
+	var eventTypes []entity.EventType
+	if err := r.db.SelectContext(ctx, &eventTypes, query, args...); err != nil {
+		slog.Error("Failed to get event types", logger.Extra(map[string]any{
+			"err": err.Error(),
+			"ids": ids,
+		}))
+		return nil, err
+	}
+
+	return eventTypes, nil
 }
 
 func (r *eventTypeRepo) getEventTypeQueryBuilder() BuildQuery {
