@@ -55,20 +55,21 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 
 	// Convert to response DTO
 	response := &EventResponse{
-		Id:                   createdEvent.Id,
-		Title:                createdEvent.Title,
-		Description:          createdEvent.Description,
-		EventTypeId:          createdEvent.EventTypeId,
-		StartAt:              createdEvent.StartAt,
-		RegistrationOpensAt:  createdEvent.RegistrationOpensAt,
-		RegistrationClosesAt: createdEvent.RegistrationClosesAt,
-		AutoEventCreate:      createdEvent.AutoEventCreate,
-		CreatedBy:            createdEvent.CreatedBy,
-		UpdatedBy:            createdEvent.UpdatedBy,
-		Remarks:              createdEvent.Remarks,
-		CreatedAt:            createdEvent.CreatedAt,
-		UpdatedAt:            createdEvent.UpdatedAt,
-		IsActive:             createdEvent.IsActive,
+		Id:                    createdEvent.Id,
+		Title:                 createdEvent.Title,
+		Description:           createdEvent.Description,
+		EventTypeId:           createdEvent.EventTypeId,
+		StartAt:               createdEvent.StartAt,
+		RegistrationOpensAt:   createdEvent.RegistrationOpensAt,
+		RegistrationClosesAt:  createdEvent.RegistrationClosesAt,
+		ShouldAutoCreateEvent: createdEvent.ShouldAutoCreateEvent,
+		TotalParticipants:     createdEvent.TotalParticipants,
+		IsActive:              createdEvent.IsActive,
+		CreatedBy:             createdEvent.CreatedBy,
+		UpdatedBy:             createdEvent.UpdatedBy,
+		Remarks:               createdEvent.Remarks,
+		CreatedAt:             createdEvent.CreatedAt,
+		UpdatedAt:             createdEvent.UpdatedAt,
 	}
 
 	return response, nil
@@ -112,4 +113,81 @@ func (s *service) GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]Ge
 	pagination := util.GetPaginationResponse(totalItem, req.Page, req.Limit)
 
 	return eventTypeRes, pagination, nil
+}
+
+func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error) {
+
+	events, err := s.eventRepo.GetEventWithPagination(ctx, GetEventsQueryReq{
+		Title:       req.Title,
+		Page:        req.Page,
+		Limit:       req.Limit,
+		EventStatus: req.EventStatus,
+		CurrentTime: req.CurrentTime,
+	})
+	if err != nil {
+		return []EventCustomerResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+
+	uniqueEventTypes := make([]int, 0, len(events))
+	seen := make(map[int]struct{})
+
+	for _, event := range events {
+		if _, ok := seen[event.EventTypeId]; !ok {
+			seen[event.EventTypeId] = struct{}{}
+			uniqueEventTypes = append(uniqueEventTypes, event.EventTypeId)
+		}
+	}
+
+	eventTypeResponse, err := s.getEventTypesWhereIdsIn(ctx, uniqueEventTypes)
+	eventTypes := make(map[int]GetEventTypeResponse)
+	for _, eventType := range eventTypeResponse {
+		eventTypes[eventType.Id] = GetEventTypeResponse{
+			Id:          eventType.Id,
+			Name:        eventType.Name,
+			Description: eventType.Description,
+		}
+	}
+
+	eventTypeRes := make([]EventCustomerResponse, len(events))
+	for i, event := range events {
+		eventTypeRes[i] = EventCustomerResponse{
+			Id:                   event.Id,
+			Title:                event.Title,
+			Description:          event.Description,
+			EventType:            eventTypes[event.EventTypeId],
+			StartAt:              event.StartAt,
+			RegistrationOpensAt:  event.RegistrationOpensAt,
+			RegistrationClosesAt: event.RegistrationClosesAt,
+		}
+	}
+
+	totalItem, err := s.eventRepo.GetTotalEventCount(ctx, GetEventsQueryReq{
+		Title:       req.Title,
+		EventStatus: req.EventStatus,
+		CurrentTime: req.CurrentTime,
+	})
+	if err != nil {
+		return []EventCustomerResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+	pagination := util.GetPaginationResponse(totalItem, req.Page, req.Limit)
+
+	return eventTypeRes, pagination, nil
+}
+
+func (s *service) getEventTypesWhereIdsIn(ctx context.Context, eventTypeIds []int) ([]GetEventTypeResponse, error) {
+	eventTypes, err := s.eventTypeRepo.GetByIDs(ctx, eventTypeIds)
+	if err != nil {
+		return []GetEventTypeResponse{}, err
+	}
+
+	eventTypeResponse := make([]GetEventTypeResponse, len(eventTypes))
+	for i, eventType := range eventTypes {
+		eventTypeResponse[i] = GetEventTypeResponse{
+			Id:          eventType.Id,
+			Name:        eventType.Name,
+			Description: eventType.Description,
+		}
+	}
+
+	return eventTypeResponse, nil
 }

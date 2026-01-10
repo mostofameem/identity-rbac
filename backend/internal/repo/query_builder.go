@@ -38,7 +38,9 @@ func NewQueryBuilder(buildQuery BuildQuery) *queryBuilder {
 
 func (q *queryBuilder) FilterByPrefix(key, val string) *queryBuilder {
 	if val != "" {
-		q.query = q.query.Where(sq.Like{key: val + "%"})
+		q.query = q.query.Where(
+			sq.Expr(key+" ILIKE ?", val+"%"),
+		)
 	}
 	return q
 }

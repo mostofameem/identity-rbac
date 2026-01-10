@@ -5,6 +5,7 @@ import (
 	"errors"
 	"identity-rbac/internal/api/middlewares"
 	"identity-rbac/internal/api/utils"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/util"
 	"log"
@@ -19,6 +20,14 @@ type CreateEventRequest struct {
 	StartAt              time.Time  `json:"startAt" validation:"required"`
 	RegistrationOpensAt  *time.Time `json:"registrationOpensAt"`
 	RegistrationClosesAt *time.Time `json:"registrationClosesAt"`
+	TotalParticipants    int        `json:"totalParticipants"`
+}
+
+type GetEventRequest struct {
+	Title       string               `form:"title" json:"title"`
+	EventStatus enum.EventStatusType `form:"status" json:"status"`
+	Page        int                  `form:"page" json:"page"`
+	Limit       int                  `form:"limit" json:"limit"`
 }
 
 func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
@@ -42,14 +51,16 @@ func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare service request
 	serviceReq := event.CreateEventReq{
-		Title:                createEventReq.Title,
-		Description:          createEventReq.Description,
-		EventTypeId:          createEventReq.EventTypeId,
-		StartAt:              createEventReq.StartAt,
-		RegistrationOpensAt:  createEventReq.RegistrationOpensAt,
-		RegistrationClosesAt: createEventReq.RegistrationClosesAt,
-		CreatedBy:            createdBy,
-		CreatedAt:            util.GetCurrentTime(),
+		Title:                 createEventReq.Title,
+		Description:           createEventReq.Description,
+		EventTypeId:           createEventReq.EventTypeId,
+		StartAt:               createEventReq.StartAt,
+		RegistrationOpensAt:   createEventReq.RegistrationOpensAt,
+		RegistrationClosesAt:  createEventReq.RegistrationClosesAt,
+		ShouldAutoCreateEvent: false,
+		TotalParticipants:     createEventReq.TotalParticipants,
+		CreatedBy:             &createdBy,
+		CreatedAt:             util.GetCurrentTime(),
 	}
 
 	// Call event service
@@ -67,5 +78,33 @@ func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	utils.SendData(w, map[string]any{
 		"message": "Event created successfully",
 		"data":    createdEvent,
+	})
+}
+
+func (handlers *Handlers) GetEvents(w http.ResponseWriter, r *http.Request) {
+	var request GetEventRequest
+
+	err := utils.BindValues(&request, r.URL.Query())
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Failed to extract query params")
+		return
+	}
+
+	events, pagination, err := handlers.eventSvc.GetEvents(r.Context(), event.GetEventsReq{
+		Title:       request.Title,
+		EventStatus: request.EventStatus,
+		Page:        request.Page,
+		Limit:       request.Limit,
+		CurrentTime: time.Now(),
+	})
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"data":       events,
+		"pagination": pagination,
+		"message":    "Successfully fetched events.",
 	})
 }
