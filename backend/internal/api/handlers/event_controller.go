@@ -8,8 +8,11 @@ import (
 	"identity-rbac/internal/enum"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/util"
+	"identity-rbac/pkg/logger"
 	"log"
+	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -106,5 +109,46 @@ func (handlers *Handlers) GetEvents(w http.ResponseWriter, r *http.Request) {
 		"data":       events,
 		"pagination": pagination,
 		"message":    "Successfully fetched events.",
+	})
+}
+
+func (handlers *Handlers) GetEventDetails(w http.ResponseWriter, r *http.Request) {
+	
+	idStr := r.PathValue("id")
+
+	if idStr == "" {
+		slog.Error("missing id parameter in path")
+		utils.SendError(w, http.StatusBadRequest, "Missing 'id' parameter in path")
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		slog.Error("invalid id parameter", logger.Extra(map[string]any{
+			"id":  idStr,
+			"err": err.Error(),
+		}))
+		utils.SendError(w, http.StatusBadRequest, "Invalid 'id' parameter, must be an integer")
+		return
+	}
+
+	response, err := handlers.eventSvc.GetEventDetails(r.Context(), id)
+	if err != nil {
+		slog.Error("failed to fetch event details.", logger.Extra(map[string]any{
+			"id":  idStr,
+			"err": err.Error(),
+		}))
+
+		if err == util.ErrNotFound {
+			utils.SendError(w, http.StatusNotFound, "Gift card details not found.")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Failed to fetch event details. Please try again later.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"data":    response,
+		"message": "Successfully fetched event details.",
 	})
 }

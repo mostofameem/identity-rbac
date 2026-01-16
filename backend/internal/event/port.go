@@ -8,6 +8,7 @@ import (
 
 type Service interface {
 	CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error)
+	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
 
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
