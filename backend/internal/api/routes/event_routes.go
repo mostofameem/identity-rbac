@@ -34,6 +34,24 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 	)
 
 	mux.Handle(
+		"PUT /api/v1/event-types/settings",
+		manager.With(
+			http.HandlerFunc(server.handlers.CreateEventTypeSettings),
+			server.middleware.Authorization(middlewares.EVENT_CREATE_ACCESS),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
+		"GET /api/v1/event-types/settings/{id}",
+		manager.With(
+			http.HandlerFunc(server.handlers.GetEventTypeSettings),
+			server.middleware.Authorization(middlewares.EVENT_CREATE_ACCESS),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
 		"GET /api/v1/events",
 		manager.With(
 			http.HandlerFunc(server.handlers.GetEvents),
