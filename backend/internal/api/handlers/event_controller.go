@@ -32,9 +32,9 @@ type GetEventRequest struct {
 }
 
 type PerticipateEventRequest struct {
-	EventId    int `json:"eventId" validation:"required"`
-	UserId     int `json:"userId" validation:"required"`
-	GuestCount int `json:"guestCount" validation:"required"`
+	EventId    int `json:"eventId" validation:"required,gt=0"`
+	UserId     int `json:"userId" validation:"required,gt=0"`
+	GuestCount int `json:"guestCount" validation:"required,gte=0,lte=10"` // Added max limit of 10 guests
 }
 
 func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
@@ -165,14 +165,14 @@ func (handlers *Handlers) PerticipateEvent(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Call event service
-	err := handlers.eventSvc.PerticipateEvent(r.Context(), serviceReq)
+	err := handlers.eventSvc.ParticipateEvent(r.Context(), serviceReq)
 	if err != nil {
-		if errors.Is(err, util.ErrNotFound) {
-			utils.SendError(w, http.StatusNotFound, "Event not found")
+		if errors.Is(err, util.ErrSomethingWentWrong) {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to perticipate event")
 			return
 		}
-		log.Printf("Failed to perticipate event: %v\n", err)
-		utils.SendError(w, http.StatusInternalServerError, "Failed to perticipate event")
+
+		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

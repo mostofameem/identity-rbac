@@ -12,7 +12,7 @@ type Service interface {
 	CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error)
 	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
 
-	PerticipateEvent(ctx context.Context, req PerticipateEventReq) error
+	ParticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
@@ -22,6 +22,7 @@ type Service interface {
 type EventRepo interface {
 	Create(ctx context.Context, req CreateEventReq) (int, error)
 	GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.Events, error)
+	GetByIDForUpdate(ctx context.Context, tx *sqlx.Tx, id int) (*entity.Events, error)
 	GetEventWithPagination(ctx context.Context, req GetEventsQueryReq) ([]entity.Events, error)
 	GetTotalEventCount(ctx context.Context, req GetEventsQueryReq) (int, error)
 	UpdateParticipantCount(ctx context.Context, tx *sqlx.Tx, eventID, count int) error
@@ -38,6 +39,7 @@ type EventTypeRepo interface {
 
 type PerticipantRepo interface {
 	Create(ctx context.Context, tx *sqlx.Tx, req PerticipateEventReq) error
+	Exists(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (bool, error)
 }
 
 type EventTypeSettingRepo interface {

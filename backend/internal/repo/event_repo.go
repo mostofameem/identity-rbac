@@ -214,3 +214,48 @@ func (r *eventRepo) getEventCountQueryBuilder() BuildQuery {
 			From(r.table)
 	}
 }
+
+func (r eventRepo) GetByIDForUpdate(
+	ctx context.Context,
+	tx *sqlx.Tx,
+	id int,
+) (*entity.Events, error) {
+
+	if tx == nil {
+		return nil, errors.New("transaction is required for GetByIDForUpdate")
+	}
+
+	query, args, err := r.psql.
+		Select("*").
+		From(r.table).
+		Where(sq.Eq{
+			"id":        id,
+			"is_active": true,
+		}).
+		Suffix("FOR UPDATE").
+		ToSql()
+
+	if err != nil {
+		slog.Error("Failed to build select-for-update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"id":    id,
+		}))
+		return nil, err
+	}
+
+	var event entity.Events
+
+	if err := tx.GetContext(ctx, &event, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		slog.Error("Failed to get event for update", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"id":    id,
+		}))
+		return nil, err
+	}
+
+	return &event, nil
+}

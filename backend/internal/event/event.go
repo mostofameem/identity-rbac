@@ -6,7 +6,11 @@ import (
 	"identity-rbac/config"
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/util"
+	"log"
+	"time"
 )
+
+const DEFAULT_PARTICIPANT_COUNT = 1
 
 type service struct {
 	cnf              *config.Config
@@ -230,63 +234,75 @@ func (s *service) getEventTypesWhereIdsIn(ctx context.Context, eventTypeIds []in
 	return eventTypeResponse, nil
 }
 
-func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq) error {
-
-	// begin transaction
+func (s *service) ParticipateEvent(ctx context.Context, req PerticipateEventReq) (err error) {
 	tx, err := s.transactionRepo.BeginTx(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		log.Printf("Failed to begin transaction: %v\n", err)
+		return util.ErrSomethingWentWrong
 	}
 
 	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
 		if err != nil {
-			err = tx.Rollback()
+			_ = tx.Rollback()
 			return
 		}
 		err = tx.Commit()
 	}()
 
-	event, err := s.eventRepo.GetByID(ctx, tx, req.EventId)
+	// IMPORTANT: row lock
+	event, err := s.eventRepo.GetByIDForUpdate(ctx, tx, req.EventId)
 	if err != nil {
-		return fmt.Errorf("failed to get event: %w", err)
+		log.Printf("Failed to get event: %v\n", err)
+		return util.ErrSomethingWentWrong
 	}
-
 	if event == nil {
 		return util.ErrEventNotFound
 	}
 
-	totalParticipants := event.TotalParticipants + req.GuestCount + 1
+	totalParticipants := event.TotalParticipants + req.GuestCount + DEFAULT_PARTICIPANT_COUNT
 
-	// Validate participation rules
-	if err = validateParticipation(event, req, totalParticipants); err != nil {
+	if err = validateParticipation(event, req.CurrentTime, totalParticipants); err != nil {
 		return err
 	}
 
-	// Create participation
+	// Prevent duplicate participation
+	exists, err := s.perticipantRepo.Exists(ctx, tx, req.EventId, req.UserId)
+	if err != nil {
+		log.Printf("Failed to check participation: %v\n", err)
+		return util.ErrSomethingWentWrong
+	}
+	if exists {
+		return util.ErrAlreadyRegistered
+	}
+
 	if err = s.perticipantRepo.Create(ctx, tx, req); err != nil {
-		return fmt.Errorf("failed to create participation: %w", err)
+		log.Printf("Failed to create participant: %v\n", err)
+		return util.ErrSomethingWentWrong
 	}
 
-	// Update event total participants
 	if err = s.eventRepo.UpdateParticipantCount(ctx, tx, req.EventId, totalParticipants); err != nil {
-		return fmt.Errorf("failed to update event total participants: %w", err)
+		log.Printf("Failed to update participant count: %v\n", err)
+		return util.ErrSomethingWentWrong
 	}
-
-	tx.Commit()
 
 	return nil
 }
 
-func validateParticipation(event *entity.Events, req PerticipateEventReq, totalParticipants int) error {
-	if event.IsActive == false {
+func validateParticipation(event *entity.Events, now time.Time, totalParticipants int) error {
+	if !event.IsActive {
 		return util.ErrEventNotActive
 	}
 
 	if event.RegistrationOpensAt == nil || event.RegistrationClosesAt == nil {
 		return util.ErrEventRegistrationTimeNotInRange
 	}
-	if req.CurrentTime.Before(*event.RegistrationOpensAt) || req.CurrentTime.After(*event.RegistrationClosesAt) {
-		return util.ErrEventRegistrationTimeFinished
+
+	if now.Before(*event.RegistrationOpensAt) || now.After(*event.RegistrationClosesAt) {
+		return util.ErrEventAlreadyEnded
 	}
 
 	if totalParticipants > event.MaxParticipants {

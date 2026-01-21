@@ -33,10 +33,10 @@ func (r *perticipantRepo) Create(ctx context.Context, tx *sqlx.Tx, req event.Per
 
 	query, args, err := r.psql.Insert(r.table).
 		Columns(
-			"event_id", "user_id", "guest_count", "status", "remarks", "created_at", "updated_at", "created_by", "updated_by",
+			"event_id", "user_id", "guest_count", "status", "remarks", "created_at", "created_by", "updated_at", "updated_by",
 		).
 		Values(
-			req.EventId, req.UserId, req.GuestCount, enum.PerticepateStatusGoing, "", req.CurrentTime, req.CurrentTime, req.UserId, req.UserId,
+			req.EventId, req.UserId, req.GuestCount, enum.PerticepateStatusGoing, "", req.CurrentTime, req.UserId, req.CurrentTime, req.UserId,
 		).
 		Suffix("RETURNING id").
 		ToSql()
@@ -60,4 +60,33 @@ func (r *perticipantRepo) Create(ctx context.Context, tx *sqlx.Tx, req event.Per
 	}
 
 	return nil
+}
+
+func (r *perticipantRepo) Exists(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (bool, error) {
+
+	query, args, err := r.psql.Select("1").
+		From(r.table).
+		Where(sq.Eq{"event_id": eventID, "user_id": userID}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build select query", logger.Extra(map[string]any{
+			"error":   err.Error(),
+			"eventID": eventID,
+			"userID":  userID,
+		}))
+		return false, err
+	}
+
+	var exists int
+	err = tx.QueryRowContext(ctx, query, args...).Scan(&exists)
+	if err != nil {
+		slog.Error("Failed to execute select query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return false, err
+	}
+
+	return exists > 0, nil
 }
