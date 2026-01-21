@@ -38,10 +38,10 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
   const [selectedEventType, setSelectedEventType] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [newSetting, setNewSetting] = useState<Partial<EventTypeSetting>>({
-    key: '',
-    value: '',
+    key: 'autoCreateAt',
+    value: '09:00',
     dataType: 'string',
-    isRequired: false,
+    isRequired: true,
   });
 
   // Fetch event types for the dropdown
@@ -97,7 +97,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
   };
 
   const handleAddSetting = async () => {
-    if (!newSetting.key || !selectedEventType) return;
+    if (!selectedEventType || !newSetting.value) return;
 
     try {
       const settingToAdd = {
@@ -106,30 +106,36 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
       };
 
       await eventTypeService.createEventTypeSetting(settingToAdd);
-      setNewSetting({ key: '', value: '', dataType: 'string', isRequired: false });
-      fetchSettings();
-    } catch (error) {
+      setNewSetting({ key: 'autoCreateAt', value: '09:00', dataType: 'string', isRequired: true });
+      await fetchSettings();
+    } catch (error: any) {
       console.error('Error adding setting:', error);
+      alert(error.message || 'Failed to save event type settings. Please ensure time is in HH:MM format.');
     }
   };
 
   const handleDeleteSetting = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this setting?')) return;
-
-    try {
-      await eventTypeService.deleteEventTypeSetting(id);
-      fetchSettings();
-    } catch (error) {
-      console.error('Error deleting setting:', error);
-    }
+    alert('Delete functionality is not supported by the backend. Please contact administrator.');
   };
 
   const handleUpdateSetting = async (id: string, updatedSetting: Partial<EventTypeSetting>) => {
     try {
+      // Convert value to proper format if it's time
+      const valueToSave = updatedSetting.value;
+      if (updatedSetting.key === 'autoCreateAt' && typeof valueToSave === 'string') {
+        // Ensure HH:MM format
+        const timeMatch = valueToSave.match(/^(\d{1,2}):(\d{2})$/);
+        if (!timeMatch) {
+          alert('Please enter time in HH:MM format (e.g., 09:00)');
+          return;
+        }
+      }
+      
       await eventTypeService.updateEventTypeSetting(id, updatedSetting);
-      fetchSettings();
-    } catch (error) {
+      await fetchSettings();
+    } catch (error: any) {
       console.error('Error updating setting:', error);
+      alert(error.message || 'Failed to update setting. Please ensure time is in HH:MM format.');
     }
   };
 
@@ -165,64 +171,53 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
             <Divider sx={{ my: 3 }} />
 
             <Typography variant="h6" gutterBottom>
-              Add New Setting
+              Event Type Settings
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Configure automatic event creation settings for this event type.
             </Typography>
 
-            <div className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-12 md:col-span-3">
+            <div className="grid grid-cols-12 gap-3 items-end">
+              <div className="col-span-12 md:col-span-4">
                 <TextField
                   fullWidth
-                  label="Key"
-                  name="key"
-                  value={newSetting.key}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                  size="small"
-                />
-              </div>
-
-              <div className="col-span-12 md:col-span-3">
-                <FormControl fullWidth variant="outlined" size="small">
-                  <InputLabel>Data Type</InputLabel>
-                  <Select
-                    name="dataType"
-                    value={newSetting.dataType}
-                    onChange={(e) => setNewSetting({ ...newSetting, dataType: e.target.value as 'string' | 'number' | 'boolean' | 'object' | 'date' | 'select' | 'array' | undefined })}
-                    label="Data Type"
-                  >
-                    <MenuItem value="string">String</MenuItem>
-                    <MenuItem value="number">Number</MenuItem>
-                    <MenuItem value="boolean">Boolean</MenuItem>
-                    <MenuItem value="date">Date</MenuItem>
-                    <MenuItem value="array">Array</MenuItem>
-                    <MenuItem value="object">Object</MenuItem>
-                  </Select>
-                </FormControl>
-              </div>
-
-              <div className="col-span-12 md:col-span-3">
-                <TextField
-                  fullWidth
-                  label="Value"
+                  label="Auto Create At (HH:MM)"
                   name="value"
                   value={newSetting.value}
                   onChange={handleInputChange}
                   variant="outlined"
                   size="small"
+                  placeholder="09:00"
+                  helperText="Time in 24-hour format (e.g., 09:00, 14:30)"
+                  required
                 />
               </div>
 
-              <div className="col-span-12 md:col-span-2">
+              <div className="col-span-12 md:col-span-4">
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Interval (Minutes)"
+                  name="interval"
+                  value={1440}
+                  variant="outlined"
+                  size="small"
+                  helperText="Default: 1440 (24 hours)"
+                  disabled
+                />
+              </div>
+
+              <div className="col-span-12 md:col-span-3">
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={newSetting.isRequired || false}
+                      checked={newSetting.isRequired !== false}
                       onChange={(e) => setNewSetting({ ...newSetting, isRequired: e.target.checked })}
-                      name="isRequired"
+                      name="isActive"
                       color="primary"
                     />
                   }
-                  label="Required"
+                  label="Active"
                 />
               </div>
 
@@ -230,12 +225,12 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
                 <Button
                   variant="contained"
                   color="primary"
-                  startIcon={<AddIcon />}
+                  startIcon={<SaveIcon />}
                   onClick={handleAddSetting}
-                  disabled={!newSetting.key}
+                  disabled={!newSetting.value}
                   fullWidth
                 >
-                  Add
+                  Save
                 </Button>
               </div>
             </div>
@@ -258,44 +253,29 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Key</TableCell>
-                    <TableCell>Data Type</TableCell>
-                    <TableCell>Value</TableCell>
-                    <TableCell>Required</TableCell>
+                    <TableCell>Auto Create At</TableCell>
+                    <TableCell>Status</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {settings.map((setting) => (
-                    <TableRow key={setting.id}>
-                      <TableCell>{setting.key}</TableCell>
-                      <TableCell>{setting.dataType}</TableCell>
+                    <TableRow key={setting.id} hover>
                       <TableCell>
-                        {setting.dataType === 'boolean' ? (
-                          <Switch
-                            checked={setting.value === 'true'}
-                            onChange={(e) =>
-                              handleUpdateSetting(setting.id, {
-                                ...setting,
-                                value: e.target.checked ? 'true' : 'false'
-                              })
-                            }
-                            color="primary"
-                          />
-                        ) : (
-                          <TextField
-                            value={setting.value}
-                            onChange={(e) =>
-                              handleUpdateSetting(setting.id, {
-                                ...setting,
-                                value: e.target.value
-                              })
-                            }
-                            variant="outlined"
-                            size="small"
-                            fullWidth
-                          />
-                        )}
+                        <TextField
+                          value={setting.value}
+                          onChange={(e) =>
+                            handleUpdateSetting(setting.id, {
+                              ...setting,
+                              value: e.target.value
+                            })
+                          }
+                          variant="outlined"
+                          size="small"
+                          placeholder="HH:MM"
+                          helperText="Time in 24-hour format"
+                          sx={{ minWidth: 150 }}
+                        />
                       </TableCell>
                       <TableCell>
                         <Switch
@@ -308,11 +288,17 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
                           }
                           color="primary"
                         />
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {setting.isRequired ? 'Active' : 'Inactive'}
+                        </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <IconButton
                           onClick={() => handleDeleteSetting(setting.id)}
                           color="error"
+                          size="small"
+                          disabled
+                          title="Delete not supported"
                         >
                           <DeleteIcon />
                         </IconButton>

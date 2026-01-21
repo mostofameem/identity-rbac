@@ -43,11 +43,11 @@ const EventList: React.FC = () => {
         page: page + 1,
         limit: rowsPerPage,
       });
-      setEvents(response.data);
-      setTotal(response.total);
-    } catch (error) {
+      setEvents(response.data || []);
+      setTotal(response.total || 0);
+    } catch (error: any) {
       console.error('Error fetching events:', error);
-      // Handle error (e.g., show error message)
+      alert(error.message || 'Failed to fetch events. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -84,11 +84,11 @@ const EventList: React.FC = () => {
       } else {
         await eventService.createEvent(eventData);
       }
-      fetchEvents();
+      await fetchEvents();
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving event:', error);
-      // Handle error
+      alert(error.message || 'Failed to save event. Please try again.');
     }
   };
 
@@ -96,10 +96,10 @@ const EventList: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this event?')) {
       try {
         await eventService.deleteEvent(id);
-        fetchEvents();
-      } catch (error) {
+        await fetchEvents();
+      } catch (error: any) {
         console.error('Error deleting event:', error);
-        // Handle error
+        alert(error.message || 'Failed to delete event. Please try again.');
       }
     }
   };
@@ -159,11 +159,39 @@ const EventList: React.FC = () => {
               ) : (
                 events.map((event) => (
                   <TableRow key={event.id}>
-                    <TableCell>{event.title}</TableCell>
-                    <TableCell>{event.eventType?.name || 'N/A'}</TableCell>
-                    <TableCell>{new Date(event.startAt).toLocaleString()}</TableCell>
-                    <TableCell>{new Date(event.registrationClosesAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{event.totalParticipants || 0} / {event.maxParticipants}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {event.title}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={event.eventType?.name || 'N/A'}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(event.startAt).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(event.registrationClosesAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {(event as any).totalParticipants || 0} / {event.maxParticipants || '∞'}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={event.status || 'Active'}
@@ -172,7 +200,9 @@ const EventList: React.FC = () => {
                             ? 'success'
                             : event.status === 'upcoming' || event.status === 'UPCOMING'
                               ? 'info'
-                              : 'default'
+                              : event.status === 'RECENT'
+                                ? 'primary'
+                                : 'default'
                         }
                         size="small"
                       />

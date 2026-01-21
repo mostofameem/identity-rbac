@@ -51,8 +51,29 @@ const handleApiError = (error: any) => {
 export const eventTypeService = {
   getEventTypes: async (params: ListQueryParams = {}): Promise<PaginatedResponse<EventType>> => {
     try {
-      const response = await api.get('/event-types', { params });
-      return response.data;
+      const queryParams: any = {};
+      if (params.page) queryParams.page = params.page;
+      if (params.limit) queryParams.limit = params.limit;
+      if (params.search) queryParams.name = params.search;
+      
+      const response = await api.get('/event-types', { params: queryParams });
+      // Backend returns {data: [], pagination: {totalItem, totalPage, currentPage}}
+      const backendData = response.data.data || [];
+      const pagination = response.data.pagination || {};
+      
+      return {
+        data: backendData.map((et: any) => ({
+          id: et.id.toString(),
+          name: et.name,
+          description: et.description,
+          isActive: true,
+          requiresApproval: false,
+        })),
+        total: pagination.totalItem || 0,
+        page: pagination.currentPage || 1,
+        limit: params.limit || 10,
+        totalPages: pagination.totalPage || 1,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -61,7 +82,14 @@ export const eventTypeService = {
   getEventType: async (id: string): Promise<EventType> => {
     try {
       const response = await api.get(`/event-types/${id}`);
-      return response.data;
+      const data = response.data.data || response.data;
+      return {
+        id: data.id.toString(),
+        name: data.name,
+        description: data.description,
+        isActive: data.isActive !== false,
+        requiresApproval: false,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -69,8 +97,20 @@ export const eventTypeService = {
 
   createEventType: async (data: Partial<EventType>): Promise<EventType> => {
     try {
-      const response = await api.post('/event-types', data);
-      return response.data;
+      // Backend expects only name and description
+      const payload = {
+        name: data.name,
+        description: data.description || '',
+      };
+      const response = await api.post('/event-types', payload);
+      const responseData = response.data.data || response.data;
+      return {
+        id: responseData.toString() || Date.now().toString(),
+        name: data.name || '',
+        description: data.description || '',
+        isActive: true,
+        requiresApproval: false,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -78,8 +118,9 @@ export const eventTypeService = {
 
   updateEventType: async (id: string, data: Partial<EventType>): Promise<EventType> => {
     try {
+      // Backend doesn't have update endpoint, but keeping for compatibility
       const response = await api.put(`/event-types/${id}`, data);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       return handleApiError(error);
     }
@@ -87,6 +128,7 @@ export const eventTypeService = {
 
   deleteEventType: async (id: string): Promise<void> => {
     try {
+      // Backend doesn't have delete endpoint, but keeping for compatibility
       await api.delete(`/event-types/${id}`);
     } catch (error) {
       handleApiError(error);
@@ -97,7 +139,26 @@ export const eventTypeService = {
   getEventTypeSettings: async (eventTypeId: string): Promise<EventTypeSetting[]> => {
     try {
       const response = await api.get(`/event-types/settings/${eventTypeId}`);
-      return response.data;
+      const data = response.data.data || response.data;
+      // Handle both array and single object response
+      if (Array.isArray(data)) {
+        return data.map((s: any) => ({
+          id: s.id?.toString() || s.eventTypeId?.toString() || '',
+          key: s.key || '',
+          value: s.value?.toString() || s.autoCreateAt || '',
+          dataType: s.dataType || 'string',
+          isRequired: s.isRequired || false,
+          eventTypeId: eventTypeId,
+        }));
+      }
+      return [{
+        id: data.id?.toString() || eventTypeId,
+        key: 'autoCreateAt',
+        value: data.autoCreateAt || '',
+        dataType: 'string' as const,
+        isRequired: true,
+        eventTypeId: eventTypeId,
+      }];
     } catch (error) {
       return handleApiError(error);
     }
@@ -105,8 +166,23 @@ export const eventTypeService = {
 
   createEventTypeSetting: async (data: Partial<EventTypeSetting>): Promise<EventTypeSetting> => {
     try {
-      const response = await api.post('/event-types/settings', data);
-      return response.data;
+      // Backend expects: eventTypeId, autoCreateAt (HH:MM), autoEventIntervalInMinutes, isActive
+      const payload = {
+        eventTypeId: parseInt(data.eventTypeId || '0'),
+        autoCreateAt: data.value || '09:00',
+        autoEventIntervalInMinutes: parseInt(data.value?.toString() || '1440'), // Default 24 hours
+        isActive: data.isRequired || true,
+      };
+      const response = await api.put('/event-types/settings', payload);
+      const responseData = response.data.data || response.data;
+      return {
+        id: responseData.toString() || Date.now().toString(),
+        key: data.key || 'autoCreateAt',
+        value: payload.autoCreateAt,
+        dataType: 'string' as const,
+        isRequired: payload.isActive,
+        eventTypeId: data.eventTypeId,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -114,8 +190,22 @@ export const eventTypeService = {
 
   updateEventTypeSetting: async (id: string, data: Partial<EventTypeSetting>): Promise<EventTypeSetting> => {
     try {
-      const response = await api.put(`/event-types/settings/${id}`, data);
-      return response.data;
+      // Backend uses PUT for both create and update
+      const payload = {
+        eventTypeId: parseInt(data.eventTypeId || id),
+        autoCreateAt: data.value || '09:00',
+        autoEventIntervalInMinutes: 1440,
+        isActive: data.isRequired !== false,
+      };
+      const response = await api.put('/event-types/settings', payload);
+      return {
+        id: id,
+        key: data.key || 'autoCreateAt',
+        value: payload.autoCreateAt,
+        dataType: 'string' as const,
+        isRequired: payload.isActive,
+        eventTypeId: data.eventTypeId || id,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -123,7 +213,8 @@ export const eventTypeService = {
 
   deleteEventTypeSetting: async (id: string): Promise<void> => {
     try {
-      await api.delete(`/event-types/settings/${id}`);
+      // Backend doesn't have delete endpoint for settings
+      console.warn('Delete event type settings not supported by backend');
     } catch (error) {
       handleApiError(error);
     }
@@ -134,8 +225,43 @@ export const eventTypeService = {
 export const eventService = {
   getEvents: async (params: ListQueryParams = {}): Promise<PaginatedResponse<Event>> => {
     try {
-      const response = await api.get('/events', { params });
-      return response.data;
+      const queryParams: any = {};
+      if (params.page) queryParams.page = params.page;
+      if (params.limit) queryParams.limit = params.limit;
+      if (params.search) queryParams.title = params.search;
+      if (params.eventTypeId) queryParams.typeId = params.eventTypeId;
+      if (params.status) queryParams.status = params.status;
+      
+      const response = await api.get('/events', { params: queryParams });
+      // Backend returns {data: [], pagination: {totalItem, totalPage, currentPage}}
+      const backendData = response.data.data || [];
+      const pagination = response.data.pagination || {};
+      
+      return {
+        data: backendData.map((e: any) => ({
+          id: e.id.toString(),
+          title: e.title,
+          description: e.description,
+          startAt: e.startAt,
+          registrationOpensAt: e.registrationOpensAt,
+          registrationClosesAt: e.registrationClosesAt,
+          maxParticipants: e.maxParticipants || e.totalParticipants || 0,
+          totalParticipants: e.totalParticipants || 0,
+          status: e.status || 'upcoming',
+          eventTypeId: e.eventTypeId?.toString() || e.eventType?.id?.toString() || '',
+          eventType: e.eventType ? {
+            id: e.eventType.id?.toString() || '',
+            name: e.eventType.name || e.eventType,
+            description: e.eventType.description,
+            isActive: true,
+            requiresApproval: false,
+          } : undefined,
+        })),
+        total: pagination.totalItem || 0,
+        page: pagination.currentPage || 1,
+        limit: params.limit || 10,
+        totalPages: pagination.totalPage || 1,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -144,7 +270,25 @@ export const eventService = {
   getEvent: async (id: string): Promise<Event> => {
     try {
       const response = await api.get(`/event/${id}`);
-      return response.data;
+      const data = response.data.data || response.data;
+      return {
+        id: data.id.toString(),
+        title: data.title,
+        description: data.description,
+        startAt: data.startAt,
+        registrationOpensAt: data.registrationOpensAt,
+        registrationClosesAt: data.registrationClosesAt,
+        maxParticipants: data.maxParticipants || 0,
+        status: data.status || 'upcoming',
+        eventTypeId: data.eventTypeId?.toString() || '',
+        eventType: data.eventType ? {
+          id: data.eventType.id?.toString() || '',
+          name: data.eventType.name || '',
+          description: data.eventType.description,
+          isActive: true,
+          requiresApproval: false,
+        } : undefined,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -152,17 +296,32 @@ export const eventService = {
 
   createEvent: async (data: Partial<Event>): Promise<Event> => {
     try {
+      // Backend expects: title, description, eventTypeId, startAt, registrationOpensAt, registrationClosesAt, maxParticipants
       const payload = {
         title: data.title,
-        description: data.description,
+        description: data.description || '',
         eventTypeId: parseInt(data.eventTypeId as string),
-        startAt: data.startAt,
-        registrationOpensAt: data.registrationOpensAt,
-        registrationClosesAt: data.registrationClosesAt,
-        maxParticipants: parseInt(data.maxParticipants as any),
+        startAt: typeof data.startAt === 'string' ? data.startAt : (data.startAt as Date).toISOString(),
+        registrationOpensAt: typeof data.registrationOpensAt === 'string' 
+          ? data.registrationOpensAt 
+          : (data.registrationOpensAt as Date).toISOString(),
+        registrationClosesAt: typeof data.registrationClosesAt === 'string'
+          ? data.registrationClosesAt
+          : (data.registrationClosesAt as Date).toISOString(),
+        maxParticipants: parseInt((data.maxParticipants || 0).toString()),
       };
       const response = await api.post('/events', payload);
-      return response.data;
+      const responseData = response.data.data || response.data;
+      return {
+        id: responseData.id?.toString() || Date.now().toString(),
+        title: data.title || '',
+        description: data.description || '',
+        startAt: data.startAt as Date,
+        registrationOpensAt: data.registrationOpensAt as Date,
+        registrationClosesAt: data.registrationClosesAt as Date,
+        maxParticipants: data.maxParticipants || 0,
+        eventTypeId: data.eventTypeId as string,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -170,8 +329,9 @@ export const eventService = {
 
   updateEvent: async (id: string, data: Partial<Event>): Promise<Event> => {
     try {
+      // Backend doesn't have update endpoint, but keeping for compatibility
       const response = await api.put(`/events/${id}`, data);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       return handleApiError(error);
     }
@@ -179,6 +339,7 @@ export const eventService = {
 
   deleteEvent: async (id: string): Promise<void> => {
     try {
+      // Backend doesn't have delete endpoint, but keeping for compatibility
       await api.delete(`/events/${id}`);
     } catch (error) {
       handleApiError(error);
@@ -187,7 +348,10 @@ export const eventService = {
 
   participateInEvent: async (eventId: string, data: any = {}): Promise<void> => {
     try {
-      await api.post('/event/participate', { eventId, ...data });
+      await api.post('/event/participate', { 
+        eventId: parseInt(eventId),
+        guestCount: data.guestCount || 0,
+      });
     } catch (error) {
       handleApiError(error);
     }

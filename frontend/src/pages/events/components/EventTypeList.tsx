@@ -13,6 +13,7 @@ import {
   TablePagination,
   IconButton,
   Typography,
+  Chip,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { EventType } from '../types/event.types';
@@ -35,11 +36,11 @@ const EventTypeList: React.FC = () => {
         page: page + 1,
         limit: rowsPerPage,
       });
-      setEventTypes(response.data);
-      setTotal(response.total);
-    } catch (error) {
+      setEventTypes(response.data || []);
+      setTotal(response.total || 0);
+    } catch (error: any) {
       console.error('Error fetching event types:', error);
-      // Handle error
+      alert(error.message || 'Failed to fetch event types. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -66,11 +67,11 @@ const EventTypeList: React.FC = () => {
       } else {
         await eventTypeService.createEventType(eventTypeData);
       }
-      fetchEventTypes();
+      await fetchEventTypes();
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving event type:', error);
-      // Handle error
+      alert(error.message || 'Failed to save event type. Please try again.');
     }
   };
 
@@ -78,10 +79,10 @@ const EventTypeList: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this event type?')) {
       try {
         await eventTypeService.deleteEventType(id);
-        fetchEventTypes();
-      } catch (error) {
+        await fetchEventTypes();
+      } catch (error: any) {
         console.error('Error deleting event type:', error);
-        // Handle error
+        alert(error.message || 'Failed to delete event type. Please try again.');
       }
     }
   };
@@ -126,26 +127,52 @@ const EventTypeList: React.FC = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
-                    Loading...
+                    <Typography variant="body2" color="text.secondary">
+                      Loading...
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : eventTypes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} align="center">
-                    No event types found
+                    <Typography variant="body2" color="text.secondary">
+                      No event types found
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 eventTypes.map((eventType) => (
-                  <TableRow key={eventType.id}>
-                    <TableCell>{eventType.name}</TableCell>
-                    <TableCell>{eventType.description || 'N/A'}</TableCell>
-                    <TableCell>{eventType.isActive ? 'Yes' : 'No'}</TableCell>
+                  <TableRow key={eventType.id} hover>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {eventType.name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {eventType.description || 'No description'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={eventType.isActive ? 'Active' : 'Inactive'}
+                        color={eventType.isActive ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
                     <TableCell align="right">
-                      <IconButton onClick={() => handleOpen(eventType)}>
+                      <IconButton 
+                        onClick={() => handleOpen(eventType)}
+                        color="primary"
+                        size="small"
+                      >
                         <EditIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleDelete(eventType.id)}>
+                      <IconButton 
+                        onClick={() => handleDelete(eventType.id)}
+                        color="error"
+                        size="small"
+                      >
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>

@@ -149,16 +149,15 @@ export interface CreateEventRequest {
   title: string;
   description: string;
   eventTypeId: number;
-  eventStartsAt: string;
-  registrationOpensAt: string;
-  registrationClosesAt: string;
+  startAt: string; // ISO string
+  registrationOpensAt: string; // ISO string
+  registrationClosesAt: string; // ISO string
+  maxParticipants: number;
 }
 
 export interface CreateEventTypeRequest {
   name: string;
   description: string;
-  autoEventCreate: boolean;
-  autoEventCreateInterval: number;
 }
 
 export interface GetEventsResponse {
@@ -284,25 +283,25 @@ export const adminApiClient = {
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-    return adminAxiosInstance.get(`/v1/events?${params.toString()}`);
+    return adminAxiosInstance.get(`/api/v1/events?${params.toString()}`);
   },
 
   createEvent: (data: CreateEventRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/events', data),
+    adminAxiosInstance.post('/api/v1/events', data),
 
   getEventTypes: (name?: string): Promise<AxiosResponse<GetEventTypesResponse>> => {
     const params = new URLSearchParams();
     if (name) params.append('name', name);
-    return adminAxiosInstance.get(`/v1/event-types?${params.toString()}`);
+    return adminAxiosInstance.get(`/api/v1/event-types?${params.toString()}`);
   },
 
   createEventType: (data: CreateEventTypeRequest): Promise<AxiosResponse<{ message: string }>> =>
-    adminAxiosInstance.post('/v1/event-types', data),
+    adminAxiosInstance.post('/api/v1/event-types', data),
 
   // Event Details
   getEventDetails: (eventId: number): Promise<AxiosResponse<EventDetailsResponse>> => {
     const params = new URLSearchParams();
     params.append('statusMode', 'ALL');
-    return adminAxiosInstance.get(`/v1/events/${eventId}/details?${params.toString()}`);
+    return adminAxiosInstance.get(`/api/v1/event/${eventId}?${params.toString()}`);
   },
 }; 
