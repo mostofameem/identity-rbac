@@ -49,4 +49,12 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 			server.middleware.AuthenticateJWT,
 		),
 	)
+
+	mux.Handle(
+		"POST /api/v1/event/participate",
+		manager.With(
+			http.HandlerFunc(server.handlers.PerticipateEvent),
+			server.middleware.AuthenticateJWT,
+		),
+	)
 }

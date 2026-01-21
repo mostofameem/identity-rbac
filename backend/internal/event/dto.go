@@ -13,7 +13,7 @@ type CreateEventReq struct {
 	RegistrationOpensAt   *time.Time
 	RegistrationClosesAt  *time.Time
 	ShouldAutoCreateEvent bool
-	TotalParticipants     int
+	MaxParticipants       int
 	CreatedBy             *int
 	CreatedAt             time.Time
 }
@@ -81,4 +81,11 @@ type EventCustomerResponse struct {
 	RegistrationOpensAt  *time.Time           `json:"registrationOpensAt"`
 	RegistrationClosesAt *time.Time           `json:"registrationClosesAt"`
 	IsActive             bool                 `json:"isActive"`
+}
+
+type PerticipateEventReq struct {
+	EventId     int
+	UserId      int
+	GuestCount  int
+	CurrentTime time.Time
 }

@@ -12,6 +12,7 @@ type Events struct {
 	RegistrationClosesAt  *time.Time `db:"registration_closes_at"      json:"registrationClosesAt"`
 	ShouldAutoCreateEvent bool       `db:"should_auto_create_event"    json:"shouldAutoCreateEvent"`
 	TotalParticipants     int        `db:"total_participants"          json:"totalParticipants"`
+	MaxParticipants       int        `db:"max_participants"            json:"maxParticipants"`
 	IsActive              bool       `db:"is_active"                   json:"isActive"`
 	IsDeleted             bool       `db:"is_deleted"                  json:"isDeleted"`
 	CreatedBy             *int       `db:"created_by"                  json:"createdBy"`

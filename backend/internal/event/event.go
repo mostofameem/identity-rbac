@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"identity-rbac/config"
+	"identity-rbac/internal/entity"
 	"identity-rbac/internal/util"
 )
 
@@ -13,6 +14,7 @@ type service struct {
 	eventTypeRepo    EventTypeRepo
 	perticipantRepo  PerticipantRepo
 	eventSettingRepo EventTypeSettingRepo
+	transactionRepo  TransactionRepo
 }
 
 func NewEventSerVice(
@@ -21,6 +23,7 @@ func NewEventSerVice(
 	eventTypeRepo EventTypeRepo,
 	perticipantRepo PerticipantRepo,
 	eventSettingRepo EventTypeSettingRepo,
+	transactionRepo TransactionRepo,
 ) Service {
 	return &service{
 		cnf:              cnf,
@@ -28,6 +31,7 @@ func NewEventSerVice(
 		eventTypeRepo:    eventTypeRepo,
 		perticipantRepo:  perticipantRepo,
 		eventSettingRepo: eventSettingRepo,
+		transactionRepo:  transactionRepo,
 	}
 }
 
@@ -48,7 +52,7 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 	}
 
 	// Retrieve the created event
-	createdEvent, err := s.eventRepo.GetByID(ctx, eventId)
+	createdEvent, err := s.eventRepo.GetByID(ctx, nil, eventId)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +81,7 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 
 func (s *service) GetEventDetails(ctx context.Context, id int) (EventResponse, error) {
 
-	event, err := s.eventRepo.GetByID(ctx, id)
+	event, err := s.eventRepo.GetByID(ctx, nil, id)
 	if err != nil {
 		return EventResponse{}, err
 	}
@@ -224,4 +228,70 @@ func (s *service) getEventTypesWhereIdsIn(ctx context.Context, eventTypeIds []in
 	}
 
 	return eventTypeResponse, nil
+}
+
+func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq) error {
+
+	// begin transaction
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	defer func() {
+		if err != nil {
+			err = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	event, err := s.eventRepo.GetByID(ctx, tx, req.EventId)
+	if err != nil {
+		return fmt.Errorf("failed to get event: %w", err)
+	}
+
+	if event == nil {
+		return util.ErrEventNotFound
+	}
+
+	totalParticipants := event.TotalParticipants + req.GuestCount + 1
+
+	// Validate participation rules
+	if err = validateParticipation(event, req, totalParticipants); err != nil {
+		return err
+	}
+
+	// Create participation
+	if err = s.perticipantRepo.Create(ctx, tx, req); err != nil {
+		return fmt.Errorf("failed to create participation: %w", err)
+	}
+
+	// Update event total participants
+	if err = s.eventRepo.UpdateParticipantCount(ctx, tx, req.EventId, totalParticipants); err != nil {
+		return fmt.Errorf("failed to update event total participants: %w", err)
+	}
+
+	tx.Commit()
+
+	return nil
+}
+
+func validateParticipation(event *entity.Events, req PerticipateEventReq, totalParticipants int) error {
+	if event.IsActive == false {
+		return util.ErrEventNotActive
+	}
+
+	if event.RegistrationOpensAt == nil || event.RegistrationClosesAt == nil {
+		return util.ErrEventRegistrationTimeNotInRange
+	}
+	if req.CurrentTime.Before(*event.RegistrationOpensAt) || req.CurrentTime.After(*event.RegistrationClosesAt) {
+		return util.ErrEventRegistrationTimeFinished
+	}
+
+	if totalParticipants > event.MaxParticipants {
+		return util.ErrEventMaxParticipantsExceeded
+	}
+
+	return nil
 }

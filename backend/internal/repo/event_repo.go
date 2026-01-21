@@ -37,12 +37,12 @@ func (r *eventRepo) Create(ctx context.Context, req event.CreateEventReq) (int, 
 		Columns(
 			"title", "description", "event_type_id", "start_at",
 			"registration_opens_at", "registration_closes_at",
-			"should_auto_create_event", "total_participants", "created_by", "created_at", "updated_at", "is_active","updated_by",
+			"should_auto_create_event", "max_participants", "created_by", "created_at", "updated_at", "is_active", "updated_by",
 		).
 		Values(
 			req.Title, req.Description, req.EventTypeId, req.StartAt,
 			req.RegistrationOpensAt, req.RegistrationClosesAt,
-			req.ShouldAutoCreateEvent, req.TotalParticipants, req.CreatedBy, req.CreatedAt, req.CreatedAt, true,req.CreatedBy,
+			req.ShouldAutoCreateEvent, req.MaxParticipants, req.CreatedBy, req.CreatedAt, req.CreatedAt, true, req.CreatedBy,
 		).
 		Suffix("RETURNING id").
 		ToSql()
@@ -68,12 +68,11 @@ func (r *eventRepo) Create(ctx context.Context, req event.CreateEventReq) (int, 
 	return id, nil
 }
 
-func (r *eventRepo) GetByID(ctx context.Context, id int) (*entity.Events, error) {
+func (r *eventRepo) GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.Events, error) {
 	query, args, err := r.psql.
 		Select("*").
 		From(r.table).
-		Where(sq.Eq{"id": id}).
-		Where(sq.Eq{"is_active": true}).
+		Where(sq.Eq{"id": id, "is_active": true}).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build select query", logger.Extra(map[string]any{
@@ -84,7 +83,14 @@ func (r *eventRepo) GetByID(ctx context.Context, id int) (*entity.Events, error)
 	}
 
 	var event entity.Events
-	if err := r.db.GetContext(ctx, &event, query, args...); err != nil {
+
+	// Use tx if provided, otherwise use the database connection
+	var db sqlx.QueryerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if err := sqlx.GetContext(ctx, db, &event, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -97,6 +103,34 @@ func (r *eventRepo) GetByID(ctx context.Context, id int) (*entity.Events, error)
 	}
 
 	return &event, nil
+}
+
+func (r *eventRepo) UpdateParticipantCount(ctx context.Context, tx *sqlx.Tx, eventID, count int) error {
+	query, args, err := r.psql.Update(r.table).
+		Set("total_participants", count).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"id": eventID}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update participant count query", logger.Extra(map[string]any{
+			"error":   err.Error(),
+			"eventID": eventID,
+			"count":   count,
+		}))
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		slog.Error("Failed to update participant count", logger.Extra(map[string]any{
+			"error":   err.Error(),
+			"eventID": eventID,
+			"count":   count,
+		}))
+		return err
+	}
+
+	return nil
 }
 
 func (r *eventRepo) GetEventWithPagination(ctx context.Context, req event.GetEventsQueryReq) ([]entity.Events, error) {
