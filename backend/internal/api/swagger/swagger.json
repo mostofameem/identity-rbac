@@ -21,6 +21,96 @@
     }
   ],
   "paths": {
+    "/api/v1/event/participate": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Participate in an event",
+        "description": "Allows a user to participate in an event with optional guests. Requires authentication.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipateEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully participated in the event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Event participated in successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User already registered for this event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/event/{id}": {
       "get": {
         "tags": ["Events"],
@@ -808,6 +898,11 @@
                     "format": "date-time",
                     "description": "When registration closes (optional)",
                     "example": "2024-03-10T23:59:59Z"
+                  },
+                  "maxParticipants": {
+                    "type": "integer",
+                    "description": "Maximum number of participants (optional)",
+                    "example": 100
                   }
                 }
               }
@@ -927,6 +1022,24 @@
       }
     },
     "schemas": {
+      "ParticipateEventRequest": {
+        "type": "object",
+        "required": ["eventId", "guestCount"],
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "ID of the event to participate in"
+          },
+          "guestCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Number of guests the user is bringing (0-10)"
+          }
+        }
+      },
       "Event": {
         "type": "object",
         "properties": {
