@@ -89,3 +89,21 @@ type PerticipateEventReq struct {
 	GuestCount  int
 	CurrentTime time.Time
 }
+
+type EventTypeSettingsRequest struct {
+	EventTypeId                int
+	AutoCreateAt               string
+	AutoEventIntervalInMinutes int
+	RequestBy                  int
+	Remarks                    string
+	IsActive                   bool
+}
+
+type EventTypeSettingsResponse struct {
+	Id                         int
+	EventTypeId                int
+	AutoCreateAt               string
+	AutoEventIntervalInMinutes int
+	CreatedBy                  *int
+	IsActive                   bool
+}

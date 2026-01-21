@@ -64,10 +64,11 @@ func serveRest(cmd *cobra.Command, args []string) error {
 
 	eventRepo := repo.NewEventRepo(db)
 	eventTypeRepo := repo.NewEventTypeRepo(db)
+	eventTypeSettingRepo := repo.NewEventTypeSettingRepo(db)
 	perticipantRepo := repo.NewPerticipantRepo(db)
-	eventSettingRepo := repo.NewEventSettingRepo(db)
+	eventSettingRepo := repo.NewEventTypeSettingRepo(db)
 	transaction := repo.NewTransaction(db)
-	eventSvc := event.NewEventSerVice(cnf, eventRepo, eventTypeRepo, perticipantRepo, eventSettingRepo, transaction)
+	eventSvc := event.NewEventSerVice(cnf, eventRepo, eventTypeRepo, eventTypeSettingRepo, perticipantRepo, eventSettingRepo, transaction)
 
 	handlers := handlers.NewHandlers(cnf, rbacSvc, eventSvc)
 

@@ -28,4 +28,10 @@ const (
 	EVENT_TYPE_UPDATE_ACCESS = "event_type.update"
 	EVENT_TYPE_DELETE_ACCESS = "event_type.delete"
 	EVENT_TYPE_VIEW_ACCESS   = "event_type.view"
+
+	// Event Type Settings
+	EVENT_TYPE_SETTINGS_CREATE_ACCESS = "event_type_settings.create"
+	EVENT_TYPE_SETTINGS_UPDATE_ACCESS = "event_type_settings.update"
+	EVENT_TYPE_SETTINGS_DELETE_ACCESS = "event_type_settings.delete"
+	EVENT_TYPE_SETTINGS_VIEW_ACCESS   = "event_type_settings.view"
 )

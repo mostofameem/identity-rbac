@@ -23,7 +23,9 @@
   "paths": {
     "/api/v1/event/participate": {
       "post": {
-        "tags": ["Events"],
+        "tags": [
+          "Events"
+        ],
         "summary": "Participate in an event",
         "description": "Allows a user to participate in an event with optional guests. Requires authentication.",
         "security": [
@@ -113,7 +115,9 @@
     },
     "/api/v1/event/{id}": {
       "get": {
-        "tags": ["Events"],
+        "tags": [
+          "Events"
+        ],
         "summary": "Get event details by ID",
         "description": "Returns the details of a specific event by its ID. Requires authentication and EVENT_VIEW_ACCESS permission.",
         "security": [
@@ -171,9 +175,121 @@
         }
       }
     },
-    "/api/v1/event-types": {
+    "/api/v1/event-types/settings": {
+      "put": {
+        "tags": ["Event Types"],
+        "summary": "Create or update event type settings",
+        "description": "Creates or updates settings for an event type including auto-creation settings. Requires authentication and appropriate permissions.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventTypeSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event type settings created/updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Event Type settings created successfully"
+                    },
+                    "data": {
+                      "type": "integer",
+                      "example": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/event-types/settings/{id}": {
       "get": {
         "tags": ["Event Types"],
+        "summary": "Get event type settings by ID",
+        "description": "Retrieves the settings for a specific event type by its ID. Requires authentication and appropriate permissions.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "ID of the event type settings to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event type settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully fetched event type settings"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EventTypeSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/event-types": {
+      "get": {
+        "tags": [
+          "Event Types"
+        ],
         "summary": "Get list of event types",
         "description": "Returns a paginated list of event types with optional filtering. Requires authentication and appropriate permissions.",
         "parameters": [
@@ -240,7 +356,9 @@
         }
       },
       "post": {
-        "tags": ["Event Types"],
+        "tags": [
+          "Event Types"
+        ],
         "summary": "Create a new event type",
         "description": "Creates a new event type with the provided details. Requires authentication and appropriate permissions.",
         "security": [
@@ -304,7 +422,9 @@
     },
     "/health-check": {
       "get": {
-        "tags": ["General"],
+        "tags": [
+          "General"
+        ],
         "summary": "Health Check Route",
         "description": "Simple endpoint to test if the API is working.",
         "responses": {
@@ -327,10 +447,11 @@
         }
       }
     },
-
     "/api/v1/register": {
       "post": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Register a New User with Email Invitation Token",
         "description": "Allows a user to complete their registration using an email invitation token. The token contains the email and role IDs that were assigned during the invitation process.",
         "security": [
@@ -414,7 +535,9 @@
     },
     "/api/v1/reset-password": {
       "patch": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Reset password for a user",
         "description": "Allows a user to reset their password by providing their old password and a new password.",
         "security": [
@@ -435,16 +558,17 @@
         "responses": {
           "201": {
             "schema": {
-                "$ref": "#/components/schemas/SuccessResponse"
-              }
+              "$ref": "#/components/schemas/SuccessResponse"
+            }
           }
         }
       }
     },
-
     "/api/v1/users/invite": {
       "post": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Admin Insert a New User",
         "requestBody": {
           "required": true,
@@ -459,24 +583,30 @@
         "responses": {
           "200": {
             "schema": {
-                "$ref": "#/components/schemas/SuccessResponse"
-              }
+              "$ref": "#/components/schemas/SuccessResponse"
+            }
           }
         }
       }
     },
-
-    "/api/v1/users":{
+    "/api/v1/users": {
       "get": {
         "summary": "Get User list",
         "description": "Returns a list of existing user with filter by email",
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "parameters": [
-          { "name": "email", "in": "query", "schema": { "type": "string"} }
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
-          "200": {
-          },
+          "200": {},
           "500": {
             "description": "Internal server error"
           }
@@ -488,10 +618,11 @@
         ]
       }
     },
-
     "/api/v1/login": {
       "post": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Log In an Existing User",
         "requestBody": {
           "required": true,
@@ -517,12 +648,13 @@
         }
       }
     },
-
     "/api/v1/roles": {
       "post": {
         "summary": "Create a new role",
         "description": "Adds a role with a name, description and a list of permissions",
-        "tags": ["role"],
+        "tags": [
+          "role"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -560,9 +692,17 @@
       "get": {
         "summary": "List all roles",
         "description": "Returns a list of existing roles",
-        "tags": ["role"],
+        "tags": [
+          "role"
+        ],
         "parameters": [
-          { "name": "title", "in": "query", "schema": { "type": "string"} }
+          {
+            "name": "title",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -589,12 +729,13 @@
         ]
       }
     },
-
     "/api/v1/users/assign-role": {
       "post": {
         "summary": "Assign a role to a user",
         "description": "Links an existing role to a user by ID",
-        "tags": ["role"],
+        "tags": [
+          "role"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -630,14 +771,21 @@
         ]
       }
     },
-
     "/api/v1/permissions": {
       "get": {
         "summary": "List all permissions",
         "description": "Returns a list of existing permissions",
-        "tags": ["permissions"],
+        "tags": [
+          "permissions"
+        ],
         "parameters": [
-          { "name": "title", "in": "query", "schema": { "type": "string"} }
+          {
+            "name": "title",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -664,11 +812,12 @@
         ]
       }
     },
-
     "/api/v1/roles/assign-permission": {
       "post": {
         "summary": "Assign a permission to a role",
-        "tags": ["permissions"],
+        "tags": [
+          "permissions"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -704,10 +853,11 @@
         ]
       }
     },
-
     "/api/v1/users/me/permissions": {
       "get": {
-        "tags": ["User"],
+        "tags": [
+          "User"
+        ],
         "summary": "Get permissions of the currently authenticated user",
         "description": "Returns a list of permissions assigned to the authenticated user.",
         "security": [
@@ -746,21 +896,29 @@
         }
       }
     },
-
-
-    "/api/v1/token/refresh":{
+    "/api/v1/token/refresh": {
       "get": {
-          "tags": ["User"],
-          "summary": "Get access token from refresh token",
-          "parameters": [
-          { "name": "token", "in": "query", "schema": { "type": "string"} ,"required":true}
-          ]
-        }
+        "tags": [
+          "User"
+        ],
+        "summary": "Get access token from refresh token",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ]
+      }
     },
-
     "/api/v1/events": {
       "get": {
-        "tags": ["Events"],
+        "tags": [
+          "Events"
+        ],
         "summary": "Get list of events",
         "description": "Returns a paginated list of events with optional filtering. Requires authentication.",
         "parameters": [
@@ -780,7 +938,11 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["UPCOMING", "ONGOING", "RECENT"],
+              "enum": [
+                "UPCOMING",
+                "ONGOING",
+                "RECENT"
+              ],
               "example": "UPCOMING"
             }
           },
@@ -850,7 +1012,9 @@
         }
       },
       "post": {
-        "tags": ["Events"],
+        "tags": [
+          "Events"
+        ],
         "summary": "Create a new event",
         "description": "Creates a new event with the provided details. Requires authentication and event.create permission.",
         "security": [
@@ -864,7 +1028,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["title", "eventTypeId", "startAt"],
+                "required": [
+                  "title",
+                  "eventTypeId",
+                  "startAt"
+                ],
                 "properties": {
                   "title": {
                     "type": "string",
@@ -1024,7 +1192,10 @@
     "schemas": {
       "ParticipateEventRequest": {
         "type": "object",
-        "required": ["eventId", "guestCount"],
+        "required": [
+          "eventId",
+          "guestCount"
+        ],
         "properties": {
           "eventId": {
             "type": "integer",
@@ -1160,7 +1331,11 @@
       },
       "CreateEventRequest": {
         "type": "object",
-        "required": ["title", "eventTypeId", "startAt"],
+        "required": [
+          "title",
+          "eventTypeId",
+          "startAt"
+        ],
         "properties": {
           "title": {
             "type": "string",
@@ -1194,9 +1369,80 @@
           }
         }
       },
+      "EventTypeSettingsRequest": {
+        "type": "object",
+        "required": ["eventTypeId", "autoCreateAt", "autoEventIntervalInMinutes", "isActive"],
+        "properties": {
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1,
+            "description": "ID of the event type"
+          },
+          "autoCreateAt": {
+            "type": "string",
+            "format": "time",
+            "example": "12:00",
+            "description": "Time when the event should be automatically created"
+          },
+          "autoEventIntervalInMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 60,
+            "description": "Interval in minutes between automatically created events"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the auto-creation is active"
+          }
+        }
+      },
+      "EventTypeSettings": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1
+          },
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1
+          },
+          "autoCreateAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-21T12:00:00Z"
+          },
+          "autoEventIntervalInMinutes": {
+            "type": "integer",
+            "example": 60
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "CreateEventTypeRequest": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -1274,7 +1520,11 @@
             "minLength": 6
           }
         },
-        "required": ["firstName", "lastName", "password"]
+        "required": [
+          "firstName",
+          "lastName",
+          "password"
+        ]
       },
       "ResetPasswordReq": {
         "type": "object",
@@ -1288,7 +1538,10 @@
             "example": "password123"
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "InviteUserReq": {
         "type": "object",
@@ -1306,7 +1559,11 @@
             "example": "user@exabyting.com"
           }
         },
-        "required": ["userName", "email", "roleId"]
+        "required": [
+          "userName",
+          "email",
+          "roleId"
+        ]
       },
       "LoginReq": {
         "type": "object",
@@ -1320,7 +1577,10 @@
             "example": "password123"
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "LoginResponse": {
         "type": "object",
@@ -1329,7 +1589,7 @@
             "type": "string",
             "example": "your-jwt-token-here"
           },
-          "refreshToken":{
+          "refreshToken": {
             "type": "string",
             "example": "your-jwt-token-here"
           }
@@ -1368,7 +1628,10 @@
       },
       "AddRoleReq": {
         "type": "object",
-        "required": ["roleName", "description"],
+        "required": [
+          "roleName",
+          "description"
+        ],
         "properties": {
           "roleName": {
             "type": "string"
@@ -1384,7 +1647,10 @@
       },
       "AddRoleToUserReq": {
         "type": "object",
-        "required": ["userId", "roleId"],
+        "required": [
+          "userId",
+          "roleId"
+        ],
         "properties": {
           "userId": {
             "type": "integer"
@@ -1396,7 +1662,11 @@
       },
       "AddPermissionToRoleReq": {
         "type": "object",
-        "required": ["roleId","moduleId", "permissionId"],
+        "required": [
+          "roleId",
+          "moduleId",
+          "permissionId"
+        ],
         "properties": {
           "roleId": {
             "type": "integer"
@@ -1458,8 +1728,14 @@
           "status": {
             "type": "object",
             "properties": {
-              "code": { "type": "integer", "example": 200 },
-              "message": { "type": "string", "example": "Success" }
+              "code": {
+                "type": "integer",
+                "example": 200
+              },
+              "message": {
+                "type": "string",
+                "example": "Success"
+              }
             }
           },
           "body": {
@@ -1483,18 +1759,32 @@
                 "example": "Invalid request"
               }
             },
-            "required": ["code", "message"]
+            "required": [
+              "code",
+              "message"
+            ]
           }
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       },
       "UserPermissions": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "description": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       }
     }

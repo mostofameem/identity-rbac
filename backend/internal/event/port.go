@@ -17,6 +17,9 @@ type Service interface {
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
 	GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error)
+
+	EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error)
+	GetEventTypeSettings(ctx context.Context, eventTypeID int) (EventTypeSettingsResponse, error)
 }
 
 type EventRepo interface {
@@ -43,6 +46,8 @@ type PerticipantRepo interface {
 }
 
 type EventTypeSettingRepo interface {
+	CreateOrUpsert(ctx context.Context, req EventTypeSettingsRequest) (int, error)
+	GetByEventTypeID(ctx context.Context, eventTypeID int) (entity.EventTypeSettings, error)
 }
 
 type TransactionRepo interface {

@@ -1,9 +1,9 @@
 -- +migrate Up
 CREATE TABLE IF NOT EXISTS event_type_settings (
-    id BIGINT  PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     event_type_id BIGINT NOT NULL,
-    auto_create_at TIMESTAMP NULL DEFAULT NULL,
-    auto_event_interval_in_minites INT,
+    auto_create_at TIME NULL DEFAULT NULL,
+    auto_event_interval_in_minutes BIGINT,
     created_by BIGINT NULL,
     updated_by BIGINT NULL,
     remarks VARCHAR(250) DEFAULT NULL,
