@@ -15,6 +15,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PageLayout } from './components/layout';
 import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
+import EventTypeList from './pages/events/components/EventTypeList';
+import EventList from './pages/events/components/EventList';
 import LoginPage from './components/LoginPage';
 import HomePage from './components/HomePage';
 import InvitationPage from './components/InvitationPage';
@@ -73,68 +75,96 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Home Route */}
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <HomePage />
           </ProtectedRoute>
-        } 
+        }
       />
-      
+
       {/* Management Routes */}
-      <Route 
-        path="/users" 
+      <Route
+        path="/users"
         element={
           <ProtectedRoute requiredPermission="user">
-            <PageWrapper 
-              title="User Management" 
+            <PageWrapper
+              title="User Management"
               subtitle="Manage users and their role assignments"
             >
-              <UserManagement 
-                showMessage={() => {}} 
-                loading={false} 
-                setLoading={() => {}} 
+              <UserManagement
+                showMessage={() => { }}
+                loading={false}
+                setLoading={() => { }}
               />
             </PageWrapper>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/roles" 
+
+      <Route
+        path="/roles"
         element={
           <ProtectedRoute requiredPermission="role">
-            <PageWrapper 
-              title="Role Management" 
+            <PageWrapper
+              title="Role Management"
               subtitle="Create and manage system roles with permissions"
             >
-              <RoleManagement 
-                showMessage={() => {}} 
-                loading={false} 
-                setLoading={() => {}} 
+              <RoleManagement
+                showMessage={() => { }}
+                loading={false}
+                setLoading={() => { }}
               />
             </PageWrapper>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/permissions" 
+
+      <Route
+        path="/permissions"
         element={
           <ProtectedRoute requiredPermission="permission.view">
-            <PageWrapper 
-              title="Permission Management" 
+            <PageWrapper
+              title="Permission Management"
               subtitle="View and manage system permissions"
             >
-              <PermissionManagement 
-                showMessage={() => {}} 
-                loading={false} 
-                setLoading={() => {}} 
+              <PermissionManagement
+                showMessage={() => { }}
+                loading={false}
+                setLoading={() => { }}
               />
             </PageWrapper>
           </ProtectedRoute>
-        } 
+        }
+      />
+
+      <Route
+        path="/event-configuration"
+        element={
+          <ProtectedRoute>
+            <PageWrapper
+              title="Event Configuration"
+              subtitle="Manage event types and settings"
+            >
+              <EventTypeList />
+            </PageWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/events"
+        element={
+          <ProtectedRoute>
+            <PageWrapper
+              title="Events"
+              subtitle="Manage all events"
+            >
+              <EventList />
+            </PageWrapper>
+          </ProtectedRoute>
+        }
       />
 
       {/* Fallback Route */}
