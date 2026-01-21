@@ -20,20 +20,20 @@ const Sidebar: React.FC = () => {
       <div className="p-4 border-b border-gray-700">
         <h1 className="text-xl font-bold">RBAC System</h1>
       </div>
-      
+
       <nav className="mt-4">
         <div className="px-4 py-2">
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/')}`}
           >
             Home
           </Link>
-          
+
           {/* User Management */}
           {hasUserPermission() && (
-            <Link 
-              to="/users" 
+            <Link
+              to="/users"
               className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/users')}`}
             >
               Users
@@ -42,8 +42,8 @@ const Sidebar: React.FC = () => {
 
           {/* Role Management */}
           {hasResourcePermission('role') && (
-            <Link 
-              to="/roles" 
+            <Link
+              to="/roles"
               className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/roles')}`}
             >
               Roles
@@ -52,16 +52,32 @@ const Sidebar: React.FC = () => {
 
           {/* Permission Management */}
           {hasResourcePermission('permission', 'view') && (
-            <Link 
-              to="/permissions" 
+            <Link
+              to="/permissions"
               className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/permissions')}`}
             >
               Permissions
             </Link>
           )}
+
+          {/* Events */}
+          <Link
+            to="/events"
+            className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/events')}`}
+          >
+            Events
+          </Link>
+
+          {/* Event Configuration */}
+          <Link
+            to="/event-configuration"
+            className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/event-configuration')}`}
+          >
+            Event Configuration
+          </Link>
         </div>
       </nav>
-      
+
       {/* Logout Button */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
         <div className="flex items-center justify-between mb-4">

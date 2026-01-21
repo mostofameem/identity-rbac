@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"identity-rbac/config"
 	"identity-rbac/internal/entity"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
 	"log"
 	"log/slog"
@@ -204,6 +205,10 @@ func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCusto
 			StartAt:              event.StartAt,
 			RegistrationOpensAt:  event.RegistrationOpensAt,
 			RegistrationClosesAt: event.RegistrationClosesAt,
+			IsActive:             event.IsActive,
+			Status:               getEventStatus(&event, req.CurrentTime),
+			TotalParticipants:    event.TotalParticipants,
+			MaxParticipants:      event.MaxParticipants,
 		}
 	}
 
@@ -358,4 +363,20 @@ func (s *service) GetEventTypeSettings(ctx context.Context, eventTypeID int) (Ev
 		CreatedBy:                  eventTypeSettings.CreatedBy,
 		IsActive:                   eventTypeSettings.IsActive,
 	}, nil
+}
+
+func getEventStatus(event *entity.Events, now time.Time) enum.EventStatusType {
+	if !event.IsActive {
+		return enum.EventStatusInactive
+	}
+
+	if now.Before(*event.RegistrationOpensAt) {
+		return enum.EventStatusUpcoming
+	}
+
+	if now.After(*event.RegistrationClosesAt) {
+		return enum.EventStatusRecent
+	}
+
+	return enum.EventStatusOngoing
 }

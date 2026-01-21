@@ -80,6 +80,9 @@ type EventCustomerResponse struct {
 	StartAt              time.Time            `json:"startAt"`
 	RegistrationOpensAt  *time.Time           `json:"registrationOpensAt"`
 	RegistrationClosesAt *time.Time           `json:"registrationClosesAt"`
+	TotalParticipants    int                  `json:"totalParticipants"`
+	MaxParticipants      int                  `json:"maxParticipants"`
+	Status               enum.EventStatusType `json:"status"`
 	IsActive             bool                 `json:"isActive"`
 }
 
