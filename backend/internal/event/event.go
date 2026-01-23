@@ -46,7 +46,7 @@ func NewEventSerVice(
 
 func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error) {
 	// Validate event type exists
-	eventType, err := s.eventTypeRepo.GetByID(ctx, req.EventTypeId)
+	eventType, err := s.eventTypeRepo.GetByID(ctx, nil, req.EventTypeId)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +110,8 @@ func (s *service) GetEventDetails(ctx context.Context, id int) (EventResponse, e
 		RegistrationClosesAt:  event.RegistrationClosesAt,
 		ShouldAutoCreateEvent: event.ShouldAutoCreateEvent,
 		TotalParticipants:     event.TotalParticipants,
+		MaxParticipants:       event.MaxParticipants,
+		Status:                string(getEventStatus(event, time.Now())),
 		IsActive:              event.IsActive,
 		CreatedBy:             event.CreatedBy,
 		UpdatedBy:             event.UpdatedBy,
@@ -193,6 +195,7 @@ func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCusto
 			Id:          eventType.Id,
 			Name:        eventType.Name,
 			Description: eventType.Description,
+			IsActive:    eventType.IsActive,
 		}
 	}
 
@@ -399,7 +402,23 @@ func getEventStatus(event *entity.Events, now time.Time) enum.EventStatusType {
 
 func (s *service) UpdateEventTypeStatus(ctx context.Context, id int, status string) error {
 
-	eventType, err := s.eventTypeRepo.GetByID(ctx, id)
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	eventType, err := s.eventTypeRepo.GetByID(ctx, tx, id)
 	if err != nil {
 		slog.Error("Failed to get event type", "error", err)
 		return util.ErrSomethingWentWrong
@@ -412,7 +431,46 @@ func (s *service) UpdateEventTypeStatus(ctx context.Context, id int, status stri
 
 	isActive := status == "ACTIVE"
 
-	err = s.eventTypeRepo.UpdateIsActiveStatus(ctx, id, isActive)
+	err = s.eventTypeRepo.UpdateIsActiveStatus(ctx, tx, id, isActive)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+
+	return nil
+}
+
+func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) error {
+
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	event, err := s.eventRepo.GetByID(ctx, tx, id)
+	if err != nil {
+		slog.Error("Failed to get event type", "error", err)
+		return util.ErrSomethingWentWrong
+	}
+
+	if event == nil {
+		slog.Error("Event not found", "id", id)
+		return util.ErrNotFound
+	}
+
+	isActive := status == "ACTIVE"
+
+	err = s.eventRepo.UpdateIsActiveStatus(ctx, tx, id, isActive)
 	if err != nil {
 		return util.ErrSomethingWentWrong
 	}

@@ -32,7 +32,7 @@ func NewEventTypeRepo(db *DB) EventTypeRepo {
 	}
 }
 
-func (r *eventTypeRepo) GetByID(ctx context.Context, id int) (*entity.EventType, error) {
+func (r *eventTypeRepo) GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.EventType, error) {
 	query, args, err := r.psql.
 		Select("*").
 		From(r.table).
@@ -46,8 +46,13 @@ func (r *eventTypeRepo) GetByID(ctx context.Context, id int) (*entity.EventType,
 		return nil, err
 	}
 
-	var eventType entity.EventType
-	if err := r.db.GetContext(ctx, &eventType, query, args...); err != nil {
+	var db sqlx.QueryerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	var eventType *entity.EventType
+	if err := sqlx.GetContext(ctx, db, &eventType, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -59,7 +64,7 @@ func (r *eventTypeRepo) GetByID(ctx context.Context, id int) (*entity.EventType,
 		return nil, err
 	}
 
-	return &eventType, nil
+	return eventType, nil
 }
 
 func (r *eventTypeRepo) GetByName(ctx context.Context, name string) (*entity.EventType, error) {
@@ -77,8 +82,8 @@ func (r *eventTypeRepo) GetByName(ctx context.Context, name string) (*entity.Eve
 		return nil, err
 	}
 
-	var eventType entity.EventType
-	if err := r.db.GetContext(ctx, &eventType, query, args...); err != nil {
+	var eventType *entity.EventType
+	if err := r.db.GetContext(ctx, eventType, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -90,7 +95,7 @@ func (r *eventTypeRepo) GetByName(ctx context.Context, name string) (*entity.Eve
 		return nil, err
 	}
 
-	return &eventType, nil
+	return eventType, nil
 }
 
 func (r *eventTypeRepo) Create(ctx context.Context, req event.CreateEventTypeReq) (int, error) {
@@ -238,7 +243,7 @@ func (r *eventTypeRepo) getEventTypeCountQueryBuilder() BuildQuery {
 	}
 }
 
-func (r *eventTypeRepo) UpdateIsActiveStatus(ctx context.Context, id int, isActive bool) error {
+func (r *eventTypeRepo) UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error {
 
 	query, args, err := r.psql.
 		Update(r.table).
@@ -253,7 +258,7 @@ func (r *eventTypeRepo) UpdateIsActiveStatus(ctx context.Context, id int, isActi
 		return err
 	}
 
-	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
 		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
 			"error": err.Error(),
 			"query": query,

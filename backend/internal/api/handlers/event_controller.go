@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"identity-rbac/internal/api/middlewares"
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/enum"
@@ -35,6 +36,10 @@ type PerticipateEventRequest struct {
 	EventId    int `json:"eventId" validation:"required,gt=0"`
 	UserId     int `json:"userId" validation:"required,gt=0"`
 	GuestCount int `json:"guestCount" validation:"required,gte=0,lte=10"` // Added max limit of 10 guests
+}
+
+type EventStatusChangeRequest struct {
+	Status enum.ActiveInactiveStatus `json:"status" validation:"required"`
 }
 
 func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
@@ -178,5 +183,33 @@ func (handlers *Handlers) PerticipateEvent(w http.ResponseWriter, r *http.Reques
 
 	utils.SendData(w, map[string]any{
 		"message": "Event Perticipated successfully",
+	})
+}
+
+func (handlers *Handlers) UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return
+	}
+
+	var request EventStatusChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := utils.Validate(request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Validation error")
+		return
+	}
+
+	err := handlers.eventSvc.UpdateEventStatus(r.Context(), id, fmt.Sprintf("%s", request.Status))
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Successfully updated event type status.",
 	})
 }

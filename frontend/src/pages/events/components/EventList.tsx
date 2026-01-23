@@ -19,7 +19,7 @@ import {
   TablePagination,
   Chip,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, PowerSettingsNew as PowerIcon } from '@mui/icons-material';
 import type { Event as EventType } from '../types/event.types';
 import EventForm from './EventForm';
 import EventDetailsDialog from './EventDetailsDialog';
@@ -100,6 +100,23 @@ const EventList: React.FC = () => {
       } catch (error: any) {
         console.error('Error deleting event:', error);
         alert(error.message || 'Failed to delete event. Please try again.');
+      }
+    }
+  };
+
+  const handleToggleStatus = async (event: EventType) => {
+    const currentStatus = (event.status || '').toUpperCase();
+    const isCurrentlyActive = event.isActive !== undefined ? event.isActive : (currentStatus === 'ACTIVE' || currentStatus === 'ONGOING');
+    const newStatus: any = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
+    const confirmMessage = `Are you sure you want to ${isCurrentlyActive ? 'deactivate' : 'activate'} this event?`;
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        await eventService.changeEventStatus(event.id, newStatus);
+        await fetchEvents();
+      } catch (error: any) {
+        console.error('Error toggling event status:', error);
+        alert(error.message || 'Failed to toggle status. Please try again.');
       }
     }
   };
@@ -211,8 +228,13 @@ const EventList: React.FC = () => {
                       <IconButton onClick={() => handleOpenDetails(event)} color="info">
                         <VisibilityIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleOpen(event)} color="primary">
-                        <EditIcon />
+                      <IconButton
+                        onClick={() => handleToggleStatus(event)}
+                        color={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'warning' : 'success'}
+                        size="small"
+                        title={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'Deactivate' : 'Activate'}
+                      >
+                        <PowerIcon />
                       </IconButton>
                       <IconButton onClick={() => handleDelete(event.id)} color="error">
                         <DeleteIcon />

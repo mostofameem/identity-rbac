@@ -28,6 +28,8 @@ type EventResponse struct {
 	RegistrationClosesAt  *time.Time `json:"registrationClosesAt"`
 	ShouldAutoCreateEvent bool       `json:"shouldAutoCreateEvent"`
 	TotalParticipants     int        `json:"totalParticipants"`
+	MaxParticipants       int        `json:"maxParticipants"`
+	Status                string     `json:"status"`
 	CreatedBy             *int       `json:"createdBy"`
 	UpdatedBy             *int       `json:"updatedBy"`
 	Remarks               *string    `json:"remarks"`

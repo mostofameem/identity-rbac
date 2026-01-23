@@ -16,6 +16,32 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 	)
 
 	mux.Handle(
+		"GET /api/v1/events",
+		manager.With(
+			http.HandlerFunc(server.handlers.GetEvents),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
+		"PUT /api/v1/events/{id}/change-status",
+		manager.With(
+			http.HandlerFunc(server.handlers.UpdateEventStatus),
+			server.middleware.Authorization(middlewares.EVENT_UPDATE_ACCESS),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
+		"GET /api/v1/events/{id}",
+		manager.With(
+			http.HandlerFunc(server.handlers.GetEventDetails),
+			server.middleware.Authorization(middlewares.EVENT_VIEW_ACCESS),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
 		"POST /api/v1/event-types",
 		manager.With(
 			http.HandlerFunc(server.handlers.CreateEventType),
@@ -56,23 +82,6 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 		manager.With(
 			http.HandlerFunc(server.handlers.GetEventTypeSettings),
 			server.middleware.Authorization(middlewares.EVENT_CREATE_ACCESS),
-			server.middleware.AuthenticateJWT,
-		),
-	)
-
-	mux.Handle(
-		"GET /api/v1/events",
-		manager.With(
-			http.HandlerFunc(server.handlers.GetEvents),
-			server.middleware.AuthenticateJWT,
-		),
-	)
-
-	mux.Handle(
-		"GET /api/v1/event/{id}",
-		manager.With(
-			http.HandlerFunc(server.handlers.GetEventDetails),
-			server.middleware.Authorization(middlewares.EVENT_VIEW_ACCESS),
 			server.middleware.AuthenticateJWT,
 		),
 	)

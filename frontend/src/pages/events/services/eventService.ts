@@ -232,6 +232,8 @@ export const eventService = {
           maxParticipants: e.maxParticipants || e.totalParticipants || 0,
           totalParticipants: e.totalParticipants || 0,
           status: e.status || 'upcoming',
+          isActive: e.isActive,
+          shouldAutoCreateEvent: e.shouldAutoCreateEvent,
           eventTypeId: e.eventTypeId?.toString() || e.eventType?.id?.toString() || '',
           eventType: e.eventType ? {
             id: e.eventType.id?.toString() || '',
@@ -253,7 +255,7 @@ export const eventService = {
 
   getEvent: async (id: string): Promise<Event> => {
     try {
-      const response = await api.get(`/event/${id}`);
+      const response = await api.get(`/events/${id}`);
       const data = response.data.data || response.data;
       return {
         id: data.id.toString(),
@@ -264,6 +266,8 @@ export const eventService = {
         registrationClosesAt: data.registrationClosesAt,
         maxParticipants: data.maxParticipants || 0,
         status: data.status || 'upcoming',
+        isActive: data.isActive,
+        shouldAutoCreateEvent: data.shouldAutoCreateEvent,
         eventTypeId: data.eventTypeId?.toString() || '',
         eventType: data.eventType ? {
           id: data.eventType.id?.toString() || '',
@@ -336,6 +340,14 @@ export const eventService = {
         eventId: parseInt(eventId),
         guestCount: data.guestCount || 0,
       });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  changeEventStatus: async (id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> => {
+    try {
+      await api.put(`/events/${id}/change-status`, { status });
     } catch (error) {
       handleApiError(error);
     }

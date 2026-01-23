@@ -179,134 +179,153 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
       maxWidth={false}
       PaperProps={{
         sx: {
-          width: '650px',
-          maxWidth: '95vw', // Ensure it doesn't overflow on small screens
-          borderRadius: 2,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          width: '500px',
+          maxWidth: '95vw',
+          borderRadius: 3,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+          overflow: 'hidden'
         }
       }}
     >
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{
-          pb: 2,
+          p: 2.5,
           background: eventType
-            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-            : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          color: 'white'
+            ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)'
+            : 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5
         }}>
-          <Typography variant="h5" fontWeight="bold">
-            {eventType ? 'Edit Event Type' : 'Create New Event Type'}
+          {eventType ? <Settings /> : <AutoAwesome />}
+          <Typography variant="h6" fontWeight="700">
+            {eventType ? 'Edit Event Type' : 'New Event Type'}
           </Typography>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 3, bgcolor: '#f5f7fa' }}>
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-12">
-              {/* Event Type Settings Configuration */}
-              {eventType?.id && (
-                <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2, border: '2px solid', borderColor: 'primary.main' }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                      <Settings color="primary" />
-                      <Typography variant="h6" fontWeight="600">
-                        Event Type Settings
-                      </Typography>
-                    </Box>
 
-                    {settingsError && (
-                      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSettingsError(null)}>
-                        {settingsError}
-                      </Alert>
-                    )}
+        <DialogContent sx={{ p: 2.5, bgcolor: '#ffffff' }}>
+          <Box display="flex" flexDirection="column" gap={2}>
+            {/* Basic Info Section */}
+            <Box>
+              <Typography variant="overline" color="text.secondary" fontWeight="700" sx={{ mb: 1, display: 'block' }}>
+                Basic Information
+              </Typography>
+              <TextField
+                fullWidth
+                label="Event Type Name"
+                name="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                size="small"
+                variant="outlined"
+                required
+                sx={{ mb: 1.5 }}
+              />
+              <TextField
+                fullWidth
+                label="Description"
+                name="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                size="small"
+                variant="outlined"
+                multiline
+                rows={2}
+              />
+            </Box>
 
-                    {settingsSuccess && (
-                      <Alert severity="success" sx={{ mb: 2 }}>
-                        Settings saved successfully!
-                      </Alert>
-                    )}
-
-                    <Box mb={2}>
-                      <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <Schedule color="action" fontSize="small" />
-                        <Typography variant="subtitle2" fontWeight="600">
-                          Auto Create At (HH:MM)
-                        </Typography>
-                      </Box>
-                      <TextField
-                        fullWidth
-                        value={eventTypeSettings.autoCreateAt}
-                        onChange={(e) => setEventTypeSettings(prev => ({ ...prev, autoCreateAt: e.target.value }))}
-                        placeholder="09:00"
-                        helperText="Time in 24-hour format when events should be auto-created"
-                        sx={{ mb: 2 }}
-                      />
-                    </Box>
-
-                    <Box mb={2}>
-                      <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <AutoAwesome color="action" fontSize="small" />
-                        <Typography variant="subtitle2" fontWeight="600">
-                          Interval (Minutes)
-                        </Typography>
-                      </Box>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        value={eventTypeSettings.autoEventIntervalInMinutes}
-                        onChange={(e) => setEventTypeSettings(prev => ({
-                          ...prev,
-                          autoEventIntervalInMinutes: parseInt(e.target.value) || 1440
-                        }))}
-                        helperText="Default: 1440 (24 hours)"
-                        sx={{ mb: 2 }}
-                      />
-                    </Box>
-
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={eventTypeSettings.isActive}
-                          onChange={(e) => setEventTypeSettings(prev => ({ ...prev, isActive: e.target.checked }))}
-                          color="primary"
-                        />
-                      }
-                      label="Enable Auto-Creation"
-                    />
-
-                    {/* Save settings button removed - merged with main update button */}
-
-                    <Box mt={2} display="flex" alignItems="start" gap={1} sx={{ bgcolor: '#e3f2fd', p: 1.5, borderRadius: 1 }}>
-                      <Info color="info" fontSize="small" sx={{ mt: 0.5 }} />
-                      <Typography variant="caption" color="text.secondary">
-                        Configure automatic event creation for this event type. Events will be created automatically at the specified time and interval.
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
-
-              {!eventType?.id && (
-                <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2, bgcolor: '#fff3e0' }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <Info color="warning" />
-                      <Typography variant="subtitle2" fontWeight="600">
-                        Event Type Settings
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Save the event type first to configure automatic event creation settings.
+            {/* Settings Section */}
+            {eventType?.id && (
+              <Box sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: '#f8fafc',
+                border: '1px solid',
+                borderColor: 'divider'
+              }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Schedule fontSize="small" color="primary" />
+                    <Typography variant="subtitle2" fontWeight="700">
+                      Auto-Creation Settings
                     </Typography>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
+                  </Box>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={eventTypeSettings.isActive}
+                        onChange={(e) => setEventTypeSettings(prev => ({ ...prev, isActive: e.target.checked }))}
+                        color="primary"
+                      />
+                    }
+                    label={<Typography variant="caption" fontWeight="600">Active</Typography>}
+                    labelPlacement="start"
+                    sx={{ m: 0 }}
+                  />
+                </Box>
+
+                {settingsError && (
+                  <Alert severity="error" sx={{ mb: 1.5, py: 0 }} onClose={() => setSettingsError(null)}>
+                    {settingsError}
+                  </Alert>
+                )}
+
+                {settingsSuccess && (
+                  <Alert severity="success" sx={{ mb: 1.5, py: 0 }}>
+                    Saved!
+                  </Alert>
+                )}
+
+                <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
+                  <TextField
+                    label="Create At (HH:MM)"
+                    value={eventTypeSettings.autoCreateAt}
+                    onChange={(e) => setEventTypeSettings(prev => ({ ...prev, autoCreateAt: e.target.value }))}
+                    size="small"
+                    placeholder="09:00"
+                    fullWidth
+                  />
+                  <TextField
+                    label="Interval (Min)"
+                    type="number"
+                    value={eventTypeSettings.autoEventIntervalInMinutes}
+                    onChange={(e) => setEventTypeSettings(prev => ({
+                      ...prev,
+                      autoEventIntervalInMinutes: parseInt(e.target.value) || 1440
+                    }))}
+                    size="small"
+                    fullWidth
+                  />
+                </Box>
+
+                <Box mt={1.5} display="flex" alignItems="start" gap={1}>
+                  <Info color="info" sx={{ fontSize: 16, mt: 0.3 }} />
+                  <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', lineHeight: 1.2 }}>
+                    Events will be created automatically at the specified time and interval.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
+            {!eventType?.id && (
+              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#fff7ed', border: '1px dashed', borderColor: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Info color="warning" fontSize="small" />
+                <Typography variant="caption" fontWeight="500">
+                  Save to enable auto-creation settings.
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f5f7fa' }}>
+
+        <DialogActions sx={{ p: 2, px: 2.5, bgcolor: '#ffffff', borderTop: '1px solid', borderColor: 'divider' }}>
           <Button
             onClick={onClose}
             color="inherit"
-            sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+            variant="text"
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
           >
             Cancel
           </Button>
@@ -315,10 +334,16 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
             color="primary"
             variant="contained"
             disabled={settingsLoading}
-            sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600 }}
-            startIcon={settingsLoading ? <CircularProgress size={20} /> : null}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 700,
+              boxShadow: 'none',
+              '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
+            }}
+            startIcon={settingsLoading ? <CircularProgress size={16} color="inherit" /> : null}
           >
-            {settingsLoading ? 'Saving...' : (eventType ? 'Update Event Type' : 'Create Event Type')}
+            {settingsLoading ? 'Saving...' : (eventType ? 'Save Changes' : 'Create Type')}
           </Button>
         </DialogActions>
       </form>
