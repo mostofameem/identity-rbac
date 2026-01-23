@@ -329,9 +329,16 @@ func (s *service) EventTypeSettings(ctx context.Context, req EventTypeSettingsRe
 		return 0, util.ErrEventSomethingWentWrong
 	}
 
-	if 
+	if eventSetting != nil {
+		id, err := s.eventSettingRepo.Update(ctx, req)
+		if err != nil {
+			return 0, util.ErrSomethingWentWrong
+		}
 
-	id, err := s.eventTypeSettingRepo.CreateOrUpsert(ctx, req)
+		return id, nil
+	}
+
+	id, err := s.eventTypeSettingRepo.Create(ctx, req)
 	if err != nil {
 		slog.Error("Failed to create event type settings", "error", err)
 		return 0, err

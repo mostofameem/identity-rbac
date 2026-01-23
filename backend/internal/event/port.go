@@ -49,7 +49,7 @@ type PerticipantRepo interface {
 
 type EventTypeSettingRepo interface {
 	CreateOrUpsert(ctx context.Context, req EventTypeSettingsRequest) (int, error)
-	GetByEventTypeID(ctx context.Context, eventTypeID int) (entity.EventTypeSettings, error)
+	GetByEventTypeID(ctx context.Context, eventTypeID int) (*entity.EventTypeSettings, error)
 	Create(ctx context.Context, req EventTypeSettingsRequest) (int, error)
 	Update(ctx context.Context, req EventTypeSettingsRequest) (int, error)
 }
