@@ -10,13 +10,14 @@ import (
 
 type Service interface {
 	CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error)
+	GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error)
 	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
 
 	ParticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
-	GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error)
+	UpdateEventTypeStatus(ctx context.Context, id int, status string) error
 
 	EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error)
 	GetEventTypeSettings(ctx context.Context, eventTypeID int) (EventTypeSettingsResponse, error)
@@ -38,6 +39,7 @@ type EventTypeRepo interface {
 	GetByName(ctx context.Context, name string) (*entity.EventType, error)
 	Create(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetByIDs(ctx context.Context, ids []int) ([]entity.EventType, error)
+	UpdateIsActiveStatus(ctx context.Context, id int, isActive bool) error
 }
 
 type PerticipantRepo interface {

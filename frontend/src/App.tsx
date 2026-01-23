@@ -140,11 +140,11 @@ const AppRoutes: React.FC = () => {
       />
 
       <Route
-        path="/event-configuration"
+        path="/event-types"
         element={
           <ProtectedRoute>
             <PageWrapper
-              title="Event Configuration"
+              title="Event Types"
               subtitle="Manage event types and settings"
             >
               <EventTypeList />

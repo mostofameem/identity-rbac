@@ -150,6 +150,7 @@ func (s *service) GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]Ge
 			Id:          eventType.Id,
 			Name:        eventType.Name,
 			Description: eventType.Description,
+			IsActive:    eventType.IsActive,
 		}
 	}
 
@@ -237,6 +238,7 @@ func (s *service) getEventTypesWhereIdsIn(ctx context.Context, eventTypeIds []in
 			Id:          eventType.Id,
 			Name:        eventType.Name,
 			Description: eventType.Description,
+			IsActive:    eventType.IsActive,
 		}
 	}
 
@@ -379,4 +381,27 @@ func getEventStatus(event *entity.Events, now time.Time) enum.EventStatusType {
 	}
 
 	return enum.EventStatusOngoing
+}
+
+func (s *service) UpdateEventTypeStatus(ctx context.Context, id int, status string) error {
+
+	eventType, err := s.eventTypeRepo.GetByID(ctx, id)
+	if err != nil {
+		slog.Error("Failed to get event type", "error", err)
+		return util.ErrSomethingWentWrong
+	}
+
+	if eventType == nil {
+		slog.Error("Event type not found", "id", id)
+		return util.ErrNotFound
+	}
+
+	isActive := status == "ACTIVE"
+
+	err = s.eventTypeRepo.UpdateIsActiveStatus(ctx, id, isActive)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+
+	return nil
 }
