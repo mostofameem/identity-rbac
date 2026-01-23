@@ -37,7 +37,6 @@ func (r *eventTypeRepo) GetByID(ctx context.Context, id int) (*entity.EventType,
 		Select("*").
 		From(r.table).
 		Where(sq.Eq{"id": id}).
-		Where(sq.Eq{"is_active": true}).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build select query", logger.Extra(map[string]any{
@@ -127,7 +126,6 @@ func (r *eventTypeRepo) GetAllWithPagination(ctx context.Context, req event.GetE
 
 	query, args, err := NewQueryBuilder(r.getEventTypeQueryBuilder()).
 		FilterByPrefix("name", req.Name).
-		FilterByBoolean("is_active", true).
 		Limit(limit).
 		Offset(Offset).
 		ToSql()
@@ -225,6 +223,7 @@ func (r *eventTypeRepo) getEventTypeQueryBuilder() BuildQuery {
 			"id",
 			"name",
 			"description",
+			"is_active",
 		).
 			From(r.table)
 	}
@@ -237,4 +236,31 @@ func (r *eventTypeRepo) getEventTypeCountQueryBuilder() BuildQuery {
 		).
 			From(r.table)
 	}
+}
+
+func (r *eventTypeRepo) UpdateIsActiveStatus(ctx context.Context, id int, isActive bool) error {
+
+	query, args, err := r.psql.
+		Update(r.table).
+		Set("is_active", isActive).
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"id":    id,
+		}))
+		return err
+	}
+
+	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
 }

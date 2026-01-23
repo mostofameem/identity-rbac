@@ -15,7 +15,13 @@ import {
   Typography,
   Chip,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Settings as SettingsIcon,
+  PowerSettingsNew as PowerIcon
+} from '@mui/icons-material';
 import { EventType } from '../types/event.types';
 import EventTypeForm from './EventTypeForm';
 import { eventTypeService } from '../services/eventService';
@@ -84,6 +90,17 @@ const EventTypeList: React.FC = () => {
         console.error('Error deleting event type:', error);
         alert(error.message || 'Failed to delete event type. Please try again.');
       }
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    const newStatus = currentStatus ? 'INACTIVE' : 'ACTIVE';
+    try {
+      await eventTypeService.changeEventTypeStatus(id, newStatus);
+      await fetchEventTypes();
+    } catch (error: any) {
+      console.error('Error toggling event type status:', error);
+      alert(error.message || 'Failed to update status. Please try again.');
     }
   };
 
@@ -161,17 +178,35 @@ const EventTypeList: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton 
+                      <IconButton
+                        onClick={() => handleOpen(eventType)}
+                        color="secondary"
+                        size="small"
+                        title="Settings"
+                      >
+                        <SettingsIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleToggleStatus(eventType.id, eventType.isActive)}
+                        color={eventType.isActive ? "warning" : "success"}
+                        size="small"
+                        title={eventType.isActive ? "Deactivate" : "Activate"}
+                      >
+                        <PowerIcon />
+                      </IconButton>
+                      <IconButton
                         onClick={() => handleOpen(eventType)}
                         color="primary"
                         size="small"
+                        title="Edit"
                       >
                         <EditIcon />
                       </IconButton>
-                      <IconButton 
+                      <IconButton
                         onClick={() => handleDelete(eventType.id)}
                         color="error"
                         size="small"
+                        title="Delete"
                       >
                         <DeleteIcon />
                       </IconButton>

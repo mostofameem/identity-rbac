@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"identity-rbac/internal/api/utils"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/util"
 	"net/http"
@@ -25,6 +27,10 @@ type EventTypeSettingsRequest struct {
 	AutoCreateAt               string `json:"autoCreateAt"               validation:"required"`
 	AutoEventIntervalInMinutes int    `json:"autoEventIntervalInMinutes" validation:"required"`
 	IsActive                   bool   `json:"isActive"                   validation:"required"`
+}
+
+type EventTypeStatusChangeRequest struct {
+	Status enum.ActiveInactiveStatus `json:"status" validation:"required"`
 }
 
 func (handlers *Handlers) CreateEventType(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +145,6 @@ func (handlers *Handlers) CreateEventTypeSettings(w http.ResponseWriter, r *http
 }
 
 func (handlers *Handlers) GetEventTypeSettings(w http.ResponseWriter, r *http.Request) {
-
 	id, ok := utils.GetIntPathParam(r, "id", w)
 	if !ok {
 		return
@@ -154,5 +159,33 @@ func (handlers *Handlers) GetEventTypeSettings(w http.ResponseWriter, r *http.Re
 	utils.SendData(w, map[string]any{
 		"data":    eventTypeSettings,
 		"message": "Successfully fetched event type settings.",
+	})
+}
+
+func (handlers *Handlers) UpdateEventTypeStatus(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return
+	}
+
+	var request EventTypeStatusChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := utils.Validate(request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Validation error")
+		return
+	}
+
+	err := handlers.eventSvc.UpdateEventTypeStatus(r.Context(), id, fmt.Sprintf("%s", request.Status))
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Successfully updated event type status.",
 	})
 }

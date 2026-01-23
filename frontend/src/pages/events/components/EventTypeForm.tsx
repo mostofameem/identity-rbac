@@ -176,17 +176,17 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (): Promise<boolean> => {
     if (!eventType?.id) {
       setSettingsError('Please save the event type first before configuring settings');
-      return;
+      return false;
     }
 
     // Validate time format
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(eventTypeSettings.autoCreateAt)) {
       setSettingsError('Please enter time in HH:MM format (e.g., 09:00)');
-      return;
+      return false;
     }
 
     try {
@@ -204,18 +204,26 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
 
       setSettingsSuccess(true);
       setTimeout(() => setSettingsSuccess(false), 3000);
+      return true;
     } catch (error: any) {
       console.error('Error saving event type settings:', error);
       setSettingsError(error.message || 'Failed to save settings');
+      return false;
     } finally {
       setSettingsLoading(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (validate()) {
+      // If we are editing, we also want to save the auto-creation settings
+      if (eventType?.id) {
+        const settingsSaved = await handleSaveSettings();
+        if (!settingsSaved) return;
+      }
+
       onSave(formData);
     }
   };
@@ -224,10 +232,11 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
-      fullWidth
+      maxWidth={false}
       PaperProps={{
         sx: {
+          width: '650px',
+          maxWidth: '95vw', // Ensure it doesn't overflow on small screens
           borderRadius: 2,
           boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         }
@@ -247,89 +256,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
         </DialogTitle>
         <DialogContent dividers sx={{ p: 3, bgcolor: '#f5f7fa' }}>
           <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-12 md:col-span-6">
-              <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom fontWeight="600">
-                    Basic Information
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Name *"
-                    name="name"
-                    value={formData.name || ''}
-                    onChange={handleChange}
-                    margin="normal"
-                    error={!!errors.name}
-                    helperText={errors.name}
-                    required
-                    sx={{ mb: 2 }}
-                  />
-
-                  <TextField
-                    fullWidth
-                    label="Description"
-                    name="description"
-                    value={formData.description || ''}
-                    onChange={handleChange}
-                    margin="normal"
-                    multiline
-                    rows={3}
-                    sx={{ mb: 2 }}
-                  />
-
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Maximum Participants"
-                    name="maxParticipants"
-                    value={formData.maxParticipants || ''}
-                    onChange={handleNumberChange}
-                    margin="normal"
-                    inputProps={{ min: 0 }}
-                    sx={{ mb: 2 }}
-                  />
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <Box>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.isActive || false}
-                          onChange={(e) =>
-                            setFormData(prev => ({ ...prev, isActive: e.target.checked }))
-                          }
-                          name="isActive"
-                          color="primary"
-                        />
-                      }
-                      label="Active"
-                    />
-                    <Box mt={2}>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={formData.requiresApproval || false}
-                            onChange={(e) =>
-                              setFormData(prev => ({ ...prev, requiresApproval: e.target.checked }))
-                            }
-                            name="requiresApproval"
-                            color="primary"
-                          />
-                        }
-                        label="Requires Approval"
-                      />
-                      <FormHelperText>
-                        If enabled, participants will need approval to join events of this type.
-                      </FormHelperText>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="col-span-12 md:col-span-6">
+            <div className="col-span-12">
               {/* Event Type Settings Configuration */}
               {eventType?.id && (
                 <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2, border: '2px solid', borderColor: 'primary.main' }}>
@@ -401,18 +328,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
                       label="Enable Auto-Creation"
                     />
 
-                    <Box mt={2}>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSaveSettings}
-                        disabled={settingsLoading}
-                        fullWidth
-                        startIcon={settingsLoading ? <CircularProgress size={20} /> : <Settings />}
-                      >
-                        {settingsLoading ? 'Saving...' : 'Save Settings'}
-                      </Button>
-                    </Box>
+                    {/* Save settings button removed - merged with main update button */}
 
                     <Box mt={2} display="flex" alignItems="start" gap={1} sx={{ bgcolor: '#e3f2fd', p: 1.5, borderRadius: 1 }}>
                       <Info color="info" fontSize="small" sx={{ mt: 0.5 }} />
@@ -454,9 +370,11 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
             type="submit"
             color="primary"
             variant="contained"
+            disabled={settingsLoading}
             sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600 }}
+            startIcon={settingsLoading ? <CircularProgress size={20} /> : null}
           >
-            {eventType ? 'Update Event Type' : 'Create Event Type'}
+            {settingsLoading ? 'Saving...' : (eventType ? 'Update Event Type' : 'Create Event Type')}
           </Button>
         </DialogActions>
       </form>

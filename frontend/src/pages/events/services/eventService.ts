@@ -66,7 +66,7 @@ export const eventTypeService = {
           id: et.id.toString(),
           name: et.name,
           description: et.description,
-          isActive: true,
+          isActive: et.isActive !== false,
           requiresApproval: false,
         })),
         total: pagination.totalItem || 0,
@@ -130,6 +130,14 @@ export const eventTypeService = {
     try {
       // Backend doesn't have delete endpoint, but keeping for compatibility
       await api.delete(`/event-types/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  changeEventTypeStatus: async (id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> => {
+    try {
+      await api.put(`/event-type/${id}/change-status`, { status });
     } catch (error) {
       handleApiError(error);
     }
