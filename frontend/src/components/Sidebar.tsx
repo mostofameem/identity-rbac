@@ -68,12 +68,12 @@ const Sidebar: React.FC = () => {
             Events
           </Link>
 
-          {/* Event Configuration */}
+          {/* Event Type */}
           <Link
-            to="/event-configuration"
-            className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/event-configuration')}`}
+            to="/event-types"
+            className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/event-types')}`}
           >
-            Event Configuration
+            Event Type
           </Link>
         </div>
       </nav>

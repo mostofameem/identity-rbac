@@ -55,12 +55,12 @@ export const eventTypeService = {
       if (params.page) queryParams.page = params.page;
       if (params.limit) queryParams.limit = params.limit;
       if (params.search) queryParams.name = params.search;
-      
+
       const response = await api.get('/event-types', { params: queryParams });
       // Backend returns {data: [], pagination: {totalItem, totalPage, currentPage}}
       const backendData = response.data.data || [];
       const pagination = response.data.pagination || {};
-      
+
       return {
         data: backendData.map((et: any) => ({
           id: et.id.toString(),
@@ -139,30 +139,41 @@ export const eventTypeService = {
   getEventTypeSettings: async (eventTypeId: string): Promise<EventTypeSetting[]> => {
     try {
       const response = await api.get(`/event-types/settings/${eventTypeId}`);
-      const data = response.data.data || response.data;
-      // Handle both array and single object response
-      if (Array.isArray(data)) {
-        return data.map((s: any) => ({
-          id: s.id?.toString() || s.eventTypeId?.toString() || '',
-          key: s.key || '',
-          value: s.value?.toString() || s.autoCreateAt || '',
-          dataType: s.dataType || 'string',
-          isRequired: s.isRequired || false,
-          eventTypeId: eventTypeId,
-        }));
-      }
-      return [{
-        id: data.id?.toString() || eventTypeId,
-        key: 'autoCreateAt',
-        value: data.autoCreateAt || '',
-        dataType: 'string' as const,
-        isRequired: true,
-        eventTypeId: eventTypeId,
-      }];
+      const data = response.data?.data ?? response.data;
+
+      if (!data) return [];
+
+      return [
+        {
+          id: `${data.Id}-autoCreateAt`,
+          key: 'autoCreateAt',
+          value: data.AutoCreateAt ?? '',
+          dataType: 'string',
+          isRequired: true,
+          eventTypeId,
+        },
+        {
+          id: `${data.Id}-autoEventIntervalInMinutes`,
+          key: 'autoEventIntervalInMinutes',
+          value: data.AutoEventIntervalInMinutes?.toString() ?? '',
+          dataType: 'number',
+          isRequired: true,
+          eventTypeId,
+        },
+        {
+          id: `${data.Id}-isActive`,
+          key: 'isActive',
+          value: data.IsActive?.toString() ?? 'false',
+          dataType: 'boolean',
+          isRequired: false,
+          eventTypeId,
+        },
+      ];
     } catch (error) {
       return handleApiError(error);
     }
   },
+
 
   createEventTypeSetting: async (data: Partial<EventTypeSetting>): Promise<EventTypeSetting> => {
     try {
@@ -173,6 +184,8 @@ export const eventTypeService = {
         autoEventIntervalInMinutes: parseInt(data.value?.toString() || '1440'), // Default 24 hours
         isActive: data.isRequired || true,
       };
+
+      console.log('Creating/Updating event type setting (PUT):', payload);
       const response = await api.put('/event-types/settings', payload);
       const responseData = response.data.data || response.data;
       return {
@@ -194,9 +207,11 @@ export const eventTypeService = {
       const payload = {
         eventTypeId: parseInt(data.eventTypeId || id),
         autoCreateAt: data.value || '09:00',
-        autoEventIntervalInMinutes: 1440,
+        autoEventIntervalInMinutes: parseInt(data.value?.toString() || '1440'),
         isActive: data.isRequired !== false,
       };
+
+      console.log('Updating event type setting (PUT):', payload);
       const response = await api.put('/event-types/settings', payload);
       return {
         id: id,
@@ -231,12 +246,12 @@ export const eventService = {
       if (params.search) queryParams.title = params.search;
       if (params.eventTypeId) queryParams.typeId = params.eventTypeId;
       if (params.status) queryParams.status = params.status;
-      
+
       const response = await api.get('/events', { params: queryParams });
       // Backend returns {data: [], pagination: {totalItem, totalPage, currentPage}}
       const backendData = response.data.data || [];
       const pagination = response.data.pagination || {};
-      
+
       return {
         data: backendData.map((e: any) => ({
           id: e.id.toString(),
@@ -302,8 +317,8 @@ export const eventService = {
         description: data.description || '',
         eventTypeId: parseInt(data.eventTypeId as string),
         startAt: typeof data.startAt === 'string' ? data.startAt : (data.startAt as Date).toISOString(),
-        registrationOpensAt: typeof data.registrationOpensAt === 'string' 
-          ? data.registrationOpensAt 
+        registrationOpensAt: typeof data.registrationOpensAt === 'string'
+          ? data.registrationOpensAt
           : (data.registrationOpensAt as Date).toISOString(),
         registrationClosesAt: typeof data.registrationClosesAt === 'string'
           ? data.registrationClosesAt
@@ -348,7 +363,7 @@ export const eventService = {
 
   participateInEvent: async (eventId: string, data: any = {}): Promise<void> => {
     try {
-      await api.post('/event/participate', { 
+      await api.post('/event/participate', {
         eventId: parseInt(eventId),
         guestCount: data.guestCount || 0,
       });

@@ -20,17 +20,17 @@ import {
   Chip,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
-import { Event } from '../types/event.types';
+import type { Event as EventType } from '../types/event.types';
 import EventForm from './EventForm';
 import EventDetailsDialog from './EventDetailsDialog';
 import { eventService } from '../services/eventService';
 
 const EventList: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventType[]>([]);
   const [open, setOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [viewEvent, setViewEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
+  const [viewEvent, setViewEvent] = useState<EventType | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
@@ -57,7 +57,7 @@ const EventList: React.FC = () => {
     fetchEvents();
   }, [page, rowsPerPage]);
 
-  const handleOpen = (event?: Event) => {
+  const handleOpen = (event?: EventType) => {
     setSelectedEvent(event || null);
     setOpen(true);
   };
@@ -67,7 +67,7 @@ const EventList: React.FC = () => {
     setSelectedEvent(null);
   };
 
-  const handleOpenDetails = (event: Event) => {
+  const handleOpenDetails = (event: EventType) => {
     setViewEvent(event);
     setDetailsOpen(true);
   };
@@ -77,7 +77,7 @@ const EventList: React.FC = () => {
     setViewEvent(null);
   };
 
-  const handleSave = async (eventData: Partial<Event>) => {
+  const handleSave = async (eventData: Partial<EventType>) => {
     try {
       if (selectedEvent) {
         await eventService.updateEvent(selectedEvent.id, eventData);
