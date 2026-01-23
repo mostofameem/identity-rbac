@@ -69,7 +69,10 @@ const EventTypeList: React.FC = () => {
   const handleSave = async (eventTypeData: Partial<EventType>) => {
     try {
       if (selectedEventType) {
-        await eventTypeService.updateEventType(selectedEventType.id, eventTypeData);
+        // Backend doesn't have a general update endpoint for event types.
+        // Settings are updated internally within the EventTypeForm.
+        // We just need to refresh the list to show any potential changes (like status).
+        console.log('Event type settings updated, refreshing list...');
       } else {
         await eventTypeService.createEventType(eventTypeData);
       }

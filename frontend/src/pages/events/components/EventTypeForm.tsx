@@ -8,16 +8,10 @@ import {
   TextField,
   FormControlLabel,
   Switch,
-  FormHelperText,
   Box,
   Typography,
-  Chip,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
   Card,
   CardContent,
-  Divider,
   Alert,
   CircularProgress
 } from '@mui/material';
@@ -52,13 +46,6 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
     settings: [],
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [settingKey, setSettingKey] = useState('');
-  const [settingValue, setSettingValue] = useState('');
-  const [settingType, setSettingType] = useState('string');
-  const [settingRequired, setSettingRequired] = useState(false);
-
-  // Event Type Settings API state
   const [eventTypeSettings, setEventTypeSettings] = useState({
     autoCreateAt: '09:00',
     autoEventIntervalInMinutes: 1440, // 24 hours
@@ -99,13 +86,20 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
   const fetchEventTypeSettings = async (eventTypeId: string) => {
     try {
       setSettingsLoading(true);
-      const settings = await eventTypeService.getEventTypeSettings(eventTypeId);
-      if (settings && settings.length > 0) {
-        const setting = settings[0];
+      const data = await eventTypeService.getEventTypeSettings(eventTypeId);
+      console.log('Fetched settings data:', data);
+      if (data) {
+        // Handle both PascalCase (backend) and potential camelCase
+        const autoCreateAt = data.AutoCreateAt || data.autoCreateAt || '09:00';
+        const intervalValue = data.AutoEventIntervalInMinutes !== undefined
+          ? data.AutoEventIntervalInMinutes
+          : (data.autoEventIntervalInMinutes || 1440);
+        const activeValue = data.IsActive !== undefined ? data.IsActive : (data.isActive === true);
+
         setEventTypeSettings({
-          autoCreateAt: setting.value || '09:00',
-          autoEventIntervalInMinutes: parseInt(setting.value) || 1440,
-          isActive: setting.isRequired || false,
+          autoCreateAt: autoCreateAt,
+          autoEventIntervalInMinutes: typeof intervalValue === 'string' ? parseInt(intervalValue) : intervalValue,
+          isActive: activeValue === true || activeValue === 'true',
         });
       }
     } catch (error: any) {
@@ -119,61 +113,12 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? '' : Number(value),
-    }));
-  };
-
-  const addSetting = () => {
-    if (!settingKey.trim()) return;
-
-    const newSetting = {
-      id: `temp-${Date.now()}`,
-      key: settingKey,
-      value: settingValue,
-      dataType: settingType,
-      isRequired: settingRequired,
-    };
-
-    setFormData(prev => ({
-      ...prev,
-      settings: [...(prev.settings || []), newSetting],
-    }));
-
-    // Reset form
-    setSettingKey('');
-    setSettingValue('');
-    setSettingType('string');
-    setSettingRequired(false);
-  };
-
-  const removeSetting = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      settings: (prev.settings || []).filter(setting => setting.id !== id),
-    }));
-  };
-
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
     if (!formData.name?.trim()) {
-      newErrors.name = 'Event type name is required';
+      return false;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const handleSaveSettings = async (): Promise<boolean> => {
@@ -196,10 +141,9 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
 
       await eventTypeService.createEventTypeSetting({
         eventTypeId: eventType.id,
-        key: 'autoCreateAt',
-        value: eventTypeSettings.autoCreateAt,
-        dataType: 'string',
-        isRequired: eventTypeSettings.isActive,
+        autoCreateAt: eventTypeSettings.autoCreateAt,
+        autoEventIntervalInMinutes: eventTypeSettings.autoEventIntervalInMinutes,
+        isActive: eventTypeSettings.isActive,
       });
 
       setSettingsSuccess(true);

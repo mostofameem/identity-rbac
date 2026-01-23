@@ -324,6 +324,13 @@ func validateParticipation(event *entity.Events, now time.Time, totalParticipant
 }
 
 func (s *service) EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error) {
+	eventSetting, err := s.eventSettingRepo.GetByEventTypeID(ctx, req.EventTypeId)
+	if err != nil {
+		return 0, util.ErrEventSomethingWentWrong
+	}
+
+	if 
+
 	id, err := s.eventTypeSettingRepo.CreateOrUpsert(ctx, req)
 	if err != nil {
 		slog.Error("Failed to create event type settings", "error", err)
