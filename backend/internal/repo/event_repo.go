@@ -72,7 +72,7 @@ func (r *eventRepo) GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.E
 	query, args, err := r.psql.
 		Select("*").
 		From(r.table).
-		Where(sq.Eq{"id": id, "is_active": true}).
+		Where(sq.Eq{"id": id}).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build select query", logger.Extra(map[string]any{
@@ -138,7 +138,6 @@ func (r *eventRepo) GetEventWithPagination(ctx context.Context, req event.GetEve
 
 	query, args, err := NewQueryBuilder(r.getEventQueryBuilder()).
 		FilterByPrefix("title", req.Title).
-		FilterByBoolean("is_active", true).
 		FilterByMode(string(req.EventStatus), req.CurrentTime).
 		Limit(limit).
 		Offset(Offset).
@@ -258,4 +257,31 @@ func (r eventRepo) GetByIDForUpdate(
 	}
 
 	return &event, nil
+}
+
+func (r *eventRepo) UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error {
+
+	query, args, err := r.psql.
+		Update(r.table).
+		Set("is_active", isActive).
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"id":    id,
+		}))
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
 }

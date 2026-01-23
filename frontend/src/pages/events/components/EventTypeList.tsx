@@ -24,11 +24,13 @@ import {
 } from '@mui/icons-material';
 import { EventType } from '../types/event.types';
 import EventTypeForm from './EventTypeForm';
+import EventTypeDetailsDialog from './EventTypeDetailsDialog';
 import { eventTypeService } from '../services/eventService';
 
 const EventTypeList: React.FC = () => {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [open, setOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -63,13 +65,22 @@ const EventTypeList: React.FC = () => {
 
   const handleClose = () => {
     setOpen(false);
+    setDetailsOpen(false);
     setSelectedEventType(null);
+  };
+
+  const handleOpenDetails = (eventType: EventType) => {
+    setSelectedEventType(eventType);
+    setDetailsOpen(true);
   };
 
   const handleSave = async (eventTypeData: Partial<EventType>) => {
     try {
       if (selectedEventType) {
-        await eventTypeService.updateEventType(selectedEventType.id, eventTypeData);
+        // Backend doesn't have a general update endpoint for event types.
+        // Settings are updated internally within the EventTypeForm.
+        // We just need to refresh the list to show any potential changes (like status).
+        console.log('Event type settings updated, refreshing list...');
       } else {
         await eventTypeService.createEventType(eventTypeData);
       }
@@ -159,7 +170,12 @@ const EventTypeList: React.FC = () => {
                 </TableRow>
               ) : (
                 eventTypes.map((eventType) => (
-                  <TableRow key={eventType.id} hover>
+                  <TableRow
+                    key={eventType.id}
+                    hover
+                    onClick={() => handleOpenDetails(eventType)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">
                         {eventType.name}
@@ -179,7 +195,10 @@ const EventTypeList: React.FC = () => {
                     </TableCell>
                     <TableCell align="right">
                       <IconButton
-                        onClick={() => handleOpen(eventType)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetails(eventType);
+                        }}
                         color="secondary"
                         size="small"
                         title="Settings"
@@ -187,7 +206,10 @@ const EventTypeList: React.FC = () => {
                         <SettingsIcon />
                       </IconButton>
                       <IconButton
-                        onClick={() => handleToggleStatus(eventType.id, eventType.isActive)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleStatus(eventType.id, eventType.isActive);
+                        }}
                         color={eventType.isActive ? "warning" : "success"}
                         size="small"
                         title={eventType.isActive ? "Deactivate" : "Activate"}
@@ -195,15 +217,10 @@ const EventTypeList: React.FC = () => {
                         <PowerIcon />
                       </IconButton>
                       <IconButton
-                        onClick={() => handleOpen(eventType)}
-                        color="primary"
-                        size="small"
-                        title="Edit"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={() => handleDelete(eventType.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(eventType.id);
+                        }}
                         color="error"
                         size="small"
                         title="Delete"
@@ -232,6 +249,15 @@ const EventTypeList: React.FC = () => {
         open={open}
         onClose={handleClose}
         onSave={handleSave}
+        eventType={selectedEventType}
+      />
+
+      <EventTypeDetailsDialog
+        open={detailsOpen}
+        onClose={() => {
+          handleClose();
+          fetchEventTypes();
+        }}
         eventType={selectedEventType}
       />
     </Container>

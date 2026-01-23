@@ -101,8 +101,10 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
 
     try {
       const settingToAdd = {
-        ...newSetting,
         eventTypeId: selectedEventType,
+        autoCreateAt: newSetting.value || '09:00',
+        autoEventIntervalInMinutes: 1440, // Default to 24 hours
+        isActive: newSetting.isRequired !== false,
       };
 
       await eventTypeService.createEventTypeSetting(settingToAdd);
@@ -120,18 +122,25 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
 
   const handleUpdateSetting = async (id: string, updatedSetting: Partial<EventTypeSetting>) => {
     try {
-      // Convert value to proper format if it's time
-      const valueToSave = updatedSetting.value;
-      if (updatedSetting.key === 'autoCreateAt' && typeof valueToSave === 'string') {
-        // Ensure HH:MM format
-        const timeMatch = valueToSave.match(/^(\d{1,2}):(\d{2})$/);
-        if (!timeMatch) {
-          alert('Please enter time in HH:MM format (e.g., 09:00)');
-          return;
-        }
+      // Map individual setting update to the block update required by the backend
+      const autoCreateAt = settings.find(s => s.key === 'autoCreateAt')?.value || '09:00';
+      const autoEventIntervalInMinutes = parseInt(settings.find(s => s.key === 'autoEventIntervalInMinutes')?.value || '1440');
+      const isActive = settings.find(s => s.key === 'isActive')?.value === 'true' || false;
+
+      const payload = {
+        eventTypeId: selectedEventType,
+        autoCreateAt: updatedSetting.key === 'autoCreateAt' ? (updatedSetting.value || autoCreateAt) : autoCreateAt,
+        autoEventIntervalInMinutes: updatedSetting.key === 'autoEventIntervalInMinutes' ? (parseInt(updatedSetting.value || '1440')) : autoEventIntervalInMinutes,
+        isActive: updatedSetting.key === 'isActive' ? (updatedSetting.value === 'true') : isActive,
+      };
+
+      // Since the backend API expects a specific block but we manage individual settings here,
+      // we also need to handle the isRequired field which we use to map to the isActive property
+      if (updatedSetting.isRequired !== undefined) {
+        payload.isActive = updatedSetting.isRequired;
       }
-      
-      await eventTypeService.updateEventTypeSetting(id, updatedSetting);
+
+      await eventTypeService.updateEventTypeSetting(payload);
       await fetchSettings();
     } catch (error: any) {
       console.error('Error updating setting:', error);

@@ -32,7 +32,9 @@ export interface Event {
   registrationOpensAt: string | Date;
   registrationClosesAt: string | Date;
   maxParticipants?: number;
-  status?: 'draft' | 'published' | 'cancelled' | 'completed' | 'active' | 'upcoming' | 'ONGOING' | 'UPCOMING' | 'RECENT' | 'ENDED' | 'INACTIVE';
+  shouldAutoCreateEvent?: boolean;
+  isActive?: boolean;
+  status?: 'draft' | 'published' | 'cancelled' | 'completed' | 'active' | 'upcoming' | 'ONGOING' | 'UPCOMING' | 'RECENT' | 'ENDED' | 'INACTIVE' | 'ACTIVE';
   eventTypeId: string;
   eventType?: EventType;
   settings?: Record<string, any>;

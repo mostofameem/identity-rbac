@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/event"
+	"identity-rbac/internal/util"
+	"identity-rbac/pkg/logger"
 	"log/slog"
 	"time"
 
@@ -104,7 +106,7 @@ func (repo *eventTypeSettingRepo) CreateOrUpsert(ctx context.Context, req event.
 
 // GetByEventTypeID retrieves event type settings by event type ID
 // Returns default EventTypeSettingsRequest with zero values if not found
-func (repo *eventTypeSettingRepo) GetByEventTypeID(ctx context.Context, eventTypeID int) (entity.EventTypeSettings, error) {
+func (repo *eventTypeSettingRepo) GetByEventTypeID(ctx context.Context, eventTypeID int) (*entity.EventTypeSettings, error) {
 	query, args, err := repo.psql.Select(
 		"id",
 		"event_type_id",
@@ -116,11 +118,11 @@ func (repo *eventTypeSettingRepo) GetByEventTypeID(ctx context.Context, eventTyp
 		"is_active",
 	).
 		From(repo.table).
-		Where(sq.Eq{"event_type_id": eventTypeID, "is_active": true}).
+		Where(sq.Eq{"event_type_id": eventTypeID}).
 		ToSql()
 
 	if err != nil {
-		return entity.EventTypeSettings{}, fmt.Errorf("failed to build select query: %w", err)
+		return nil, fmt.Errorf("failed to build select query: %w", err)
 	}
 
 	var settings entity.EventTypeSettings
@@ -128,13 +130,86 @@ func (repo *eventTypeSettingRepo) GetByEventTypeID(ctx context.Context, eventTyp
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Return default values if no record found
-			return entity.EventTypeSettings{
+			return &entity.EventTypeSettings{
 				EventTypeID: eventTypeID,
 				IsActive:    true, // Default to active if creating new
 			}, nil
 		}
-		return entity.EventTypeSettings{}, fmt.Errorf("failed to get event type settings: %w", err)
+		return nil, fmt.Errorf("failed to get event type settings: %w", err)
 	}
 
-	return settings, nil
+	return &settings, nil
+}
+
+func (repo *eventTypeSettingRepo) Create(ctx context.Context, req event.EventTypeSettingsRequest) (int, error) {
+
+	insertQuery, insertArgs, ierr := repo.psql.Insert(repo.table).
+		Columns(
+			"event_type_id",
+			"auto_create_at",
+			"auto_event_interval_in_minutes",
+			"created_by",
+			"updated_by",
+			"remarks",
+			"created_at",
+			"updated_at",
+			"is_active",
+		).
+		Values(
+			req.EventTypeId,
+			req.AutoCreateAt, // This is now a string in HH:MM format
+			req.AutoEventIntervalInMinutes,
+			req.RequestBy,
+			req.RequestBy,
+			req.Remarks,
+			time.Now(),
+			time.Now(),
+			true, // Default is_active to true for new records
+		).
+		Suffix("RETURNING id").
+		ToSql()
+
+	var id int
+
+	if ierr != nil {
+		slog.Error("Failed to build insert query", "error", ierr)
+		return 0, fmt.Errorf("failed to build insert query: %w", ierr)
+	}
+
+	if err := repo.db.QueryRowContext(ctx, insertQuery, insertArgs...).Scan(&id); err != nil {
+		slog.Error("Failed to insert event type setting", "error", err)
+		return 0, fmt.Errorf("failed to insert event type setting: %w", err)
+	}
+
+	return id, nil
+}
+
+func (repo *eventTypeSettingRepo) Update(ctx context.Context, req event.EventTypeSettingsRequest) (int, error) {
+	// First try to update existing record
+	updateQuery, updateArgs, err := repo.psql.Update(repo.table).
+		Set("auto_create_at", req.AutoCreateAt).
+		Set("auto_event_interval_in_minutes", req.AutoEventIntervalInMinutes).
+		Set("updated_by", req.RequestBy).
+		Set("remarks", req.Remarks).
+		Set("is_active", req.IsActive).
+		Set("updated_at", time.Now()).
+		Where(sq.Eq{"event_type_id": req.EventTypeId}).
+		Suffix("RETURNING id").
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", "error", err)
+		return 0, fmt.Errorf("failed to build update query: %w", err)
+	}
+
+	var id int
+	err = repo.db.QueryRowContext(ctx, updateQuery, updateArgs...).Scan(&id)
+	if err != nil {
+		slog.Error("Failed to update event settings", logger.Extra(map[string]any{
+			"event_type_id": req.EventTypeId,
+			"error":         err,
+		}))
+		return 0, util.ErrSomethingWentWrong
+	}
+
+	return id, nil
 }

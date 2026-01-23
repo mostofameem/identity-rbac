@@ -118,9 +118,19 @@ export const eventTypeService = {
 
   updateEventType: async (id: string, data: Partial<EventType>): Promise<EventType> => {
     try {
-      // Backend doesn't have update endpoint, but keeping for compatibility
-      const response = await api.put(`/event-types/${id}`, data);
-      return response.data.data || response.data;
+      const payload = {
+        name: data.name,
+        description: data.description || '',
+      };
+      const response = await api.put(`/event-types/${id}`, payload);
+      const responseData = response.data.data || response.data;
+      return {
+        id: id,
+        name: data.name || '',
+        description: data.description || '',
+        isActive: data.isActive !== false,
+        requiresApproval: false,
+      };
     } catch (error) {
       return handleApiError(error);
     }
@@ -143,92 +153,53 @@ export const eventTypeService = {
     }
   },
 
-  // Event Type Settings
-  getEventTypeSettings: async (eventTypeId: string): Promise<EventTypeSetting[]> => {
+  getEventTypeSettings: async (eventTypeId: string): Promise<any> => {
     try {
       const response = await api.get(`/event-types/settings/${eventTypeId}`);
-      const data = response.data?.data ?? response.data;
-
-      if (!data) return [];
-
-      return [
-        {
-          id: `${data.Id}-autoCreateAt`,
-          key: 'autoCreateAt',
-          value: data.AutoCreateAt ?? '',
-          dataType: 'string',
-          isRequired: true,
-          eventTypeId,
-        },
-        {
-          id: `${data.Id}-autoEventIntervalInMinutes`,
-          key: 'autoEventIntervalInMinutes',
-          value: data.AutoEventIntervalInMinutes?.toString() ?? '',
-          dataType: 'number',
-          isRequired: true,
-          eventTypeId,
-        },
-        {
-          id: `${data.Id}-isActive`,
-          key: 'isActive',
-          value: data.IsActive?.toString() ?? 'false',
-          dataType: 'boolean',
-          isRequired: false,
-          eventTypeId,
-        },
-      ];
+      return response.data?.data ?? response.data;
     } catch (error) {
       return handleApiError(error);
     }
   },
 
-
-  createEventTypeSetting: async (data: Partial<EventTypeSetting>): Promise<EventTypeSetting> => {
+  createEventTypeSetting: async (data: {
+    eventTypeId: string;
+    autoCreateAt: string;
+    autoEventIntervalInMinutes: number;
+    isActive: boolean;
+  }): Promise<any> => {
     try {
-      // Backend expects: eventTypeId, autoCreateAt (HH:MM), autoEventIntervalInMinutes, isActive
       const payload = {
-        eventTypeId: parseInt(data.eventTypeId || '0'),
-        autoCreateAt: data.value || '09:00',
-        autoEventIntervalInMinutes: parseInt(data.value?.toString() || '1440'), // Default 24 hours
-        isActive: data.isRequired || true,
+        eventTypeId: parseInt(data.eventTypeId),
+        autoCreateAt: data.autoCreateAt,
+        autoEventIntervalInMinutes: data.autoEventIntervalInMinutes,
+        isActive: data.isActive,
       };
 
       console.log('Creating/Updating event type setting (PUT):', payload);
       const response = await api.put('/event-types/settings', payload);
-      const responseData = response.data.data || response.data;
-      return {
-        id: responseData.toString() || Date.now().toString(),
-        key: data.key || 'autoCreateAt',
-        value: payload.autoCreateAt,
-        dataType: 'string' as const,
-        isRequired: payload.isActive,
-        eventTypeId: data.eventTypeId,
-      };
+      return response.data;
     } catch (error) {
       return handleApiError(error);
     }
   },
 
-  updateEventTypeSetting: async (id: string, data: Partial<EventTypeSetting>): Promise<EventTypeSetting> => {
+  updateEventTypeSetting: async (data: {
+    eventTypeId: string;
+    autoCreateAt: string;
+    autoEventIntervalInMinutes: number;
+    isActive: boolean;
+  }): Promise<any> => {
     try {
       // Backend uses PUT for both create and update
       const payload = {
-        eventTypeId: parseInt(data.eventTypeId || id),
-        autoCreateAt: data.value || '09:00',
-        autoEventIntervalInMinutes: parseInt(data.value?.toString() || '1440'),
-        isActive: data.isRequired !== false,
+        eventTypeId: parseInt(data.eventTypeId),
+        autoCreateAt: data.autoCreateAt,
+        autoEventIntervalInMinutes: data.autoEventIntervalInMinutes,
+        isActive: data.isActive,
       };
-
-      console.log('Updating event type setting (PUT):', payload);
       const response = await api.put('/event-types/settings', payload);
-      return {
-        id: id,
-        key: data.key || 'autoCreateAt',
-        value: payload.autoCreateAt,
-        dataType: 'string' as const,
-        isRequired: payload.isActive,
-        eventTypeId: data.eventTypeId || id,
-      };
+      return response.data;
     } catch (error) {
       return handleApiError(error);
     }
@@ -271,6 +242,8 @@ export const eventService = {
           maxParticipants: e.maxParticipants || e.totalParticipants || 0,
           totalParticipants: e.totalParticipants || 0,
           status: e.status || 'upcoming',
+          isActive: e.isActive,
+          shouldAutoCreateEvent: e.shouldAutoCreateEvent,
           eventTypeId: e.eventTypeId?.toString() || e.eventType?.id?.toString() || '',
           eventType: e.eventType ? {
             id: e.eventType.id?.toString() || '',
@@ -292,7 +265,7 @@ export const eventService = {
 
   getEvent: async (id: string): Promise<Event> => {
     try {
-      const response = await api.get(`/event/${id}`);
+      const response = await api.get(`/events/${id}`);
       const data = response.data.data || response.data;
       return {
         id: data.id.toString(),
@@ -303,6 +276,8 @@ export const eventService = {
         registrationClosesAt: data.registrationClosesAt,
         maxParticipants: data.maxParticipants || 0,
         status: data.status || 'upcoming',
+        isActive: data.isActive,
+        shouldAutoCreateEvent: data.shouldAutoCreateEvent,
         eventTypeId: data.eventTypeId?.toString() || '',
         eventType: data.eventType ? {
           id: data.eventType.id?.toString() || '',
@@ -379,9 +354,19 @@ export const eventService = {
       handleApiError(error);
     }
   },
+
+  changeEventStatus: async (id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> => {
+    try {
+      await api.put(`/events/${id}/change-status`, { status });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
-export default {
+const services = {
   eventType: eventTypeService,
   event: eventService,
 };
+
+export default services;

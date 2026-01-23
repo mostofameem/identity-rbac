@@ -12,6 +12,7 @@ type Service interface {
 	CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error)
 	GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error)
 	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
+	UpdateEventStatus(ctx context.Context, id int, status string) error
 
 	ParticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 
@@ -30,16 +31,17 @@ type EventRepo interface {
 	GetEventWithPagination(ctx context.Context, req GetEventsQueryReq) ([]entity.Events, error)
 	GetTotalEventCount(ctx context.Context, req GetEventsQueryReq) (int, error)
 	UpdateParticipantCount(ctx context.Context, tx *sqlx.Tx, eventID, count int) error
+	UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error
 }
 
 type EventTypeRepo interface {
-	GetByID(ctx context.Context, id int) (*entity.EventType, error)
+	GetByID(ctx context.Context,tx *sqlx.Tx, id int) (*entity.EventType, error)
 	GetAllWithPagination(ctx context.Context, req GetEventTypesReq) ([]entity.EventType, error)
 	GetTotalEventTypeCount(ctx context.Context, req GetEventTypesReq) (int, error)
 	GetByName(ctx context.Context, name string) (*entity.EventType, error)
 	Create(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetByIDs(ctx context.Context, ids []int) ([]entity.EventType, error)
-	UpdateIsActiveStatus(ctx context.Context, id int, isActive bool) error
+	UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error
 }
 
 type PerticipantRepo interface {
@@ -49,7 +51,9 @@ type PerticipantRepo interface {
 
 type EventTypeSettingRepo interface {
 	CreateOrUpsert(ctx context.Context, req EventTypeSettingsRequest) (int, error)
-	GetByEventTypeID(ctx context.Context, eventTypeID int) (entity.EventTypeSettings, error)
+	GetByEventTypeID(ctx context.Context, eventTypeID int) (*entity.EventTypeSettings, error)
+	Create(ctx context.Context, req EventTypeSettingsRequest) (int, error)
+	Update(ctx context.Context, req EventTypeSettingsRequest) (int, error)
 }
 
 type TransactionRepo interface {
