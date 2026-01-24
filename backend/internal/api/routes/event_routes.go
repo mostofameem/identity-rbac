@@ -60,6 +60,15 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 	)
 
 	mux.Handle(
+		"GET /api/v1/event-types/{id}",
+		manager.With(
+			http.HandlerFunc(server.handlers.GetEventTypeDetails),
+			server.middleware.Authorization(middlewares.EVENT_TYPE_VIEW_ACCESS),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
 		"PUT /api/v1/event-type/{id}/change-status",
 		manager.With(
 			http.HandlerFunc(server.handlers.UpdateEventTypeStatus),

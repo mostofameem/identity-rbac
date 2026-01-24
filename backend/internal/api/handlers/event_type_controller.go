@@ -7,6 +7,7 @@ import (
 	"identity-rbac/internal/enum"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/util"
+	"identity-rbac/pkg/logger"
 	"net/http"
 	"time"
 )
@@ -187,5 +188,32 @@ func (handlers *Handlers) UpdateEventTypeStatus(w http.ResponseWriter, r *http.R
 
 	utils.SendData(w, map[string]any{
 		"message": "Successfully updated event type status.",
+	})
+}
+
+func (handlers *Handlers) GetEventTypeDetails(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return // Error response already handled by GetIntPathParam
+	}
+
+	response, err := handlers.eventSvc.GetEventTypeDetails(r.Context(), id)
+	if err != nil {
+		logger.Error("failed to fetch event type details.", logger.Extra(map[string]any{
+			"id":  id,
+			"err": err.Error(),
+		}))
+
+		if err == util.ErrNotFound {
+			utils.SendError(w, http.StatusNotFound, "Event type details not found.")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Failed to fetch event type details. Please try again later.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"data":    response,
+		"message": "Successfully fetched event type details.",
 	})
 }
