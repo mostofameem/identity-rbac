@@ -55,11 +55,23 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
 
     useEffect(() => {
         if (open && initialEventType?.id) {
-            setEventType(initialEventType);
-            setEditData(initialEventType);
+            fetchEventTypeDetails(initialEventType.id);
             fetchEventTypeSettings(initialEventType.id);
         }
     }, [open, initialEventType]);
+
+    const fetchEventTypeDetails = async (id: string) => {
+        try {
+            setLoading(true);
+            const data = await eventTypeService.getEventType(id);
+            setEventType(data);
+            setEditData(data);
+        } catch (error: any) {
+            console.error('Error fetching event type details:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchEventTypeSettings = async (id: string) => {
         try {
@@ -89,9 +101,6 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
         if (!eventType?.id) return;
         try {
             setSaving(true);
-
-            // Save basic info
-            await eventTypeService.updateEventType(eventType.id, editData);
 
             // Save auto-creation settings
             await eventTypeService.createEventTypeSetting({
@@ -143,21 +152,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                         </Avatar>
                         <Box>
                             <Typography variant="h5" fontWeight="bold" sx={{ color: 'white', mb: 0.5 }}>
-                                {isEditing ? (
-                                    <TextField
-                                        variant="standard"
-                                        value={editData.name || ''}
-                                        onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
-                                        fullWidth
-                                        sx={{
-                                            input: { color: 'white', fontSize: '1.5rem', fontWeight: 'bold' },
-                                            '& .MuiInput-underline:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
-                                            '& .MuiInput-underline:after': { borderBottomColor: 'white' }
-                                        }}
-                                    />
-                                ) : (
-                                    eventType?.name || 'Unknown Type'
-                                )}
+                                {eventType?.name || 'Unknown Type'}
                             </Typography>
                             <Box display="flex" alignItems="center" gap={1}>
                                 <Chip
@@ -185,7 +180,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                                     '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
                                 }}
                             >
-                                Edit Type
+                                Edit Settings
                             </Button>
                         ) : (
                             <IconButton
@@ -210,22 +205,9 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                                     Description
                                 </Typography>
                             </Box>
-                            {isEditing ? (
-                                <TextField
-                                    multiline
-                                    fullWidth
-                                    minRows={2}
-                                    variant="outlined"
-                                    value={editData.description || ''}
-                                    onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Update description..."
-                                    size="small"
-                                />
-                            ) : (
-                                <Typography variant="body1" color="text.secondary">
-                                    {eventType?.description || 'No description provided.'}
-                                </Typography>
-                            )}
+                            <Typography variant="body1" color="text.secondary">
+                                {eventType?.description || 'No description provided.'}
+                            </Typography>
                         </CardContent>
                     </Card>
 

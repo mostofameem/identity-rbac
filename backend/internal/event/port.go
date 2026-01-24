@@ -18,6 +18,7 @@ type Service interface {
 
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
+	GetEventTypeDetails(ctx context.Context, id int) (EventTypeResponse, error)
 	UpdateEventTypeStatus(ctx context.Context, id int, status string) error
 
 	EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error)
@@ -35,7 +36,7 @@ type EventRepo interface {
 }
 
 type EventTypeRepo interface {
-	GetByID(ctx context.Context,tx *sqlx.Tx, id int) (*entity.EventType, error)
+	GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.EventType, error)
 	GetAllWithPagination(ctx context.Context, req GetEventTypesReq) ([]entity.EventType, error)
 	GetTotalEventTypeCount(ctx context.Context, req GetEventTypesReq) (int, error)
 	GetByName(ctx context.Context, name string) (*entity.EventType, error)
