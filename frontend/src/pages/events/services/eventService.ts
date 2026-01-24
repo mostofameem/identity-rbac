@@ -116,25 +116,6 @@ export const eventTypeService = {
     }
   },
 
-  updateEventType: async (id: string, data: Partial<EventType>): Promise<EventType> => {
-    try {
-      const payload = {
-        name: data.name,
-        description: data.description || '',
-      };
-      const response = await api.put(`/event-types/${id}`, payload);
-      const responseData = response.data.data || response.data;
-      return {
-        id: id,
-        name: data.name || '',
-        description: data.description || '',
-        isActive: data.isActive !== false,
-        requiresApproval: false,
-      };
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
 
   deleteEventType: async (id: string): Promise<void> => {
     try {
