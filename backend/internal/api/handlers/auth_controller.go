@@ -9,8 +9,6 @@ import (
 	"identity-rbac/pkg/logger"
 	"log/slog"
 	"net/http"
-
-	"github.com/markbates/goth/gothic"
 )
 
 type LoginReq struct {
@@ -69,30 +67,6 @@ func (handlers *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		"refreshToken": refreshToken,
 		"message":      "User Login Succesfully",
 		"status":       "Ok",
-	})
-}
-
-func (handlers *Handlers) AuthLogin(w http.ResponseWriter, r *http.Request) {
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	accessToken, refreshToken, err := handlers.rbacSvc.AuthLogin(r.Context(), user.Email)
-	if err != nil {
-		utils.SendError(w, http.StatusNotFound, "Failed to get user")
-		return
-	}
-
-	if accessToken == "" || refreshToken == "" {
-		utils.SendError(w, http.StatusNotFound, "User not found")
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
 	})
 }
 

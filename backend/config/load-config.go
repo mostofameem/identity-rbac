@@ -21,7 +21,7 @@ func LoadConfig() error {
 	// In Docker, environment variables are provided by docker-compose
 	if _, err := os.Stat(".env"); err == nil {
 		if err = godotenv.Load(); err != nil {
-			slog.Warn("Failed to load .env file:", err)
+			slog.Warn("Failed to load .env file", "error", err)
 		} else {
 			slog.Info("Loaded configuration from .env file")
 		}
@@ -64,6 +64,12 @@ func LoadConfig() error {
 			Email:       viper.GetString("MAIL_EMAIL"),
 			Password:    viper.GetString("MAIL_PASSWORD"),
 			FrontendURL: viper.GetString("FRONTEND_URL"),
+		},
+		Redis: &RedisConfig{
+			Host:     viper.GetString("REDIS_HOST"),
+			Port:     viper.GetInt("REDIS_PORT"),
+			Password: viper.GetString("REDIS_PASSWORD"),
+			DB:       viper.GetInt("REDIS_DB"),
 		},
 	}
 

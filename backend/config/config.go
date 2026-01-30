@@ -17,6 +17,7 @@ type Config struct {
 	DB                     *DBConfig
 	Auth                   *AuthConfig
 	Mail                   *MailConfig
+	Redis                  *RedisConfig
 	MigrationSource        string `mapstructure:"MIGRATION_SOURCE" validate:"required"`
 	TokenExpireTimeInHours int    `mapstructure:"TOKEN_EXPIRE_TIME_IN_HOURS" validate:"required"`
 
