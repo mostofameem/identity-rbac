@@ -68,10 +68,14 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 
 	// Convert to response DTO
 	response := &EventResponse{
-		Id:                    createdEvent.Id,
-		Title:                 createdEvent.Title,
-		Description:           createdEvent.Description,
-		EventTypeId:           createdEvent.EventTypeId,
+		Id:          createdEvent.Id,
+		Title:       createdEvent.Title,
+		Description: createdEvent.Description,
+		EventTypeId: GetEventTypeDto{
+			Id:       eventType.Id,
+			Name:     eventType.Name,
+			IsActive: eventType.IsActive,
+		},
 		StartAt:               createdEvent.StartAt,
 		RegistrationOpensAt:   createdEvent.RegistrationOpensAt,
 		RegistrationClosesAt:  createdEvent.RegistrationClosesAt,
@@ -99,12 +103,21 @@ func (s *service) GetEventDetails(ctx context.Context, id int) (EventResponse, e
 		return EventResponse{}, util.ErrNotFound
 	}
 
+	eventType, err := s.eventTypeRepo.GetByID(ctx, nil, event.EventTypeId)
+	if err != nil {
+		return EventResponse{}, err
+	}
+
 	// Convert to response DTO
 	response := &EventResponse{
-		Id:                    event.Id,
-		Title:                 event.Title,
-		Description:           event.Description,
-		EventTypeId:           event.EventTypeId,
+		Id:          event.Id,
+		Title:       event.Title,
+		Description: event.Description,
+		EventTypeId: GetEventTypeDto{
+			Id:       eventType.Id,
+			Name:     eventType.Name,
+			IsActive: eventType.IsActive,
+		},
 		StartAt:               event.StartAt,
 		RegistrationOpensAt:   event.RegistrationOpensAt,
 		RegistrationClosesAt:  event.RegistrationClosesAt,
