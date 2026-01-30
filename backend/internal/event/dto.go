@@ -19,23 +19,23 @@ type CreateEventReq struct {
 }
 
 type EventResponse struct {
-	Id                    int             `json:"id"`
-	Title                 string          `json:"title"`
-	Description           string          `json:"description"`
-	EventTypeId           GetEventTypeDto `json:"eventType"`
-	StartAt               time.Time       `json:"startAt"`
-	RegistrationOpensAt   *time.Time      `json:"registrationOpensAt"`
-	RegistrationClosesAt  *time.Time      `json:"registrationClosesAt"`
-	ShouldAutoCreateEvent bool            `json:"shouldAutoCreateEvent"`
-	TotalParticipants     int             `json:"totalParticipants"`
-	MaxParticipants       int             `json:"maxParticipants"`
-	Status                string          `json:"status"`
-	CreatedBy             *int            `json:"createdBy"`
-	UpdatedBy             *int            `json:"updatedBy"`
-	Remarks               *string         `json:"remarks"`
-	CreatedAt             time.Time       `json:"createdAt"`
-	UpdatedAt             *time.Time      `json:"updatedAt"`
-	IsActive              bool            `json:"isActive"`
+	Id                    int        `json:"id"`
+	Title                 string     `json:"title"`
+	Description           string     `json:"description"`
+	EventTypeId           int        `json:"eventTypeId"`
+	StartAt               time.Time  `json:"startAt"`
+	RegistrationOpensAt   *time.Time `json:"registrationOpensAt"`
+	RegistrationClosesAt  *time.Time `json:"registrationClosesAt"`
+	ShouldAutoCreateEvent bool       `json:"shouldAutoCreateEvent"`
+	TotalParticipants     int        `json:"totalParticipants"`
+	MaxParticipants       int        `json:"maxParticipants"`
+	Status                string     `json:"status"`
+	CreatedBy             *int       `json:"createdBy"`
+	UpdatedBy             *int       `json:"updatedBy"`
+	Remarks               *string    `json:"remarks"`
+	CreatedAt             time.Time  `json:"createdAt"`
+	UpdatedAt             *time.Time `json:"updatedAt"`
+	IsActive              bool       `json:"isActive"`
 }
 
 type CreateEventTypeReq struct {
@@ -57,12 +57,6 @@ type GetEventTypeResponse struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	IsActive    bool   `json:"isActive"`
-}
-
-type GetEventTypeDto struct {
-	Id       int    `json:"id"`
-	Name     string `json:"name"`
-	IsActive bool   `json:"isActive"`
 }
 
 type GetEventsQueryReq struct {
