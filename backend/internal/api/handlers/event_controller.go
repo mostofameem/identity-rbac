@@ -42,6 +42,13 @@ type EventStatusChangeRequest struct {
 	Status enum.ActiveInactiveStatus `json:"status" validation:"required"`
 }
 
+type GetPublicEventRequest struct {
+	Title       string                     `form:"title" json:"title"`
+	EventStatus enum.PublicEventStatusType `form:"status" json:"status"`
+	Page        int                        `form:"page" json:"page"`
+	Limit       int                        `form:"limit" json:"limit"`
+}
+
 func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var createEventReq CreateEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&createEventReq); err != nil {
@@ -103,6 +110,42 @@ func (handlers *Handlers) GetEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	events, pagination, err := handlers.eventSvc.GetEvents(r.Context(), event.GetEventsReq{
+		Title:       request.Title,
+		EventStatus: request.EventStatus,
+		Page:        request.Page,
+		Limit:       request.Limit,
+		CurrentTime: time.Now(),
+	})
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"data":       events,
+		"pagination": pagination,
+		"message":    "Successfully fetched events.",
+	})
+}
+
+func (handlers *Handlers) GetPublicEvents(w http.ResponseWriter, r *http.Request) {
+	var request GetPublicEventRequest
+
+	err := utils.BindValues(&request, r.URL.Query())
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Failed to extract query params")
+		return
+	}
+
+	// Get user ID from context (set by authentication middleware)
+	userID, ok := r.Context().Value(middlewares.UidKey).(int)
+	if !ok {
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
+
+	events, pagination, err := handlers.eventSvc.GetPublicEvents(r.Context(), event.GetPublicEventsReq{
+		UserId:      userID,
 		Title:       request.Title,
 		EventStatus: request.EventStatus,
 		Page:        request.Page,
