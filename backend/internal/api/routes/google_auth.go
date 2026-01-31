@@ -1,72 +1,36 @@
 package routes
 
 import (
-	"fmt"
-	"html/template"
+	"context"
 	"net/http"
 
 	"github.com/markbates/goth/gothic"
 )
 
-var userTemplate = `
-<p><a href="/logout/{{.Provider}}">logout</a></p>
-<p>Name: {{.Name}} [{{.LastName}}, {{.FirstName}}]</p>
-<p>Email: {{.Email}}</p>
-<p>NickName: {{.NickName}}</p>
-<p>Location: {{.Location}}</p>
-<p>AvatarURL: {{.AvatarURL}} <img src="{{.AvatarURL}}"></p>
-<p>Description: {{.Description}}</p>
-<p>UserID: {{.UserID}}</p>
-<p>AccessToken: {{.AccessToken}}</p>
-<p>ExpiresAt: {{.ExpiresAt}}</p>
-<p>RefreshToken: {{.RefreshToken}}</p>
-`
+// There is no userTemplate needed here as we use handlers.
 
 func (server *Server) initAuthRoutes(mux *http.ServeMux) {
 
-	// mux.HandleFunc("/auth/{provider}/login",
-	// 	http.HandlerFunc(server.handlers.GoogleLogin),
-	// )
-
-	// mux.HandleFunc(
-	// 	"/auth/{provider}/callback",
-	// 	http.HandlerFunc(server.handlers.GoogleCallback),
-	// )
-
-	mux.Handle(
-		"GET /auth/{provider}/callback",
-		http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-
-			user, err := gothic.CompleteUserAuth(res, req)
-			if err != nil {
-				fmt.Fprintln(res, err)
-				return
+	// Middleware to inject provider name into context for gothic
+	withProvider := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			provider := r.PathValue("provider")
+			if provider == "" {
+				provider = "google" // Default to google
 			}
-			t, _ := template.New("foo").Parse(userTemplate)
-			t.Execute(res, user)
-		}),
-	)
+			r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
+			next(w, r)
+		}
+	}
 
-	mux.Handle(
-		"GET /auth/{provider}",
-		http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			// try to get the user without re-authenticating
-			if gothUser, err := gothic.CompleteUserAuth(res, req); err == nil {
-				t, _ := template.New("foo").Parse(userTemplate)
-				t.Execute(res, gothUser)
-			} else {
-				gothic.BeginAuthHandler(res, req)
-			}
-		}),
-	)
+	mux.HandleFunc("GET /auth/{provider}", withProvider(server.handlers.GoogleLogin))
+	mux.HandleFunc("GET /auth/{provider}/callback", withProvider(server.handlers.GoogleCallback))
 
-	mux.Handle(
-		"GET /logout/{provider}",
-		http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			gothic.Logout(res, req)
-			res.Header().Set("Location", "/")
-			res.WriteHeader(http.StatusTemporaryRedirect)
-		}),
-	)
-
+	mux.HandleFunc("GET /logout/{provider}", func(w http.ResponseWriter, r *http.Request) {
+		provider := r.PathValue("provider")
+		r = r.WithContext(context.WithValue(r.Context(), "provider", provider))
+		gothic.Logout(w, r)
+		w.Header().Set("Location", "/")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	})
 }

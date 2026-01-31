@@ -18,6 +18,7 @@ import { UserManagement, RoleManagement, PermissionManagement } from './componen
 import EventTypeList from './pages/events/components/EventTypeList';
 import EventList from './pages/events/components/EventList';
 import LoginPage from './components/LoginPage';
+import GoogleAuthCallback from './components/GoogleAuthCallback';
 import HomePage from './components/HomePage';
 import InvitationPage from './components/InvitationPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -66,6 +67,7 @@ const AppRoutes: React.FC = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/:provider/callback" element={<GoogleAuthCallback />} />
         <Route path="/invitation" element={<InvitationPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
