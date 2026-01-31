@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { config } from '../config/env';
 
 const Sidebar: React.FC = () => {
   const { pathname } = useLocation();
@@ -75,6 +76,19 @@ const Sidebar: React.FC = () => {
           >
             Event Type
           </Link>
+
+          {/* Customer Portal */}
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Portals
+            </p>
+            <a
+              href={config.customerPortalUrl}
+              className="block px-4 py-2 rounded hover:bg-gray-700 text-white no-underline"
+            >
+              Customer Portal
+            </a>
+          </div>
         </div>
       </nav>
 
