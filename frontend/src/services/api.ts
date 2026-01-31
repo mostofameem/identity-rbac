@@ -210,4 +210,10 @@ export const apiClient = {
       // userId is required by validation but backend takes it from context
       userId: 1,
     }),
+  updateParticipationStatus: (eventId: number, status: 'GOING' | 'CANCELED', remarks: string = ''): Promise<AxiosResponse<any>> =>
+    axiosInstance.put('/api/v1/event/participations/update-status', {
+      event_id: eventId,
+      status,
+      remarks,
+    }),
 };

@@ -10,15 +10,32 @@ const EventsPage: React.FC = () => {
 
     // ... useEffect hooks ...
 
-    const handleJoinEvent = async (eventId: number) => {
+    const handleJoinEvent = async (eventId: number, currentStatus?: string) => {
         try {
             setJoiningId(eventId);
-            await apiClient.participateInEvent(eventId);
-            // Refresh events to show updated status
+            if (currentStatus === 'CANCELED') {
+                await apiClient.updateParticipationStatus(eventId, 'GOING');
+            } else {
+                await apiClient.participateInEvent(eventId);
+            }
             fetchEvents();
         } catch (err: any) {
             console.error('Failed to join event:', err);
             alert(err.response?.data?.message || 'Failed to join event. Please try again.');
+        } finally {
+            setJoiningId(null);
+        }
+    };
+
+    const handleCancelParticipation = async (eventId: number) => {
+        if (!window.confirm('Are you sure you want to cancel your participation?')) return;
+        try {
+            setJoiningId(eventId);
+            await apiClient.updateParticipationStatus(eventId, 'CANCELED');
+            fetchEvents();
+        } catch (err: any) {
+            console.error('Failed to cancel participation:', err);
+            alert(err.response?.data?.message || 'Failed to cancel participation. Please try again.');
         } finally {
             setJoiningId(null);
         }
@@ -182,21 +199,24 @@ const EventsPage: React.FC = () => {
                                     <div className="shrink-0 flex justify-end w-full md:w-auto">
                                         {event.perticipationStatus === 'GOING' ? (
                                             <button
-                                                className="px-6 py-2 bg-red-50 text-red-600 hover:bg-red-100 active:scale-[0.98] rounded-xl font-bold text-xs border border-red-100 transition-all duration-200"
-                                                onClick={() => {/* To be implemented: Cancellation flow */ }}
+                                                className="px-6 py-2 bg-red-50 text-red-600 hover:bg-red-100 active:scale-[0.98] rounded-xl font-bold text-xs border border-red-100 transition-all duration-200 disabled:opacity-50"
+                                                onClick={() => handleCancelParticipation(event.id)}
+                                                disabled={joiningId === event.id}
                                             >
-                                                Cancel
+                                                {joiningId === event.id ? (
+                                                    <span className="w-3 h-3 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></span>
+                                                ) : 'Cancel'}
                                             </button>
                                         ) : (
                                             <button
                                                 className="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl font-bold text-xs shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                                onClick={() => handleJoinEvent(event.id)}
+                                                onClick={() => handleJoinEvent(event.id, event.perticipationStatus)}
                                                 disabled={joiningId === event.id}
                                             >
                                                 {joiningId === event.id ? (
                                                     <span className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
                                                 ) : null}
-                                                Join Now
+                                                {event.perticipationStatus === 'CANCELED' ? 'Re-join' : 'Join Now'}
                                             </button>
                                         )}
                                     </div>

@@ -43,7 +43,7 @@ func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq)
 	}
 
 	// Prevent duplicate participation
-	exists, err := s.perticipantRepo.Exists(ctx, tx, req.EventId, req.UserId)
+	exists, err := s.participantRepo.Exists(ctx, tx, req.EventId, req.UserId)
 	if err != nil {
 		log.Printf("Failed to check participation: %v\n", err)
 		return util.ErrSomethingWentWrong
@@ -52,7 +52,7 @@ func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq)
 		return util.ErrAlreadyRegistered
 	}
 
-	if err = s.perticipantRepo.Create(ctx, tx, req); err != nil {
+	if err = s.participantRepo.Create(ctx, tx, req); err != nil {
 		log.Printf("Failed to create participant: %v\n", err)
 		return util.ErrSomethingWentWrong
 	}
@@ -66,12 +66,12 @@ func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq)
 }
 
 func (s *service) MyEventPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, util.Pagination, error) {
-	perticipateHistory, err := s.perticipantRepo.GetMyPerticipations(ctx, req)
+	perticipateHistory, err := s.participantRepo.GetMyPerticipations(ctx, req)
 	if err != nil {
 		return nil, util.Pagination{}, err
 	}
 
-	count, err := s.perticipantRepo.GetMyPerticipationCount(ctx, req)
+	count, err := s.participantRepo.GetMyPerticipationCount(ctx, req)
 	if err != nil {
 		return nil, util.Pagination{}, err
 	}
@@ -114,18 +114,25 @@ func (s *service) UpdatePerticipation(ctx context.Context, req UpdatePerticipati
 	}
 
 	// Prevent duplicate participation
-	exists, err := s.perticipantRepo.Exists(ctx, tx, req.EventId, req.UserId)
+	participantInfo, err := s.participantRepo.GetByID(ctx, tx, req.EventId, req.UserId)
 	if err != nil {
 		return util.ErrSomethingWentWrong
 	}
-	if !exists {
-		return util.ErrAlreadyRegistered
+	if participantInfo == nil {
+		return util.ErrNotFound
 	}
 
-	if err = s.perticipantRepo.UpdateStatus(ctx, tx, req); err != nil {
+	if participantInfo.Status == string(req.Status) {
+		if req.Status == enum.PerticepateStatusCanceled {
+			return util.ErrAlreadyCanceled
+		}
+		return util.ErrAlreadyGoing
+	}
+
+	if err = s.participantRepo.UpdateStatus(ctx, tx, req); err != nil {
 		return util.ErrSomethingWentWrong
 	}
-
+	
 	switch req.Status {
 	case enum.PerticepateStatusCanceled:
 		if err = s.eventRepo.UpdateParticipantCount(ctx, tx, req.EventId, event.TotalParticipants-1); err != nil {

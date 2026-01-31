@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type UpdatePerticipationStatusReq struct {
+type UpdateParticipationStatusReq struct {
 	EventId int                        `json:"event_id"`
 	Status  enum.PerticepateStatusType `json:"status"`
 }
@@ -97,8 +97,8 @@ func (handlers *Handlers) GetMyEventPerticipations(w http.ResponseWriter, r *htt
 	})
 }
 
-func (handlers *Handlers) UpdatePerticipation(w http.ResponseWriter, r *http.Request) {
-	var request UpdatePerticipationStatusReq
+func (handlers *Handlers) UpdatePerticipationStatus(w http.ResponseWriter, r *http.Request) {
+	var request UpdateParticipationStatusReq
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -107,6 +107,18 @@ func (handlers *Handlers) UpdatePerticipation(w http.ResponseWriter, r *http.Req
 	userId, ok := r.Context().Value(middlewares.UidKey).(int)
 	if !ok {
 		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
+
+	//rate limiting
+	key := handlers.rateLimiterSvc.GetKey(userId)
+	isAllowed, err := handlers.rateLimiterSvc.IsAllowed(r.Context(), key)
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+	if !isAllowed {
+		utils.SendError(w, http.StatusTooManyRequests, "Too many requests, please try again later.")
 		return
 	}
 
@@ -119,7 +131,7 @@ func (handlers *Handlers) UpdatePerticipation(w http.ResponseWriter, r *http.Req
 	}
 
 	// Call event service
-	err := handlers.eventSvc.UpdatePerticipation(r.Context(), serviceReq)
+	err = handlers.eventSvc.UpdatePerticipation(r.Context(), serviceReq)
 	if err != nil {
 		if errors.Is(err, util.ErrSomethingWentWrong) {
 			utils.SendError(w, http.StatusInternalServerError, "Failed to update perticipation")

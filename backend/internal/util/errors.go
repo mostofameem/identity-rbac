@@ -16,4 +16,8 @@ var (
 	ErrLateRegistration           = fmt.Errorf("Oops, it looks like you missed the pre-booking deadline, so the kitchen is closed for now. No worries though—we've got you covered! We'll order some delicious food from outside and make sure you're all sorted.")
 	ErrAlreadyExist               = fmt.Errorf("already exist.")
 	ErrSomethingWentWrong         = fmt.Errorf("Something went wrong, Please Try again latter.")
+	ErrTryToUpdateSameStatus      = fmt.Errorf("You are trying to update the same status.")
+	ErrAlreadyPerticipated        = fmt.Errorf("You are already perticipated in this event.")
+	ErrAlreadyCanceled            = fmt.Errorf("You are already canceled your perticipation.")
+	ErrAlreadyGoing               = fmt.Errorf("You are already going to this event.")
 )

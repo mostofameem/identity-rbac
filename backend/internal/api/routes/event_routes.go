@@ -119,4 +119,12 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 			server.middleware.AuthenticateJWT,
 		),
 	)
+
+	mux.Handle(
+		"PUT /api/v1/event/participations/update-status",
+		manager.With(
+			http.HandlerFunc(server.handlers.UpdatePerticipationStatus),
+			server.middleware.AuthenticateJWT,
+		),
+	)
 }

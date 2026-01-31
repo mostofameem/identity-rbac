@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"identity-rbac/internal/api/utils"
+	"identity-rbac/internal/entity"
 	"identity-rbac/internal/enum"
 	"identity-rbac/internal/event"
 	"identity-rbac/pkg/logger"
@@ -14,25 +15,25 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type PerticipantRepo interface {
-	event.PerticipantRepo
+type ParticipantRepo interface {
+	event.ParticipantRepo
 }
 
-type perticipantRepo struct {
+type participantRepo struct {
 	table string
 	db    *sqlx.DB
 	psql  sq.StatementBuilderType
 }
 
-func NewPerticipantRepo(db *DB) PerticipantRepo {
-	return &perticipantRepo{
+func NewParticipantRepo(db *DB) ParticipantRepo {
+	return &participantRepo{
 		table: "participants",
 		db:    db.Db,
 		psql:  db.Psql,
 	}
 }
 
-func (r *perticipantRepo) Create(ctx context.Context, tx *sqlx.Tx, req event.PerticipateEventReq) error {
+func (r *participantRepo) Create(ctx context.Context, tx *sqlx.Tx, req event.PerticipateEventReq) error {
 
 	query, args, err := r.psql.Insert(r.table).
 		Columns(
@@ -65,7 +66,7 @@ func (r *perticipantRepo) Create(ctx context.Context, tx *sqlx.Tx, req event.Per
 	return nil
 }
 
-func (r *perticipantRepo) Exists(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (bool, error) {
+func (r *participantRepo) Exists(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (bool, error) {
 
 	query, args, err := r.psql.Select("1").
 		From(r.table).
@@ -97,7 +98,7 @@ func (r *perticipantRepo) Exists(ctx context.Context, tx *sqlx.Tx, eventID, user
 	return exists > 0, nil
 }
 
-func (r *perticipantRepo) GetMyPerticipations(ctx context.Context, req event.GetEventPerticipationsReq) ([]event.EventPerticipationDto, error) {
+func (r *participantRepo) GetMyPerticipations(ctx context.Context, req event.GetEventPerticipationsReq) ([]event.EventPerticipationDto, error) {
 	limit, Offset := utils.ConfigPageSize(req.Page, req.Limit)
 
 	query, args, err := NewQueryBuilder(r.getPerticipationQueryBuilder()).
@@ -131,7 +132,7 @@ func (r *perticipantRepo) GetMyPerticipations(ctx context.Context, req event.Get
 	return perticipations, nil
 }
 
-func (r *perticipantRepo) GetMyPerticipationCount(ctx context.Context, req event.GetEventPerticipationsReq) (int, error) {
+func (r *participantRepo) GetMyPerticipationCount(ctx context.Context, req event.GetEventPerticipationsReq) (int, error) {
 	query, args, err := NewQueryBuilder(r.getPerticipationCountQueryBuilder()).
 		FilterByIntEq("p.user_id", req.UserId).
 		FilterByTimeRange("p.created_at", req.QueryFrom, req.QueryTo).
@@ -160,7 +161,7 @@ func (r *perticipantRepo) GetMyPerticipationCount(ctx context.Context, req event
 	return count, nil
 }
 
-func (r *perticipantRepo) getPerticipationQueryBuilder() BuildQuery {
+func (r *participantRepo) getPerticipationQueryBuilder() BuildQuery {
 	return func() sq.SelectBuilder {
 		return r.psql.Select(
 			"e.id AS event_id",
@@ -180,7 +181,7 @@ func (r *perticipantRepo) getPerticipationQueryBuilder() BuildQuery {
 	}
 }
 
-func (r *perticipantRepo) getPerticipationCountQueryBuilder() BuildQuery {
+func (r *participantRepo) getPerticipationCountQueryBuilder() BuildQuery {
 	return func() sq.SelectBuilder {
 		return r.psql.Select(
 			"COUNT(p.id)",
@@ -191,7 +192,7 @@ func (r *perticipantRepo) getPerticipationCountQueryBuilder() BuildQuery {
 	}
 }
 
-func (r *perticipantRepo) UpdateStatus(ctx context.Context, tx *sqlx.Tx, req event.UpdatePerticipationStatusReq) error {
+func (r *participantRepo) UpdateStatus(ctx context.Context, tx *sqlx.Tx, req event.UpdatePerticipationStatusReq) error {
 	query, args, err := r.psql.Update(r.table).
 		Set("status", req.Status).
 		Set("remarks", req.Remarks).
@@ -218,4 +219,37 @@ func (r *perticipantRepo) UpdateStatus(ctx context.Context, tx *sqlx.Tx, req eve
 	}
 
 	return nil
+}
+
+func (r *participantRepo) GetByID(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (*entity.Participants, error) {
+	query, args, err := r.psql.Select(
+		"id", "event_id", "user_id", "guest_count", "status", "remarks", "created_at", "created_by", "updated_at", "updated_by",
+	).
+		From(r.table).
+		Where(sq.Eq{"event_id": eventID, "user_id": userID}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build select query", logger.Extra(map[string]any{
+			"error":   err.Error(),
+			"eventID": eventID,
+			"userID":  userID,
+		}))
+		return nil, err
+	}
+
+	var perticipant entity.Participants
+	err = tx.GetContext(ctx, &perticipant, query, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		slog.Error("Failed to execute select query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return nil, err
+	}
+
+	return &perticipant, nil
 }

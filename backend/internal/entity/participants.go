@@ -8,7 +8,7 @@ type Participants struct {
 	UserId     int        `db:"user_id"                     json:"userId"`
 	GuestCount int        `db:"guest_count"                 json:"guestCount"`
 	Status     string     `db:"status"                      json:"status"`
-	Remarks    string     `db:"remarks"                     json:"remarks"`
+	Remarks    *string    `db:"remarks"                     json:"remarks"`
 	CreatedAt  time.Time  `db:"created_at"                  json:"createdAt"`
 	CreatedBy  *int       `db:"created_by"                  json:"createdBy"`
 	UpdatedAt  *time.Time `db:"updated_at"                  json:"updatedAt"`

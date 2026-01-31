@@ -50,9 +50,10 @@ type EventTypeRepo interface {
 	UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error
 }
 
-type PerticipantRepo interface {
+type ParticipantRepo interface {
 	Create(ctx context.Context, tx *sqlx.Tx, req PerticipateEventReq) error
 	Exists(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (bool, error)
+	GetByID(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (*entity.Participants, error)
 
 	GetMyPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, error)
 	GetMyPerticipationCount(ctx context.Context, req GetEventPerticipationsReq) (int, error)

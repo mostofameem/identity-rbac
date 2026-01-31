@@ -31,6 +31,9 @@ func LoadConfig() error {
 
 	viper.AutomaticEnv()
 
+	viper.SetDefault("RATE_LIMIT_CAPACITY", 10)
+	viper.SetDefault("RATE_LIMIT_REFILL_RATE_PER_MINUTE", 10.0)
+
 	config = &Config{
 		Mode:                   Mode(viper.GetString("MODE")),
 		ServiceName:            viper.GetString("SERVICE_NAME"),
@@ -70,6 +73,10 @@ func LoadConfig() error {
 			Port:     viper.GetInt("REDIS_PORT"),
 			Password: viper.GetString("REDIS_PASSWORD"),
 			DB:       viper.GetInt("REDIS_DB"),
+		},
+		RateLimit: &RateLimitConfig{
+			Capacity:            viper.GetInt("RATE_LIMIT_CAPACITY"),
+			RefillRatePerMinute: viper.GetFloat64("RATE_LIMIT_REFILL_RATE_PER_MINUTE"),
 		},
 	}
 
