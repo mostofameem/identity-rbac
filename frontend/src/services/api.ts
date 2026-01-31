@@ -216,4 +216,9 @@ export const apiClient = {
       status,
       remarks,
     }),
+  updateGuestCount: (eventId: number, guestCount: number): Promise<AxiosResponse<any>> =>
+    axiosInstance.put('/api/v1/event/participations/update-guest-count', {
+      event_id: eventId,
+      guest_count: guestCount,
+    }),
 };
