@@ -17,6 +17,8 @@ type Service interface {
 
 	PerticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 	MyEventPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, util.Pagination, error)
+	UpdatePerticipation(ctx context.Context, req UpdatePerticipationStatusReq) error
+	UpdateGuestCount(ctx context.Context, userId int, eventId int, guestCount int) error
 
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
@@ -49,12 +51,15 @@ type EventTypeRepo interface {
 	UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error
 }
 
-type PerticipantRepo interface {
+type ParticipantRepo interface {
 	Create(ctx context.Context, tx *sqlx.Tx, req PerticipateEventReq) error
 	Exists(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (bool, error)
+	GetByID(ctx context.Context, tx *sqlx.Tx, eventID, userID int) (*entity.Participants, error)
 
 	GetMyPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, error)
 	GetMyPerticipationCount(ctx context.Context, req GetEventPerticipationsReq) (int, error)
+	UpdateStatus(ctx context.Context, tx *sqlx.Tx, req UpdatePerticipationStatusReq) error
+	UpdateGuestCount(ctx context.Context, tx *sqlx.Tx, userId int, eventId int, guestCount int) error
 }
 
 type EventTypeSettingRepo interface {

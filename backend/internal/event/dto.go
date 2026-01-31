@@ -174,3 +174,11 @@ type GetEventPerticipationsReq struct {
 	QueryFrom *time.Time
 	QueryTo   *time.Time
 }
+
+type UpdatePerticipationStatusReq struct {
+	EventId     int
+	UserId      int
+	Status      enum.PerticepateStatusType
+	Remarks     *string
+	CurrentTime time.Time
+}

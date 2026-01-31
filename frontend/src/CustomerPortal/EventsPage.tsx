@@ -7,20 +7,60 @@ const EventsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [joiningId, setJoiningId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [editingGuestId, setEditingGuestId] = useState<number | null>(null);
+    const [tempGuestCount, setTempGuestCount] = useState<number>(0);
+    const [isUpdatingGuest, setIsUpdatingGuest] = useState(false);
+    const [guestCountError, setGuestCountError] = useState<string | null>(null);
 
     // ... useEffect hooks ...
 
-    const handleJoinEvent = async (eventId: number) => {
+    const handleJoinEvent = async (eventId: number, currentStatus?: string) => {
         try {
             setJoiningId(eventId);
-            await apiClient.participateInEvent(eventId);
-            // Refresh events to show updated status
+            if (currentStatus === 'CANCELED') {
+                await apiClient.updateParticipationStatus(eventId, 'GOING');
+            } else {
+                await apiClient.participateInEvent(eventId);
+            }
             fetchEvents();
         } catch (err: any) {
             console.error('Failed to join event:', err);
             alert(err.response?.data?.message || 'Failed to join event. Please try again.');
         } finally {
             setJoiningId(null);
+        }
+    };
+
+    const handleCancelParticipation = async (eventId: number) => {
+        if (!window.confirm('Are you sure you want to cancel your participation?')) return;
+        try {
+            setJoiningId(eventId);
+            await apiClient.updateParticipationStatus(eventId, 'CANCELED');
+            fetchEvents();
+        } catch (err: any) {
+            console.error('Failed to cancel participation:', err);
+            alert(err.response?.data?.message || 'Failed to cancel participation. Please try again.');
+        } finally {
+            setJoiningId(null);
+        }
+    };
+
+    const handleUpdateGuestCount = async (eventId: number) => {
+        if (tempGuestCount > 5) {
+            setGuestCountError('Maximum 5 guests allowed.');
+            return;
+        }
+        try {
+            setIsUpdatingGuest(true);
+            await apiClient.updateGuestCount(eventId, tempGuestCount);
+            setEditingGuestId(null);
+            setGuestCountError(null);
+            fetchEvents();
+        } catch (err: any) {
+            console.error('Failed to update guest count:', err);
+            alert(err.response?.data?.message || 'Failed to update guest count. Please try again.');
+        } finally {
+            setIsUpdatingGuest(false);
         }
     };
     const [status, setStatus] = useState<'ONGOING' | 'UPCOMING' | 'RECENT'>('ONGOING');
@@ -179,26 +219,44 @@ const EventsPage: React.FC = () => {
                                 </div>
 
                                 {event.status === 'ONGOING' && (
-                                    <div className="shrink-0 flex justify-end w-full md:w-auto">
-                                        {event.perticipationStatus === 'GOING' ? (
+                                    <div className="shrink-0 flex flex-col items-end gap-3 w-full md:w-auto">
+                                        {(event.perticipationStatus === 'GOING' || event.perticipationStatus === 'CANCELED') && (
                                             <button
-                                                className="px-6 py-2 bg-red-50 text-red-600 hover:bg-red-100 active:scale-[0.98] rounded-xl font-bold text-xs border border-red-100 transition-all duration-200"
-                                                onClick={() => {/* To be implemented: Cancellation flow */ }}
+                                                onClick={() => {
+                                                    setEditingGuestId(event.id);
+                                                    setTempGuestCount(event.guestCount || 0);
+                                                    setGuestCountError(null);
+                                                }}
+                                                className="w-full md:w-auto px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl font-bold text-xs border border-indigo-100 transition-all duration-200"
                                             >
-                                                Cancel
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl font-bold text-xs shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                                onClick={() => handleJoinEvent(event.id)}
-                                                disabled={joiningId === event.id}
-                                            >
-                                                {joiningId === event.id ? (
-                                                    <span className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                                                ) : null}
-                                                Join Now
+                                                Update Guests ({event.guestCount || 0})
                                             </button>
                                         )}
+
+                                        <div className="flex flex-row items-center gap-2">
+                                            {event.perticipationStatus === 'GOING' ? (
+                                                <button
+                                                    className="px-6 py-2 bg-red-50 text-red-600 hover:bg-red-100 active:scale-[0.98] rounded-xl font-bold text-xs border border-red-100 transition-all duration-200 disabled:opacity-50"
+                                                    onClick={() => handleCancelParticipation(event.id)}
+                                                    disabled={joiningId === event.id}
+                                                >
+                                                    {joiningId === event.id ? (
+                                                        <span className="w-3 h-3 border-2 border-red-200 border-t-red-600 rounded-full animate-spin"></span>
+                                                    ) : 'Cancel'}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl font-bold text-xs shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                                    onClick={() => handleJoinEvent(event.id, event.perticipationStatus)}
+                                                    disabled={joiningId === event.id}
+                                                >
+                                                    {joiningId === event.id ? (
+                                                        <span className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                                                    ) : null}
+                                                    {event.perticipationStatus === 'CANCELED' ? 'Re-join' : 'Join Now'}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -207,6 +265,66 @@ const EventsPage: React.FC = () => {
                 </div>
             )
             }
+            {/* Guest Count Modal */}
+            {editingGuestId && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-gray-900">Update Guest Count</h3>
+                            <button
+                                onClick={() => setEditingGuestId(null)}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            >
+                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Number of Guests</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={tempGuestCount}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value) || 0;
+                                        setTempGuestCount(val);
+                                        if (val > 5) setGuestCountError('Maximum 5 guests allowed.');
+                                        else setGuestCountError(null);
+                                    }}
+                                    className={`w-full px-4 py-3 rounded-xl border ${guestCountError ? 'border-red-300 ring-4 ring-red-50' : 'border-gray-100 focus:ring-4 focus:ring-indigo-50'} outline-none transition-all font-bold text-gray-700`}
+                                    placeholder="Enter guest count"
+                                />
+                                {guestCountError && (
+                                    <p className="mt-1 text-[10px] font-bold text-red-500 uppercase tracking-tight">{guestCountError}</p>
+                                )}
+                                <p className="mt-2 text-[10px] text-gray-400 font-medium italic">You can invite up to 5 additional guests.</p>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setEditingGuestId(null)}
+                                    className="flex-1 px-4 py-3 bg-gray-50 text-gray-600 hover:bg-gray-100 rounded-xl font-bold text-xs transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleUpdateGuestCount(editingGuestId)}
+                                    disabled={isUpdatingGuest || !!guestCountError}
+                                    className="flex-1 px-4 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {isUpdatingGuest ? (
+                                        <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                                    ) : 'Save Changes'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </CustomerLayout >
     );
 };
