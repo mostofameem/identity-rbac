@@ -137,7 +137,15 @@ func (handlers *Handlers) GetPublicEvents(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Get user ID from context (set by authentication middleware)
+	userID, ok := r.Context().Value(middlewares.UidKey).(int)
+	if !ok {
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
+
 	events, pagination, err := handlers.eventSvc.GetPublicEvents(r.Context(), event.GetPublicEventsReq{
+		UserId:      userID,
 		Title:       request.Title,
 		EventStatus: request.EventStatus,
 		Page:        request.Page,

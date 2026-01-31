@@ -243,7 +243,7 @@ func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCusto
 
 func (s *service) GetPublicEvents(ctx context.Context, req GetPublicEventsReq) ([]EventPublicResponse, util.Pagination, error) {
 
-	events, err := s.eventRepo.GetPublicEventWithPagination(ctx, req.Title, req.Limit, req.Page, string(req.EventStatus))
+	events, err := s.eventRepo.GetPublicEventWithPagination(ctx, req.UserId, req.Title, req.Limit, req.Page, string(req.EventStatus))
 	if err != nil {
 		return []EventPublicResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
 	}
@@ -299,7 +299,7 @@ func validateParticipation(event *entity.Events, now time.Time, totalParticipant
 func (s *service) EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error) {
 	eventSetting, err := s.eventSettingRepo.GetByEventTypeID(ctx, req.EventTypeId)
 	if err != nil {
-		return 0, util.ErrEventSomethingWentWrong
+		return 0, util.ErrSomethingWentWrong
 	}
 
 	if eventSetting != nil {

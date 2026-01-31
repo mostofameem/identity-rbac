@@ -82,6 +82,7 @@ type GetEventsReq struct {
 }
 
 type GetPublicEventsReq struct {
+	UserId      int
 	Title       string
 	EventStatus enum.PublicEventStatusType
 	Page        int
@@ -114,8 +115,8 @@ type EventPublicResponse struct {
 	TotalParticipants    int                  `json:"totalParticipants"    db:"total_participants"`
 	MaxParticipants      int                  `json:"maxParticipants"      db:"max_participants"`
 	Status               enum.EventStatusType `json:"status"               db:"status"`
-	PerticipationStatus  string               `json:"perticipationStatus"  db:"perticipation_status"`
-	GuestCount           int                  `json:"guestCount"           db:"guest_count"`
+	PerticipationStatus  *string              `json:"perticipationStatus"  db:"perticipation_status"`
+	GuestCount           *int                 `json:"guestCount"           db:"guest_count"`
 }
 
 type PerticipateEventReq struct {

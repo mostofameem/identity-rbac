@@ -269,16 +269,16 @@ func (r *eventRepo) UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id in
 	return nil
 }
 
-func (r *eventRepo) GetPublicEventWithPagination(ctx context.Context, title string, limit int, page int, status string) ([]event.EventPublicResponse, error) {
+func (r *eventRepo) GetPublicEventWithPagination(ctx context.Context, userId int, title string, limit int, page int, status string) ([]event.EventPublicResponse, error) {
 	limit, Offset := utils.ConfigPageSize(page, limit)
 
-	query, args, err := NewQueryBuilder(r.getPublicEventQueryBuilder()).
-		FilterByPrefix("title", title).
+	query, args, err := NewQueryBuilder(r.getPublicEventQueryBuilder(userId, status)).
+		FilterByPrefix("e.title", title).
 		FilterByMode(status, time.Now()).
-		FilterByBoolean("is_active", true).
+		FilterByBoolean("e.is_active", true).
 		Limit(limit).
 		Offset(Offset).
-		OrderBy("start_at", "DESC").
+		OrderBy("e.start_at", "DESC").
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build query", logger.Extra(map[string]any{
@@ -347,7 +347,7 @@ func (r *eventRepo) getEventCountQueryBuilder() BuildQuery {
 	}
 }
 
-func (r *eventRepo) getPublicEventQueryBuilder() BuildQuery {
+func (r *eventRepo) getPublicEventQueryBuilder(userId int, status string) BuildQuery {
 	return func() sq.SelectBuilder {
 		return r.psql.Select(
 			"e.id AS id",
@@ -359,12 +359,12 @@ func (r *eventRepo) getPublicEventQueryBuilder() BuildQuery {
 			"e.registration_closes_at AS registration_closes_at",
 			"e.total_participants AS total_participants",
 			"e.max_participants AS max_participants",
-			"status = null",
 			"p.perticipation_status AS perticipation_status",
 			"p.guest_count AS guest_count",
 		).
-			From(r.table).
+			Column(sq.Expr("? AS status", status)).
+			From(r.table+" e").
 			LeftJoin("event_type et", "e.event_type_id = et.id").
-			LeftJoin("participant p", "e.id = p.event_id")
+			LeftJoin("participant p", "e.id = p.event_id AND p.user_id = ?", userId)
 	}
 }
