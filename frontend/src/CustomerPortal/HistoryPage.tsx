@@ -68,23 +68,23 @@ const HistoryPage: React.FC = () => {
                     {participations.map((p, idx) => (
                         <div
                             key={`${p.eventId}-${idx}`}
-                            className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col gap-4"
+                            className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3"
                         >
                             <div className="flex justify-between items-start">
                                 <div className="flex-grow">
-                                    <h4 className="text-lg font-bold text-gray-900 leading-tight mb-1">
+                                    <h4 className="text-base font-bold text-gray-900 leading-tight mb-0.5">
                                         {p.eventTitle}
                                     </h4>
-                                    <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">
+                                    <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-tighter">
                                         {p.eventType}
                                     </p>
                                 </div>
-                                <span className={`px-2 py-1 rounded-lg text-[9px] font-black border uppercase tracking-widest ${getStatusStyle(p.status)}`}>
+                                <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black border uppercase tracking-widest ${getStatusStyle(p.status)}`}>
                                     {p.status}
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-50">
+                            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-50">
                                 <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
