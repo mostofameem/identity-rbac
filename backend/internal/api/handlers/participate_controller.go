@@ -17,6 +17,11 @@ type UpdateParticipationStatusReq struct {
 	Status  enum.PerticepateStatusType `json:"status"`
 }
 
+type UpdateGuestCountReq struct {
+	EventId    int `json:"event_id"`
+	GuestCount int `json:"guest_count" validation:"required,gte=0,lte=7"`
+}
+
 func (handlers *Handlers) PerticipateEvent(w http.ResponseWriter, r *http.Request) {
 	var request PerticipateEventRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -111,7 +116,7 @@ func (handlers *Handlers) UpdatePerticipationStatus(w http.ResponseWriter, r *ht
 	}
 
 	//rate limiting
-	key := handlers.rateLimiterSvc.GetKey(userId)
+	key := handlers.rateLimiterSvc.GetParticipationKey(userId)
 	isAllowed, err := handlers.rateLimiterSvc.IsAllowed(r.Context(), key)
 	if err != nil {
 		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
@@ -144,5 +149,47 @@ func (handlers *Handlers) UpdatePerticipationStatus(w http.ResponseWriter, r *ht
 
 	utils.SendData(w, map[string]any{
 		"message": "Perticipation updated successfully",
+	})
+}
+
+func (handlers *Handlers) UpdateGuestCount(w http.ResponseWriter, r *http.Request) {
+	var request UpdateGuestCountReq
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	// Get user ID from context (set by authentication middleware)
+	userId, ok := r.Context().Value(middlewares.UidKey).(int)
+	if !ok {
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
+
+	//rate limiting
+	key := handlers.rateLimiterSvc.GetGuestCountKey(userId)
+	isAllowed, err := handlers.rateLimiterSvc.IsAllowed(r.Context(), key)
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+	if !isAllowed {
+		utils.SendError(w, http.StatusTooManyRequests, "Too many requests, please try again later.")
+		return
+	}
+
+	// Call event service
+	err = handlers.eventSvc.UpdateGuestCount(r.Context(), userId, request.EventId, request.GuestCount)
+	if err != nil {
+		if errors.Is(err, util.ErrSomethingWentWrong) {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to update guest count")
+			return
+		}
+
+		utils.SendError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Guest count updated successfully",
 	})
 }

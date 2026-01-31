@@ -127,4 +127,12 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 			server.middleware.AuthenticateJWT,
 		),
 	)
+
+	mux.Handle(
+		"PUT /api/v1/event/participations/update-guest-count",
+		manager.With(
+			http.HandlerFunc(server.handlers.UpdateGuestCount),
+			server.middleware.AuthenticateJWT,
+		),
+	)
 }

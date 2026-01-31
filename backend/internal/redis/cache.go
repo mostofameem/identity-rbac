@@ -13,6 +13,7 @@ type CacheService interface {
 
 type TokenBucketRateLimiterService interface {
 	IsAllowed(ctx context.Context, key string) (bool, error)
-	GetKey(userId int) string
+	GetParticipationKey(userId int) string
+	GetGuestCountKey(userId int) string
 	Close() error
 }

@@ -10,6 +10,7 @@ import (
 	"identity-rbac/internal/event"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -252,4 +253,33 @@ func (r *participantRepo) GetByID(ctx context.Context, tx *sqlx.Tx, eventID, use
 	}
 
 	return &perticipant, nil
+}
+
+func (r *participantRepo) UpdateGuestCount(ctx context.Context, tx *sqlx.Tx, userId int, eventId int, guestCount int) error {
+	query, args, err := r.psql.
+		Update(r.table).
+		Set("guest_count", guestCount).
+		Set("updated_at", time.Now()).
+		Set("updated_by", userId).
+		Where(sq.Eq{"event_id": eventId, "user_id": userId}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
 }

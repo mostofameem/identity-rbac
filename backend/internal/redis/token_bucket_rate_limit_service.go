@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	TOKEN_BUCKET_RATE_LIMITER_PREFIX = "rate_limit:"
-	RATE_LIMIT_LUA_SCRIPT            = `
+	TOKEN_BUCKET_RATE_LIMITER_PREFIX  = "rate_limit:"
+	PARTICIPATION_RATE_LIMITER_PREFIX = "rate_limit:participation:"
+	GUEST_COUNT_RATE_LIMITER_PREFIX   = "rate_limit:guest_count:"
+	RATE_LIMIT_LUA_SCRIPT             = `
 local key = KEYS[1]
 local capacity = tonumber(ARGV[1])
 local refill_rate = tonumber(ARGV[2])
@@ -70,6 +72,10 @@ func (t *tokenBucketRateLimiterService) Close() error {
 	return t.client.Close()
 }
 
-func (t *tokenBucketRateLimiterService) GetKey(userID int) string {
-	return TOKEN_BUCKET_RATE_LIMITER_PREFIX + strconv.Itoa(userID)
+func (t *tokenBucketRateLimiterService) GetParticipationKey(userID int) string {
+	return PARTICIPATION_RATE_LIMITER_PREFIX + strconv.Itoa(userID)
+}
+
+func (t *tokenBucketRateLimiterService) GetGuestCountKey(userID int) string {
+	return GUEST_COUNT_RATE_LIMITER_PREFIX + strconv.Itoa(userID)
 }
