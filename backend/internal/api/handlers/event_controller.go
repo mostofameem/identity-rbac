@@ -148,44 +148,6 @@ func (handlers *Handlers) GetEventDetails(w http.ResponseWriter, r *http.Request
 	})
 }
 
-func (handlers *Handlers) PerticipateEvent(w http.ResponseWriter, r *http.Request) {
-	var request PerticipateEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	// Get user ID from context (set by authentication middleware)
-	createdBy, ok := r.Context().Value(middlewares.UidKey).(int)
-	if !ok {
-		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
-		return
-	}
-
-	// Prepare service request
-	serviceReq := event.PerticipateEventReq{
-		EventId:     request.EventId,
-		UserId:      createdBy,
-		GuestCount:  request.GuestCount,
-		CurrentTime: util.GetCurrentTime(),
-	}
-
-	// Call event service
-	err := handlers.eventSvc.ParticipateEvent(r.Context(), serviceReq)
-	if err != nil {
-		if errors.Is(err, util.ErrSomethingWentWrong) {
-			utils.SendError(w, http.StatusInternalServerError, "Failed to perticipate event")
-			return
-		}
-
-		utils.SendError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	utils.SendData(w, map[string]any{
-		"message": "Event Perticipated successfully",
-	})
-}
-
 func (handlers *Handlers) UpdateEventStatus(w http.ResponseWriter, r *http.Request) {
 	id, ok := utils.GetIntPathParam(r, "id", w)
 	if !ok {
