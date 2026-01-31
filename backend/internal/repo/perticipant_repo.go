@@ -83,6 +83,9 @@ func (r *perticipantRepo) Exists(ctx context.Context, tx *sqlx.Tx, eventID, user
 	var exists int
 	err = tx.QueryRowContext(ctx, query, args...).Scan(&exists)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
 		slog.Error("Failed to execute select query", logger.Extra(map[string]any{
 			"error": err.Error(),
 			"query": query,

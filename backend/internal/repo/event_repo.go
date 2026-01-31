@@ -359,12 +359,12 @@ func (r *eventRepo) getPublicEventQueryBuilder(userId int, status string) BuildQ
 			"e.registration_closes_at AS registration_closes_at",
 			"e.total_participants AS total_participants",
 			"e.max_participants AS max_participants",
-			"p.perticipation_status AS perticipation_status",
+			"p.status AS perticipation_status",
 			"p.guest_count AS guest_count",
 		).
 			Column(sq.Expr("? AS status", status)).
 			From(r.table+" e").
-			LeftJoin("event_type et", "e.event_type_id = et.id").
-			LeftJoin("participant p", "e.id = p.event_id AND p.user_id = ?", userId)
+			LeftJoin("event_types et ON e.event_type_id = et.id").
+			LeftJoin("participants p ON e.id = p.event_id AND p.user_id = ?", userId)
 	}
 }

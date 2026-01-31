@@ -95,6 +95,7 @@ export interface LoginResponse {
 }
 
 export interface GetEventsParams {
+  title?: string;
   mode?: 'ALL' | 'ONGOING' | 'UPCOMING' | 'RECENT';
   page?: number;
   limit?: number;
@@ -161,6 +162,7 @@ export const apiClient = {
   getEvents: (params: GetEventsParams = {}): Promise<AxiosResponse<EventsResponse>> => {
     const searchParams = new URLSearchParams();
 
+    if (params.title) searchParams.append('title', params.title);
     if (params.mode) searchParams.append('status', params.mode);
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
@@ -168,6 +170,19 @@ export const apiClient = {
     if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
 
     return axiosInstance.get(`/api/v1/events?${searchParams.toString()}`);
+  },
+
+  getPublicEvents: (params: GetEventsParams = {}): Promise<AxiosResponse<EventsResponse>> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.title) searchParams.append('title', params.title);
+    if (params.mode) searchParams.append('status', params.mode);
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.sortBy) searchParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
+
+    return axiosInstance.get(`/api/v1/public/events?${searchParams.toString()}`);
   },
 
   getParticipations: (params: any = {}): Promise<AxiosResponse<ParticipationsResponse>> => {
@@ -186,5 +201,13 @@ export const apiClient = {
   completeGoogleAuth: (provider: string, code: string, state: string): Promise<AxiosResponse<LoginResponse>> =>
     axiosInstance.get(`/auth/${provider}/callback?code=${code}&state=${state}`, {
       withCredentials: true,
+    }),
+
+  participateInEvent: (eventId: number, guestCount: number = 0): Promise<AxiosResponse<any>> =>
+    axiosInstance.post('/api/v1/event/participate', {
+      eventId,
+      guestCount,
+      // userId is required by validation but backend takes it from context
+      userId: 1,
     }),
 };
