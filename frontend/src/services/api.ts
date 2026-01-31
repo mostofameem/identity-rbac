@@ -104,24 +104,44 @@ export interface GetEventsParams {
 
 interface Event {
   id: number;
-  name: string;
+  title: string;
   description: string;
-  startDate: string; // ISO date string
-  endDate: string;   // ISO date string
-  location?: string;
-  capacity?: number;
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
-  createdAt: string;  // ISO date string
-  updatedAt: string;  // ISO date string
+  startAt: string; // ISO date string
+  registrationOpensAt: string;
+  registrationClosesAt: string;
+  maxParticipants: number;
+  totalParticipants: number;
+  status: string;
+}
+
+export interface Participation {
+  eventId: number;
+  eventTitle: string;
+  eventType: string;
+  eventStartTime: string;
+  guestCount: number;
+  status: string;
+  remarks?: string;
+  createdAt: string;
 }
 
 interface EventsResponse {
   data: Event[];
   pagination: {
-    total: number;
+    totalItem: number;
     page: number;
     limit: number;
-    totalPages: number;
+    totalPage: number;
+  };
+}
+
+interface ParticipationsResponse {
+  data: Participation[];
+  pagination: {
+    totalItem: number;
+    page: number;
+    limit: number;
+    totalPage: number;
   };
 }
 
@@ -141,13 +161,17 @@ export const apiClient = {
   getEvents: (params: GetEventsParams = {}): Promise<AxiosResponse<EventsResponse>> => {
     const searchParams = new URLSearchParams();
 
-    if (params.mode) searchParams.append('mode', params.mode);
+    if (params.mode) searchParams.append('status', params.mode);
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.sortBy) searchParams.append('sortBy', params.sortBy);
     if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
 
-    return axiosInstance.get(`/v1/events?${searchParams.toString()}`);
+    return axiosInstance.get(`/api/v1/events?${searchParams.toString()}`);
+  },
+
+  getParticipations: (params: any = {}): Promise<AxiosResponse<ParticipationsResponse>> => {
+    return axiosInstance.get('/api/v1/event/participations', { params });
   },
 
   registerForEvent: (eventId: number, data: RegisterEventRequest): Promise<AxiosResponse<any>> =>

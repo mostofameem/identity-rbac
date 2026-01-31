@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/api';
 import { Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { config } from '../config/env';
 
 const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -65,14 +66,14 @@ const HomePage: React.FC = () => {
                 <p className="text-gray-600">
                   Welcome back, {user?.email}. Use the sidebar to navigate through the application.
                 </p>
-                
+
                 {/* Debug: Show user permissions */}
                 {user?.permissions && user.permissions.length > 0 && (
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <h4 className="text-sm font-medium text-blue-800 mb-2">Your Permissions:</h4>
                     <div className="flex flex-wrap gap-2">
                       {user.permissions.map((permission, index) => (
-                        <span 
+                        <span
                           key={index}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                         >
@@ -82,7 +83,7 @@ const HomePage: React.FC = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="mt-8">
                   <h3 className="text-lg font-medium text-gray-700 mb-4">Quick Access</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -91,42 +92,53 @@ const HomePage: React.FC = () => {
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 hover:shadow-md transition-shadow">
                         <h4 className="font-medium text-blue-800">Role Management</h4>
                         <p className="text-sm text-blue-600 mt-1">Manage user roles and permissions</p>
-                        <Link 
-                          to="/roles" 
+                        <Link
+                          to="/roles"
                           className="inline-block mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium"
                         >
                           View Roles →
                         </Link>
                       </div>
                     )}
-                    
+
                     {/* User Management - Show if user has user related permissions */}
                     {hasUserPermission() && (
                       <div className="bg-green-50 p-4 rounded-lg border border-green-100 hover:shadow-md transition-shadow">
                         <h4 className="font-medium text-green-800">User Management</h4>
                         <p className="text-sm text-green-600 mt-1">Manage system users and access</p>
-                        <Link 
-                          to="/users" 
+                        <Link
+                          to="/users"
                           className="inline-block mt-3 text-sm text-green-600 hover:text-green-800 font-medium"
                         >
                           View Users →
                         </Link>
                       </div>
                     )}
-                    
+
                     {/* Permissions - Show if user has role or permission related permissions */}
                     {hasRolePermission() && (
                       <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 hover:shadow-md transition-shadow">
                         <h4 className="font-medium text-purple-800">Permissions</h4>
                         <p className="text-sm text-purple-600 mt-1">Configure fine-grained access controls</p>
-                        <Link 
-                          to="/permissions" 
+                        <Link
+                          to="/permissions"
                           className="inline-block mt-3 text-sm text-purple-600 hover:text-purple-800 font-medium"
                         >
                           View Permissions →
                         </Link>
                       </div>
                     )}
+                    {/* Customer Portal - Accessible by all authenticated users */}
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:shadow-md transition-shadow">
+                      <h4 className="font-medium text-indigo-800">Customer Portal</h4>
+                      <p className="text-sm text-indigo-600 mt-1">Browse and join ongoing events</p>
+                      <a
+                        href={config.customerPortalUrl}
+                        className="inline-block mt-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium no-underline"
+                      >
+                        Explore Events →
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>

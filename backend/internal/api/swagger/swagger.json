@@ -177,7 +177,9 @@
     },
     "/api/v1/event-types/settings": {
       "put": {
-        "tags": ["Event Types"],
+        "tags": [
+          "Event Types"
+        ],
         "summary": "Create or update event type settings",
         "description": "Creates or updates settings for an event type including auto-creation settings. Requires authentication and appropriate permissions.",
         "security": [
@@ -230,7 +232,9 @@
     },
     "/api/v1/event-types/settings/{id}": {
       "get": {
-        "tags": ["Event Types"],
+        "tags": [
+          "Event Types"
+        ],
         "summary": "Get event type settings by ID",
         "description": "Retrieves the settings for a specific event type by its ID. Requires authentication and appropriate permissions.",
         "security": [
@@ -1179,6 +1183,94 @@
           }
         }
       }
+    },
+    "/api/v1/event/participations": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "summary": "Get my event participations",
+        "description": "Returns a paginated list of events the authenticated user has participated in. Requires authentication.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for pagination",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of items per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "queryFrom",
+            "in": "query",
+            "description": "Filter participations from this date (YYYY-MM-DD)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "queryTo",
+            "in": "query",
+            "description": "Filter participations to this date (YYYY-MM-DD)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched participation history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyParticipationHistoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1311,6 +1403,76 @@
           }
         }
       },
+      "EventPerticipation": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "eventTitle": {
+            "type": "string",
+            "example": "Annual Conference 2023"
+          },
+          "eventType": {
+            "type": "string",
+            "example": "Conference"
+          },
+          "eventStartTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "guestCount": {
+            "type": "integer",
+            "example": 2
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "GOING",
+              "NOT_GOING",
+              "MAYBE"
+            ],
+            "example": "GOING"
+          },
+          "remarks": {
+            "type": "string",
+            "nullable": true,
+            "example": "Looking forward to it!"
+          },
+          "createdBy": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "MyParticipationHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventPerticipation"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          },
+          "message": {
+            "type": "string",
+            "example": "Successfully fetched events."
+          }
+        }
+      },
       "EventTypeListResponse": {
         "type": "object",
         "properties": {
@@ -1371,7 +1533,12 @@
       },
       "EventTypeSettingsRequest": {
         "type": "object",
-        "required": ["eventTypeId", "autoCreateAt", "autoEventIntervalInMinutes", "isActive"],
+        "required": [
+          "eventTypeId",
+          "autoCreateAt",
+          "autoEventIntervalInMinutes",
+          "isActive"
+        ],
         "properties": {
           "eventTypeId": {
             "type": "integer",

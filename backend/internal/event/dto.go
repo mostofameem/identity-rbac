@@ -129,3 +129,24 @@ type EventTypeResponse struct {
 	UpdatedAt   *time.Time `db:"updated_at"                  json:"updatedAt"`
 	IsActive    bool       `db:"is_active"                   json:"isActive"`
 }
+
+type EventPerticipationDto struct {
+	EventId        int                        `db:"event_id"                    json:"eventId"`
+	EventTitle     string                     `db:"event_title"                 json:"eventTitle"`
+	EventType      string                     `db:"event_type"                  json:"eventType"`
+	EventStartTime time.Time                  `db:"event_start_time"            json:"eventStartTime"`
+	GuestCount     int                        `db:"guest_count"                 json:"guestCount"`
+	Status         enum.PerticepateStatusType `db:"status"                      json:"status"`
+	Remarks        *string                    `db:"remarks"                     json:"remarks"`
+	CreatedBy      int                        `db:"created_by"                  json:"createdBy"`
+	CreatedAt      time.Time                  `db:"created_at"                  json:"createdAt"`
+	UpdatedAt      *time.Time                 `db:"updated_at"                  json:"updatedAt"`
+}
+
+type GetEventPerticipationsReq struct {
+	UserId    int
+	Page      int
+	Limit     int
+	QueryFrom *time.Time
+	QueryTo   *time.Time
+}
