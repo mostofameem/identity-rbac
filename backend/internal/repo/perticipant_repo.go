@@ -190,3 +190,32 @@ func (r *perticipantRepo) getPerticipationCountQueryBuilder() BuildQuery {
 			LeftJoin("event_types et ON et.id = e.event_type_id")
 	}
 }
+
+func (r *perticipantRepo) UpdateStatus(ctx context.Context, tx *sqlx.Tx, req event.UpdatePerticipationStatusReq) error {
+	query, args, err := r.psql.Update(r.table).
+		Set("status", req.Status).
+		Set("remarks", req.Remarks).
+		Set("updated_at", req.CurrentTime).
+		Set("updated_by", req.UserId).
+		Where(sq.Eq{"event_id": req.EventId, "user_id": req.UserId}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"req":   req,
+		}))
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  req,
+		}))
+		return err
+	}
+
+	return nil
+}

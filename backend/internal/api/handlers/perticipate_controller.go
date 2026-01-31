@@ -5,11 +5,17 @@ import (
 	"errors"
 	"identity-rbac/internal/api/middlewares"
 	"identity-rbac/internal/api/utils"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/util"
 	"net/http"
 	"time"
 )
+
+type UpdatePerticipationStatusReq struct {
+	EventId int                        `json:"event_id"`
+	Status  enum.PerticepateStatusType `json:"status"`
+}
 
 func (handlers *Handlers) PerticipateEvent(w http.ResponseWriter, r *http.Request) {
 	var request PerticipateEventRequest
@@ -88,5 +94,43 @@ func (handlers *Handlers) GetMyEventPerticipations(w http.ResponseWriter, r *htt
 		"data":       events,
 		"pagination": pagination,
 		"message":    "Successfully fetched events.",
+	})
+}
+
+func (handlers *Handlers) UpdatePerticipation(w http.ResponseWriter, r *http.Request) {
+	var request UpdatePerticipationStatusReq
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	// Get user ID from context (set by authentication middleware)
+	userId, ok := r.Context().Value(middlewares.UidKey).(int)
+	if !ok {
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
+
+	// Prepare service request
+	serviceReq := event.UpdatePerticipationStatusReq{
+		EventId:     request.EventId,
+		UserId:      userId,
+		Status:      request.Status,
+		CurrentTime: util.GetCurrentTime(),
+	}
+
+	// Call event service
+	err := handlers.eventSvc.UpdatePerticipation(r.Context(), serviceReq)
+	if err != nil {
+		if errors.Is(err, util.ErrSomethingWentWrong) {
+			utils.SendError(w, http.StatusInternalServerError, "Failed to update perticipation")
+			return
+		}
+
+		utils.SendError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Perticipation updated successfully",
 	})
 }

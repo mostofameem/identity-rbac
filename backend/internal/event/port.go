@@ -17,6 +17,7 @@ type Service interface {
 
 	PerticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 	MyEventPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, util.Pagination, error)
+	UpdatePerticipation(ctx context.Context, req UpdatePerticipationStatusReq) error
 
 	CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error)
 	GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error)
@@ -55,6 +56,7 @@ type PerticipantRepo interface {
 
 	GetMyPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, error)
 	GetMyPerticipationCount(ctx context.Context, req GetEventPerticipationsReq) (int, error)
+	UpdateStatus(ctx context.Context, tx *sqlx.Tx, req UpdatePerticipationStatusReq) error
 }
 
 type EventTypeSettingRepo interface {

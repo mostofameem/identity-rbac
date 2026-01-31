@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
 	"log"
 )
@@ -81,4 +82,60 @@ func (s *service) MyEventPerticipations(ctx context.Context, req GetEventPertici
 		TotalPage: (count + req.Limit - 1) / req.Limit,
 		TotalItem: count,
 	}, nil
+}
+
+func (s *service) UpdatePerticipation(ctx context.Context, req UpdatePerticipationStatusReq) error {
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v\n", err)
+		return util.ErrSomethingWentWrong
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	// IMPORTANT: row lock
+	event, err := s.eventRepo.GetByIDForUpdate(ctx, tx, req.EventId)
+	if err != nil {
+		log.Printf("Failed to get event: %v\n", err)
+		return util.ErrSomethingWentWrong
+	}
+	if event == nil {
+		return util.ErrEventNotFound
+	}
+
+	// Prevent duplicate participation
+	exists, err := s.perticipantRepo.Exists(ctx, tx, req.EventId, req.UserId)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+	if !exists {
+		return util.ErrAlreadyRegistered
+	}
+
+	if err = s.perticipantRepo.UpdateStatus(ctx, tx, req); err != nil {
+		return util.ErrSomethingWentWrong
+	}
+
+	switch req.Status {
+	case enum.PerticepateStatusCanceled:
+		if err = s.eventRepo.UpdateParticipantCount(ctx, tx, req.EventId, event.TotalParticipants-1); err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	case enum.PerticepateStatusGoing:
+		if err = s.eventRepo.UpdateParticipantCount(ctx, tx, req.EventId, event.TotalParticipants+1); err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	}
+
+	return nil
 }
