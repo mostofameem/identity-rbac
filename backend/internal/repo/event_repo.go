@@ -9,6 +9,7 @@ import (
 	"identity-rbac/internal/event"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -196,24 +197,6 @@ func (r *eventRepo) GetTotalEventCount(
 	return totalItem, nil
 }
 
-func (r *eventRepo) getEventQueryBuilder() BuildQuery {
-	return func() sq.SelectBuilder {
-		return r.psql.Select(
-			"*",
-		).
-			From(r.table)
-	}
-}
-
-func (r *eventRepo) getEventCountQueryBuilder() BuildQuery {
-	return func() sq.SelectBuilder {
-		return r.psql.Select(
-			"COUNT(*)",
-		).
-			From(r.table)
-	}
-}
-
 func (r eventRepo) GetByIDForUpdate(
 	ctx context.Context,
 	tx *sqlx.Tx,
@@ -284,4 +267,104 @@ func (r *eventRepo) UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id in
 	}
 
 	return nil
+}
+
+func (r *eventRepo) GetPublicEventWithPagination(ctx context.Context, title string, limit int, page int, status string) ([]event.EventPublicResponse, error) {
+	limit, Offset := utils.ConfigPageSize(page, limit)
+
+	query, args, err := NewQueryBuilder(r.getPublicEventQueryBuilder()).
+		FilterByPrefix("title", title).
+		FilterByMode(status, time.Now()).
+		FilterByBoolean("is_active", true).
+		Limit(limit).
+		Offset(Offset).
+		OrderBy("start_at", "DESC").
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build query", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return nil, err
+	}
+
+	var events []event.EventPublicResponse
+	if err := r.db.SelectContext(ctx, &events, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		slog.Error("Failed to execute query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return nil, err
+	}
+
+	return events, nil
+}
+
+func (r *eventRepo) GetTotalPublicEventCount(ctx context.Context, status string) (int, error) {
+	query, args, err := NewQueryBuilder(r.getEventCountQueryBuilder()).
+		FilterByBoolean("is_active", true).
+		FilterByMode(status, time.Now()).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build query", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return 0, err
+	}
+
+	var totalItem int
+	if err := r.db.GetContext(ctx, &totalItem, query, args...); err != nil {
+		slog.Error("Failed to execute query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return 0, err
+	}
+
+	return totalItem, nil
+}
+
+func (r *eventRepo) getEventQueryBuilder() BuildQuery {
+	return func() sq.SelectBuilder {
+		return r.psql.Select(
+			"*",
+		).
+			From(r.table)
+	}
+}
+
+func (r *eventRepo) getEventCountQueryBuilder() BuildQuery {
+	return func() sq.SelectBuilder {
+		return r.psql.Select(
+			"COUNT(id)",
+		).
+			From(r.table)
+	}
+}
+
+func (r *eventRepo) getPublicEventQueryBuilder() BuildQuery {
+	return func() sq.SelectBuilder {
+		return r.psql.Select(
+			"e.id AS id",
+			"e.title AS title",
+			"e.description AS description",
+			"et.name AS event_type",
+			"e.start_at AS start_at",
+			"e.registration_opens_at AS registration_opens_at",
+			"e.registration_closes_at AS registration_closes_at",
+			"e.total_participants AS total_participants",
+			"e.max_participants AS max_participants",
+			"status = null",
+			"p.perticipation_status AS perticipation_status",
+			"p.guest_count AS guest_count",
+		).
+			From(r.table).
+			LeftJoin("event_type et", "e.event_type_id = et.id").
+			LeftJoin("participant p", "e.id = p.event_id")
+	}
 }

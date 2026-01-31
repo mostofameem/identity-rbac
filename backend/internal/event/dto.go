@@ -81,6 +81,14 @@ type GetEventsReq struct {
 	CurrentTime time.Time
 }
 
+type GetPublicEventsReq struct {
+	Title       string
+	EventStatus enum.PublicEventStatusType
+	Page        int
+	Limit       int
+	CurrentTime time.Time
+}
+
 type EventCustomerResponse struct {
 	Id                   int                  `json:"id"`
 	Title                string               `json:"title"`
@@ -93,6 +101,21 @@ type EventCustomerResponse struct {
 	MaxParticipants      int                  `json:"maxParticipants"`
 	Status               enum.EventStatusType `json:"status"`
 	IsActive             bool                 `json:"isActive"`
+}
+
+type EventPublicResponse struct {
+	Id                   int                  `json:"id"                   db:"id"`
+	Title                string               `json:"title"                db:"title"`
+	Description          string               `json:"description"          db:"description"`
+	EventType            string               `json:"eventType"            db:"event_type"`
+	StartAt              time.Time            `json:"startAt"              db:"start_at"`
+	RegistrationOpensAt  *time.Time           `json:"registrationOpensAt"  db:"registration_opens_at"`
+	RegistrationClosesAt *time.Time           `json:"registrationClosesAt" db:"registration_closes_at"`
+	TotalParticipants    int                  `json:"totalParticipants"    db:"total_participants"`
+	MaxParticipants      int                  `json:"maxParticipants"      db:"max_participants"`
+	Status               enum.EventStatusType `json:"status"               db:"status"`
+	PerticipationStatus  string               `json:"perticipationStatus"  db:"perticipation_status"`
+	GuestCount           int                  `json:"guestCount"           db:"guest_count"`
 }
 
 type PerticipateEventReq struct {
