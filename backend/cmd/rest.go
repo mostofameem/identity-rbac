@@ -10,6 +10,7 @@ import (
 	"identity-rbac/internal/auth"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/rbac"
+	"identity-rbac/internal/redis"
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/internal/token"
 	"identity-rbac/pkg/logger"
@@ -50,6 +51,16 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	userSessionRepo := repo.NewUserSessionRepo(db)
 	mailService := mail.NewMailService(cnf.Mail)
 
+	redisClient, err := redis.NewClient(cnf.Redis)
+	if err != nil {
+		slog.Error("Failed to Connect with Redis:", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return err
+	}
+	defer redisClient.Close()
+	cacheService := redis.NewCacheService(redisClient)
+
 	rbacSvc := rbac.NewService(cnf,
 		userRepo,
 		roleRepo,
@@ -60,6 +71,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		userSessionRepo,
 		tokenService,
 		mailService,
+		cacheService,
 	)
 
 	eventRepo := repo.NewEventRepo(db)

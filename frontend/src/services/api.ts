@@ -37,13 +37,13 @@ axiosInstance.interceptors.response.use(
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
           console.log('🔄 Token expired, attempting refresh...');
-          
+
           // Backend expects GET request with query parameter
           const response = await axios.get(`${API_BASE_URL}/api/v1/token/refresh?token=${refreshToken}`);
 
           const { accessToken } = response.data;
           localStorage.setItem('token', accessToken);
-          
+
           console.log('✅ Token refreshed successfully');
 
           // Update the authorization header and retry the request
@@ -54,7 +54,7 @@ axiosInstance.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error('❌ Token refresh failed:', refreshError);
-        
+
         // Only redirect to login if refresh token is invalid
         // For access denied errors, let the component handle it
         if ((refreshError as any).response?.status === 401) {
@@ -140,7 +140,7 @@ export const apiClient = {
 
   getEvents: (params: GetEventsParams = {}): Promise<AxiosResponse<EventsResponse>> => {
     const searchParams = new URLSearchParams();
-    
+
     if (params.mode) searchParams.append('mode', params.mode);
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
@@ -158,4 +158,9 @@ export const apiClient = {
 
   getUserPermissions: (): Promise<AxiosResponse<GetUserPermissionsResponse>> =>
     axiosInstance.get('/api/v1/users/me/permissions'),
-}; 
+
+  completeGoogleAuth: (provider: string, code: string, state: string): Promise<AxiosResponse<LoginResponse>> =>
+    axiosInstance.get(`/auth/${provider}/callback?code=${code}&state=${state}`, {
+      withCredentials: true,
+    }),
+};
