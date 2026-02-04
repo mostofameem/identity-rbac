@@ -129,12 +129,9 @@ func (repo *eventTypeSettingRepo) GetByEventTypeID(ctx context.Context, eventTyp
 	err = repo.db.GetContext(ctx, &settings, query, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// Return default values if no record found
-			return &entity.EventTypeSettings{
-				EventTypeID: eventTypeID,
-				IsActive:    true, // Default to active if creating new
-			}, nil
+			return nil, util.ErrNotFound
 		}
+
 		return nil, fmt.Errorf("failed to get event type settings: %w", err)
 	}
 

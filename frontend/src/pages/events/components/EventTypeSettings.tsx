@@ -23,6 +23,7 @@ import {
   TableHead,
   TableRow,
   IconButton,
+  Alert,
 } from '@mui/material';
 import { Save as SaveIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { EventTypeSetting } from '../types/event.types';
@@ -66,7 +67,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
     setLoading(true);
     try {
       const response = await eventTypeService.getEventTypeSettings(selectedEventType);
-      setSettings(response);
+      setSettings(response || []);
     } catch (error) {
       console.error('Error fetching event type settings:', error);
     } finally {
@@ -256,7 +257,11 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
           {loading ? (
             <Typography>Loading settings...</Typography>
           ) : settings.length === 0 ? (
-            <Typography>No settings found for this event type.</Typography>
+            <Box sx={{ mt: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                No event type settings found for this event type. Please create one below.
+              </Alert>
+            </Box>
           ) : (
             <TableContainer>
               <Table>

@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	UPCOMING = "UPCOMING"
-	RECENT   = "RECENT"
-	ONGOING  = "ONGOING"
+	UPCOMING   = "UPCOMING"
+	RECENT     = "RECENT"
+	ONGOING    = "ONGOING"
+	INACTIVE   = "INACTIVE"
 
 	ALL               = "ALL"
 	REGISTERED        = "REGISTERED"
@@ -120,7 +121,12 @@ func (q *queryBuilder) FilterByMode(key string, val time.Time) *queryBuilder {
 
 	case RECENT:
 		q.query = q.query.Where(sq.LtOrEq{"start_at": val})
+
+	case INACTIVE:
+		q.query = q.query.Where(sq.Eq{"is_active": false})
+
 	}
+
 	return q
 }
 
