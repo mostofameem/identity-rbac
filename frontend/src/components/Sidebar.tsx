@@ -19,7 +19,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="w-64 bg-gray-800 text-white h-screen fixed left-0 top-0 overflow-y-auto z-50 hidden sm:block">
       <div className="p-4 border-b border-gray-700">
-        <h1 className="text-xl font-bold">RBAC System</h1>
+        <h1 className="text-xl font-bold">Event Management</h1>
       </div>
 
       <nav className="mt-4">
@@ -69,13 +69,6 @@ const Sidebar: React.FC = () => {
             Events
           </Link>
 
-          {/* Event Type */}
-          <Link
-            to="/event-types"
-            className={`block px-4 py-2 rounded hover:bg-gray-700 ${isActive('/event-types')}`}
-          >
-            Event Type
-          </Link>
 
           {/* Customer Portal */}
           <div className="mt-4 pt-4 border-t border-gray-700">

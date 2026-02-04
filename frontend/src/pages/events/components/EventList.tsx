@@ -32,8 +32,13 @@ import EventForm from './EventForm';
 import EventDetailsDialog from './EventDetailsDialog';
 import { eventService } from '../services/eventService';
 
-const EventList: React.FC = () => {
+interface EventListProps {
+  onEventClick?: (event: EventType) => void;
+}
+
+const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
   const [events, setEvents] = useState<EventType[]>([]);
+
   const [open, setOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
@@ -233,8 +238,14 @@ const EventList: React.FC = () => {
                 </TableRow>
               ) : (
                 events.map((event) => (
-                  <TableRow key={event.id}>
+                  <TableRow
+                    key={event.id}
+                    hover
+                    onClick={() => onEventClick && onEventClick(event)}
+                    sx={{ cursor: onEventClick ? 'pointer' : 'default' }}
+                  >
                     <TableCell>
+
                       <Typography variant="body2" fontWeight="medium">
                         {event.title}
                       </Typography>
@@ -288,21 +299,37 @@ const EventList: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton onClick={() => handleOpenDetails(event)} color="info">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetails(event);
+                        }}
+                        color="info"
+                      >
                         <VisibilityIcon />
                       </IconButton>
                       <IconButton
-                        onClick={() => handleToggleStatus(event)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleStatus(event);
+                        }}
                         color={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'warning' : 'success'}
                         size="small"
                         title={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'Deactivate' : 'Activate'}
                       >
                         <PowerIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleDelete(event.id)} color="error">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(event.id);
+                        }}
+                        color="error"
+                      >
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>
+
                   </TableRow>
                 ))
               )}

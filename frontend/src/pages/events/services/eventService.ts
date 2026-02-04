@@ -5,8 +5,11 @@ import {
   EventType,
   EventTypeSetting,
   PaginatedResponse,
-  ListQueryParams
+  ListQueryParams,
+  ParticipationDetail,
+  ParticipationQueryParams
 } from '../types/event.types';
+
 
 const API_BASE_URL = `${config.apiBaseUrl}/api/v1`;
 
@@ -346,7 +349,31 @@ export const eventService = {
       handleApiError(error);
     }
   },
+
+  getEventParticipants: async (eventId: string, params: ParticipationQueryParams = {}): Promise<PaginatedResponse<ParticipationDetail>> => {
+    try {
+      const queryParams: any = {};
+      if (params.page) queryParams.page = params.page;
+      if (params.limit) queryParams.limit = params.limit;
+      if (params.email) queryParams.email = params.email;
+
+      const response = await api.get(`/events/${eventId}/participants`, { params: queryParams });
+      const backendData = response.data.data || [];
+      const pagination = response.data.pagination || {};
+
+      return {
+        data: backendData,
+        total: pagination.totalItem || 0,
+        page: pagination.currentPage || 1,
+        limit: params.limit || 50,
+        totalPages: pagination.totalPage || 1,
+      };
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
 };
+
 
 const services = {
   eventType: eventTypeService,

@@ -44,9 +44,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
               </div>
               <div className="flex items-center space-x-4">
                 {headerAction}
-                <span className="text-sm text-gray-600">
-                  Welcome, {user?.email}
-                </span>
               </div>
             </div>
           </div>
