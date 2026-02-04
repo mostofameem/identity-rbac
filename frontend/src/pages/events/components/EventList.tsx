@@ -1,12 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardActions,
-  CardContent,
   Container,
-  Grid,
   Typography,
   IconButton,
   Table,
@@ -18,8 +14,19 @@ import {
   Paper,
   TablePagination,
   Chip,
+  TextField,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, PowerSettingsNew as PowerIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+  PowerSettingsNew as PowerIcon,
+  Search as SearchIcon,
+} from '@mui/icons-material';
 import type { Event as EventType } from '../types/event.types';
 import EventForm from './EventForm';
 import EventDetailsDialog from './EventDetailsDialog';
@@ -35,13 +42,17 @@ const EventList: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [searchTitle, setSearchTitle] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       const response = await eventService.getEvents({
         page: page + 1,
         limit: rowsPerPage,
+        search: searchTitle || undefined,
+        status: selectedStatus || undefined,
       });
       setEvents(response.data || []);
       setTotal(response.total || 0);
@@ -51,11 +62,28 @@ const EventList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchTitle, selectedStatus]);
 
   useEffect(() => {
     fetchEvents();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, selectedStatus, fetchEvents]);
+
+  // Debounced search for title
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page !== 0) {
+        setPage(0);
+      } else {
+        fetchEvents();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTitle, page, fetchEvents]);
+
+  const handleStatusChange = (event: any) => {
+    setSelectedStatus(event.target.value);
+    setPage(0);
+  };
 
   const handleOpen = (event?: EventType) => {
     setSelectedEvent(event || null);
@@ -146,6 +174,36 @@ const EventList: React.FC = () => {
         </Button>
       </Box>
 
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <TextField
+          label="Search by Name"
+          variant="outlined"
+          size="small"
+          value={searchTitle}
+          onChange={(e) => setSearchTitle(e.target.value)}
+          sx={{ minWidth: 250 }}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />,
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel id="status-filter-label">Filter by Status</InputLabel>
+          <Select
+            labelId="status-filter-label"
+            id="status-filter"
+            value={selectedStatus}
+            label="Filter by Status"
+            onChange={handleStatusChange}
+          >
+            <MenuItem value="">All Statuses</MenuItem>
+            <MenuItem value="ONGOING">Ongoing</MenuItem>
+            <MenuItem value="UPCOMING">Upcoming</MenuItem>
+            <MenuItem value="RECENT">Recent</MenuItem>
+            <MenuItem value="INACTIVE">Inactive</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
       <Paper>
         <TableContainer>
           <Table>
@@ -220,6 +278,11 @@ const EventList: React.FC = () => {
                               : event.status === 'RECENT'
                                 ? 'primary'
                                 : 'default'
+                        }
+                        sx={
+                          event.status === 'INACTIVE'
+                            ? { bgcolor: 'grey.700', color: 'white' }
+                            : {}
                         }
                         size="small"
                       />
