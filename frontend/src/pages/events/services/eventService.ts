@@ -372,6 +372,14 @@ export const eventService = {
       return handleApiError(error);
     }
   },
+
+  updateShouldAutoCreateEvent: async (id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> => {
+    try {
+      await api.put(`/events/${id}/update-should-auto-create-event`, { status });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 

@@ -291,7 +291,7 @@ func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) 
 	return nil
 }
 
-func (s *service) UpdateHotEventStatus(ctx context.Context, id int, status string) error {
+func (s *service) UpdateShouldAutoCreateEventStatus(ctx context.Context, id int, status string) error {
 
 	tx, err := s.transactionRepo.BeginTx(ctx)
 	if err != nil {

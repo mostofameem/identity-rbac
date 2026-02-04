@@ -256,7 +256,7 @@ func (handlers *Handlers) GetEventParticipants(w http.ResponseWriter, r *http.Re
 	})
 }
 
-func (handlers *Handlers) UpdateHotEventStatus(w http.ResponseWriter, r *http.Request) {
+func (handlers *Handlers) UpdateShouldAutoCreateEvent(w http.ResponseWriter, r *http.Request) {
 	id, ok := utils.GetIntPathParam(r, "id", w)
 	if !ok {
 		return
@@ -273,7 +273,19 @@ func (handlers *Handlers) UpdateHotEventStatus(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err := handlers.eventSvc.UpdateHotEventStatus(r.Context(), id, string(request.Status))
+	//rate limiting
+	key := handlers.rateLimiterSvc.GetShouldAutoCreateEventKey(id)
+	isAllowed, err := handlers.rateLimiterSvc.IsAllowed(r.Context(), key)
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+	if !isAllowed {
+		utils.SendError(w, http.StatusTooManyRequests, "Too many requests, please try again later.")
+		return
+	}
+
+	err = handlers.eventSvc.UpdateShouldAutoCreateEventStatus(r.Context(), id, string(request.Status))
 	if err != nil {
 		if errors.Is(err, util.ErrSomethingWentWrong) {
 			utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")

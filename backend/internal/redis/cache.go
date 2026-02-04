@@ -15,5 +15,6 @@ type TokenBucketRateLimiterService interface {
 	IsAllowed(ctx context.Context, key string) (bool, error)
 	GetParticipationKey(userId int) string
 	GetGuestCountKey(userId int) string
+	GetShouldAutoCreateEventKey(eventId int) string
 	Close() error
 }

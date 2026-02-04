@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const DEFAULT_PARTICIPANT_COUNT = 1
+
 func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq) (err error) {
 	tx, err := s.transactionRepo.BeginTx(ctx)
 	if err != nil {

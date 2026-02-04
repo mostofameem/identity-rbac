@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	TOKEN_BUCKET_RATE_LIMITER_PREFIX  = "rate_limit:"
-	PARTICIPATION_RATE_LIMITER_PREFIX = "rate_limit:participation:"
-	GUEST_COUNT_RATE_LIMITER_PREFIX   = "rate_limit:guest_count:"
-	RATE_LIMIT_LUA_SCRIPT             = `
+	TOKEN_BUCKET_RATE_LIMITER_PREFIX             = "rate_limit:"
+	PARTICIPATION_RATE_LIMITER_PREFIX            = "rate_limit:participation:"
+	GUEST_COUNT_RATE_LIMITER_PREFIX              = "rate_limit:guest_count:"
+	SHOULD_AUTO_CREATE_EVENT_RATE_LIMITER_PREFIX = "rate_limit:should_auto_create_event:"
+	RATE_LIMIT_LUA_SCRIPT                        = `
 local key = KEYS[1]
 local capacity = tonumber(ARGV[1])
 local refill_rate = tonumber(ARGV[2])
@@ -78,4 +79,8 @@ func (t *tokenBucketRateLimiterService) GetParticipationKey(userID int) string {
 
 func (t *tokenBucketRateLimiterService) GetGuestCountKey(userID int) string {
 	return GUEST_COUNT_RATE_LIMITER_PREFIX + strconv.Itoa(userID)
+}
+
+func (t *tokenBucketRateLimiterService) GetShouldAutoCreateEventKey(eventId int) string {
+	return SHOULD_AUTO_CREATE_EVENT_RATE_LIMITER_PREFIX + strconv.Itoa(eventId)
 }
