@@ -32,6 +32,12 @@ type GetEventRequest struct {
 	Limit       int                  `form:"limit" json:"limit"`
 }
 
+type GetEventParticipantsRequest struct {
+	Email string `form:"email" json:"email"`
+	Page  int    `form:"page" json:"page"`
+	Limit int    `form:"limit" json:"limit"`
+}
+
 type PerticipateEventRequest struct {
 	EventId    int `json:"eventId" validation:"required,gt=0"`
 	UserId     int `json:"userId" validation:"required,gt=0"`
@@ -216,5 +222,36 @@ func (handlers *Handlers) UpdateEventStatus(w http.ResponseWriter, r *http.Reque
 
 	utils.SendData(w, map[string]any{
 		"message": "Successfully updated event type status.",
+	})
+}
+
+func (handlers *Handlers) GetEventParticipants(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return
+	}
+
+	var request GetEventParticipantsRequest
+	err := utils.BindValues(&request, r.URL.Query())
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Failed to extract query params")
+		return
+	}
+
+	participants, pagination, err := handlers.eventSvc.GetEventParticipationList(r.Context(), event.GetEventParticipantsReq{
+		EventId: id,
+		Email:   request.Email,
+		Page:    request.Page,
+		Limit:   request.Limit,
+	})
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"data":       participants,
+		"pagination": pagination,
+		"message":    "Successfully fetched event participants.",
 	})
 }

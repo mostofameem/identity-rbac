@@ -430,3 +430,19 @@ func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) 
 
 	return nil
 }
+
+func (s *service) GetEventParticipationList(ctx context.Context, req GetEventParticipantsReq) ([]EventParticipantDetailDto, util.Pagination, error) {
+	participants, err := s.participantRepo.GetEventParticipants(ctx, req)
+	if err != nil {
+		return nil, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+
+	totalItems, err := s.participantRepo.GetEventParticipantsCount(ctx, req)
+	if err != nil {
+		return nil, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+
+	pagination := util.GetPaginationResponse(totalItems, req.Page, req.Limit)
+
+	return participants, pagination, nil
+}

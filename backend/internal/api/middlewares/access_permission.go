@@ -34,4 +34,10 @@ const (
 	EVENT_TYPE_SETTINGS_UPDATE_ACCESS = "event_type_settings.update"
 	EVENT_TYPE_SETTINGS_DELETE_ACCESS = "event_type_settings.delete"
 	EVENT_TYPE_SETTINGS_VIEW_ACCESS   = "event_type_settings.view"
+
+	// Perticipent
+	PARTISIPENT_CREATE_ACCESS = "perticipent.create"
+	PARTISIPENT_UPDATE_ACCESS = "perticipent.update"
+	PARTISIPENT_DELETE_ACCESS = "perticipent.delete"
+	PARTISIPENT_VIEW_ACCESS   = "perticipent.view"
 )

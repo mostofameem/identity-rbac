@@ -182,3 +182,19 @@ type UpdatePerticipationStatusReq struct {
 	Remarks     *string
 	CurrentTime time.Time
 }
+
+type GetEventParticipantsReq struct {
+	EventId int
+	Email   string
+	Page    int
+	Limit   int
+}
+
+type EventParticipantDetailDto struct {
+	UserEmail  string     `db:"user_email"  json:"userEmail"`
+	GuestCount int        `db:"guest_count" json:"guestCount"`
+	Status     string     `db:"status"      json:"status"`
+	CreatedAt  time.Time  `db:"created_at"  json:"createdAt"`
+	UpdatedAt  *time.Time `db:"updated_at"  json:"updatedAt"`
+	Remarks    *string    `db:"remarks"     json:"remarks"`
+}
