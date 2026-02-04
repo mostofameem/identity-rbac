@@ -20,4 +20,6 @@ var (
 	ErrAlreadyPerticipated        = fmt.Errorf("You are already perticipated in this event.")
 	ErrAlreadyCanceled            = fmt.Errorf("You are already canceled your perticipation.")
 	ErrAlreadyGoing               = fmt.Errorf("You are already going to this event.")
+	ErrHotEventsLimitReached      = fmt.Errorf("Hot events limit reached.")
+	ErrEventAlreadyInStatus       = fmt.Errorf("Event is already in this status.")
 )

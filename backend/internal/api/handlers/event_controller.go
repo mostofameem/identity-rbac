@@ -255,3 +255,35 @@ func (handlers *Handlers) GetEventParticipants(w http.ResponseWriter, r *http.Re
 		"message":    "Successfully fetched event participants.",
 	})
 }
+
+func (handlers *Handlers) UpdateHotEventStatus(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return
+	}
+
+	var request EventStatusChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := utils.Validate(request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Validation error")
+		return
+	}
+
+	err := handlers.eventSvc.UpdateHotEventStatus(r.Context(), id, string(request.Status))
+	if err != nil {
+		if errors.Is(err, util.ErrSomethingWentWrong) {
+			utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Successfully toggled hot event status.",
+	})
+}

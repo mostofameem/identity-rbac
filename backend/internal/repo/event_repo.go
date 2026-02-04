@@ -386,3 +386,30 @@ func (r *eventRepo) GetEventDetailsIn(ctx context.Context, eventIDs ...int) []en
 	}
 	return events
 }
+
+func (r *eventRepo) UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *sqlx.Tx, id int, shouldAutoCreateEvent bool) error {
+
+	query, args, err := r.psql.
+		Update(r.table).
+		Set("should_auto_create_event", shouldAutoCreateEvent).
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"id":    id,
+		}))
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
+}

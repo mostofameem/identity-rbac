@@ -42,6 +42,15 @@ func (server *Server) initEventRoutes(mux *http.ServeMux, manager *middlewares.M
 	)
 
 	mux.Handle(
+		"PUT /api/v1/events/{id}/update-hot-event-status",
+		manager.With(
+			http.HandlerFunc(server.handlers.UpdateHotEventStatus),
+			server.middleware.Authorization(middlewares.EVENT_UPDATE_ACCESS),
+			server.middleware.AuthenticateJWT,
+		),
+	)
+
+	mux.Handle(
 		"GET /api/v1/events/{id}",
 		manager.With(
 			http.HandlerFunc(server.handlers.GetEventDetails),

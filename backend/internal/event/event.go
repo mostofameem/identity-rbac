@@ -290,3 +290,73 @@ func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) 
 
 	return nil
 }
+
+func (s *service) UpdateHotEventStatus(ctx context.Context, id int, status string) error {
+
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	event, err := s.eventRepo.GetByID(ctx, tx, id)
+	if err != nil {
+		slog.Error("Failed to get event type", "error", err)
+		return util.ErrSomethingWentWrong
+	}
+
+	isActive := status == "ACTIVE"
+	if event.ShouldAutoCreateEvent == isActive {
+		return util.ErrEventAlreadyInStatus
+	}
+
+	if event == nil {
+		slog.Error("Event not found", "id", id)
+		return util.ErrNotFound
+	}
+
+	if event.ShouldAutoCreateEvent {
+		err = s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, false)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+
+		err = s.hotEventsRepo.DeleteHotEvent(ctx, tx, id, event.EventTypeId)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	} else {
+		totalHotEvents, err := s.hotEventsRepo.GetTotalHotEvents(ctx, tx)
+		if totalHotEvents >= s.cnf.MaxHotEventLimit {
+			return util.ErrHotEventsLimitReached
+		}
+
+		err = s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, true)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+
+		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
+			EventID:         id,
+			EventTypeID:     event.EventTypeId,
+			LastRecreatedAt: event.CreatedAt,
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		})
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	}
+
+	return nil
+}

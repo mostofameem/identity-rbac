@@ -14,6 +14,7 @@ type Service interface {
 	GetPublicEvents(ctx context.Context, req GetPublicEventsReq) ([]EventPublicResponse, util.Pagination, error)
 	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
 	UpdateEventStatus(ctx context.Context, id int, status string) error
+	UpdateHotEventStatus(ctx context.Context, id int, status string) error
 
 	PerticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 	MyEventPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, util.Pagination, error)
@@ -40,6 +41,7 @@ type EventRepo interface {
 	GetTotalEventCount(ctx context.Context, req GetEventsQueryReq) (int, error)
 	UpdateParticipantCount(ctx context.Context, tx *sqlx.Tx, eventID, count int) error
 	UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error
+	UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *sqlx.Tx, id int, shouldAutoCreateEvent bool) error
 }
 
 type EventTypeRepo interface {
