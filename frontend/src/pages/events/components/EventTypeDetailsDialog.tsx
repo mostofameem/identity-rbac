@@ -52,6 +52,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
     });
     const [settingsLoading, setSettingsLoading] = useState(false);
     const [settingsError, setSettingsError] = useState<string | null>(null);
+    const [noSettings, setNoSettings] = useState(false);
 
     useEffect(() => {
         if (open && initialEventType?.id) {
@@ -89,6 +90,9 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                     autoEventIntervalInMinutes: typeof intervalValue === 'string' ? parseInt(intervalValue) : intervalValue,
                     isActive: activeValue === true || activeValue === 'true',
                 });
+                setNoSettings(false);
+            } else {
+                setNoSettings(true);
             }
         } catch (error: any) {
             console.error('Error fetching event type settings:', error);
@@ -214,6 +218,11 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                     {/* Auto-Creation Settings Card */}
                     <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
                         <CardContent>
+                            {noSettings && !isEditing && (
+                                <Alert severity="warning" sx={{ mb: 2 }}>
+                                    No event settings provided. Please click "Edit Settings" to create one.
+                                </Alert>
+                            )}
                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                                 <Box display="flex" alignItems="center" gap={1}>
                                     <Schedule color="primary" />

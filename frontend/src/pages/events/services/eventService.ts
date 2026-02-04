@@ -138,7 +138,10 @@ export const eventTypeService = {
     try {
       const response = await api.get(`/event-types/settings/${eventTypeId}`);
       return response.data?.data ?? response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        return null;
+      }
       return handleApiError(error);
     }
   },
