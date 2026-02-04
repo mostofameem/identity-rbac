@@ -67,8 +67,23 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
     setLoading(true);
     try {
       const response = await eventTypeService.getEventTypeSettings(selectedEventType);
-      setSettings(response || []);
+
+      // If the backend returns a single object (which it usually does for settings)
+      // we need to wrap it into an array for the table mapping to work correctly.
+      if (response && typeof response === 'object' && !Array.isArray(response)) {
+        setSettings([{
+          id: response.id.toString(),
+          key: 'autoCreateAt',
+          value: response.autoCreateAt || '09:00',
+          dataType: 'string',
+          isRequired: response.isActive,
+          eventTypeId: response.eventTypeId.toString(),
+        }]);
+      } else {
+        setSettings(response || []);
+      }
     } catch (error) {
+
       console.error('Error fetching event type settings:', error);
     } finally {
       setLoading(false);
@@ -123,25 +138,22 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
 
   const handleUpdateSetting = async (id: string, updatedSetting: Partial<EventTypeSetting>) => {
     try {
-      // Map individual setting update to the block update required by the backend
-      const autoCreateAt = settings.find(s => s.key === 'autoCreateAt')?.value || '09:00';
-      const autoEventIntervalInMinutes = parseInt(settings.find(s => s.key === 'autoEventIntervalInMinutes')?.value || '1440');
-      const isActive = settings.find(s => s.key === 'isActive')?.value === 'true' || false;
+      // Find the existing logic-specific values
+      const currentSetting = settings.find(s => s.id === id);
+      if (!currentSetting) return;
+
+      const autoCreateAt = updatedSetting.key === 'autoCreateAt' ? (updatedSetting.value || '09:00') : currentSetting.value;
+      const isActive = updatedSetting.isRequired !== undefined ? updatedSetting.isRequired : currentSetting.isRequired;
 
       const payload = {
         eventTypeId: selectedEventType,
-        autoCreateAt: updatedSetting.key === 'autoCreateAt' ? (updatedSetting.value || autoCreateAt) : autoCreateAt,
-        autoEventIntervalInMinutes: updatedSetting.key === 'autoEventIntervalInMinutes' ? (parseInt(updatedSetting.value || '1440')) : autoEventIntervalInMinutes,
-        isActive: updatedSetting.key === 'isActive' ? (updatedSetting.value === 'true') : isActive,
+        autoCreateAt: autoCreateAt,
+        autoEventIntervalInMinutes: 1440, // 24 hours default
+        isActive: isActive,
       };
 
-      // Since the backend API expects a specific block but we manage individual settings here,
-      // we also need to handle the isRequired field which we use to map to the isActive property
-      if (updatedSetting.isRequired !== undefined) {
-        payload.isActive = updatedSetting.isRequired;
-      }
-
       await eventTypeService.updateEventTypeSetting(payload);
+
       await fetchSettings();
     } catch (error: any) {
       console.error('Error updating setting:', error);
@@ -150,6 +162,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
   };
 
   return (
+
     <Container maxWidth="lg">
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h5" gutterBottom>

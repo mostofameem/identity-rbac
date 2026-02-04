@@ -76,7 +76,7 @@ const InvitationPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -104,10 +104,10 @@ const InvitationPage: React.FC = () => {
       if (response.ok) {
         setSuccess(true);
         setTimeout(() => {
-          navigate('/login', { 
-            state: { 
+          navigate('/login', {
+            state: {
               message: 'Account created successfully! Please login with your new credentials.',
-              email: email 
+              email: email
             }
           });
         }, 2000);
@@ -148,7 +148,7 @@ const InvitationPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">Welcome to RBAC System</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900">Welcome to Event Management</h2>
           <p className="mt-2 text-sm text-gray-600">
             Complete your account setup
           </p>
@@ -311,7 +311,7 @@ const InvitationPage: React.FC = () => {
           <div className="mt-6">
             <div className="text-center">
               <p className="text-xs text-gray-500">
-                Complete your registration to access the RBAC System
+                Complete your registration to access the Event Management
               </p>
             </div>
           </div>

@@ -60,3 +60,19 @@ export interface ListQueryParams {
   status?: string;
   eventTypeId?: string;
 }
+
+export interface ParticipationDetail {
+  userEmail: string;
+  guestCount: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  remarks: string | null;
+}
+
+export interface ParticipationQueryParams {
+  page?: number;
+  limit?: number;
+  email?: string;
+}
+

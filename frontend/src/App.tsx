@@ -15,9 +15,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PageLayout } from './components/layout';
 import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
-import EventTypeList from './pages/events/components/EventTypeList';
 import EventList from './pages/events/components/EventList';
+import EventsPage from './pages/events/EventsPage';
+import EventTypesPage from './pages/events/EventTypesPage';
 import LoginPage from './components/LoginPage';
+
+
 import GoogleAuthCallback from './components/GoogleAuthCallback';
 import HomePage from './components/HomePage';
 import InvitationPage from './components/InvitationPage';
@@ -142,20 +145,6 @@ const AppRoutes: React.FC = () => {
       />
 
       <Route
-        path="/event-types"
-        element={
-          <ProtectedRoute>
-            <PageWrapper
-              title="Event Types"
-              subtitle="Manage event types and settings"
-            >
-              <EventTypeList />
-            </PageWrapper>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/events"
         element={
           <ProtectedRoute>
@@ -163,11 +152,27 @@ const AppRoutes: React.FC = () => {
               title="Events"
               subtitle="Manage all events"
             >
-              <EventList />
+              <EventsPage />
             </PageWrapper>
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/event-types"
+        element={
+          <ProtectedRoute>
+            <PageWrapper
+              title="Event Types"
+              subtitle="Manage event types"
+            >
+              <EventTypesPage />
+            </PageWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+
 
       {/* Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />

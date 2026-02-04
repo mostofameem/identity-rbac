@@ -1,16 +1,11 @@
 /**
  * PageLayout Component
  * 
- * A layout wrapper that provides consistent page structure with sidebar,
- * header, and main content area. Handles responsive behavior automatically.
- * 
- * @example
- * <PageLayout title="User Management" subtitle="Manage system users">
- *   <UserManagement />
- * </PageLayout>
+ * Enhanced layout with modern design system
+ * Features: Gradient background, shadow on scroll, responsive design
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../Sidebar';
 
@@ -28,31 +23,56 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   headerAction,
 }) => {
   const { user } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  // Add scroll listener for header shadow
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      setIsScrolled(target.scrollTop > 10);
+    };
+
+    const mainElement = document.querySelector('main');
+    mainElement?.addEventListener('scroll', handleScroll);
+
+    return () => {
+      mainElement?.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   return (
-    <div className="h-screen bg-gray-100">
-      <Sidebar />
-      <div className="ml-0 sm:ml-64 h-full overflow-auto">
-        <header className="bg-white shadow">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20 flex overflow-hidden">
+      <Sidebar
+        collapsed={isSidebarCollapsed}
+        onToggle={toggleSidebar}
+      />
+
+      <div className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+        <header
+          className={`
+            bg-white/80 backdrop-blur-md z-40 transition-all duration-200
+            ${isScrolled ? 'shadow-lg' : 'shadow-sm'}
+            ${!headerAction ? 'hidden' : ''}
+          `}
+        >
           <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-                {subtitle && (
-                  <p className="mt-1 text-sm text-gray-600">{subtitle}</p>
-                )}
-              </div>
-              <div className="flex items-center space-x-4">
+            <div className="flex justify-end items-center">
+              <div className="flex items-center space-x-4 ml-4">
                 {headerAction}
-                <span className="text-sm text-gray-600">
-                  Welcome, {user?.email}
-                </span>
               </div>
             </div>
           </div>
         </header>
-        <main className="p-6">
-          {children}
+
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

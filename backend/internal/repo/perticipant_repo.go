@@ -283,3 +283,80 @@ func (r *participantRepo) UpdateGuestCount(ctx context.Context, tx *sqlx.Tx, use
 
 	return nil
 }
+
+func (r *participantRepo) GetEventParticipants(ctx context.Context, req event.GetEventParticipantsReq) ([]event.EventParticipantDetailDto, error) {
+	limit, Offset := utils.ConfigPageSize(req.Page, req.Limit)
+
+	qb := r.psql.Select(
+		"u.email AS user_email",
+		"p.guest_count AS guest_count",
+		"p.status AS status",
+		"p.created_at AS created_at",
+		"p.updated_at AS updated_at",
+		"p.remarks AS remarks",
+	).
+		From(r.table + " p").
+		LeftJoin("users u ON u.id = p.user_id").
+		Where(sq.Eq{"p.event_id": req.EventId})
+
+	if req.Email != "" {
+		qb = qb.Where(sq.Like{"u.email": "%" + req.Email + "%"})
+	}
+
+	query, args, err := qb.
+		Limit(uint64(limit)).
+		Offset(uint64(Offset)).
+		OrderBy("p.created_at DESC").
+		ToSql()
+
+	if err != nil {
+		slog.Error("Failed to build query", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return nil, err
+	}
+
+	var participants []event.EventParticipantDetailDto
+	if err := r.db.SelectContext(ctx, &participants, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		slog.Error("Failed to execute query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+		}))
+		return nil, err
+	}
+
+	return participants, nil
+}
+
+func (r *participantRepo) GetEventParticipantsCount(ctx context.Context, req event.GetEventParticipantsReq) (int, error) {
+	qb := r.psql.Select("COUNT(p.id)").
+		From(r.table + " p").
+		LeftJoin("users u ON u.id = p.user_id").
+		Where(sq.Eq{"p.event_id": req.EventId})
+
+	if req.Email != "" {
+		qb = qb.Where(sq.Like{"u.email": "%" + req.Email + "%"})
+	}
+
+	query, args, err := qb.ToSql()
+	if err != nil {
+		slog.Error("Failed to build count query", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return 0, err
+	}
+
+	var count int
+	if err := r.db.GetContext(ctx, &count, query, args...); err != nil {
+		slog.Error("Failed to execute count query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+		}))
+		return 0, err
+	}
+
+	return count, nil
+}

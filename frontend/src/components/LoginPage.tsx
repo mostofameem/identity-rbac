@@ -56,7 +56,7 @@ const LoginPage: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1 className="login-title">RBAC System</h1>
+        <h1 className="login-title">Event Management</h1>
 
         {success && (
           <div className="alert alert-success">
@@ -139,7 +139,7 @@ const LoginPage: React.FC = () => {
           Continue with Google
         </button>
       </div>
-    </div>
+    </div >
   );
 };
 

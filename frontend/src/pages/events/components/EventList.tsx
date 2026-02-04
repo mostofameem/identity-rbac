@@ -32,8 +32,13 @@ import EventForm from './EventForm';
 import EventDetailsDialog from './EventDetailsDialog';
 import { eventService } from '../services/eventService';
 
-const EventList: React.FC = () => {
+interface EventListProps {
+  onEventClick?: (event: EventType) => void;
+}
+
+const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
   const [events, setEvents] = useState<EventType[]>([]);
+
   const [open, setOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
@@ -233,8 +238,14 @@ const EventList: React.FC = () => {
                 </TableRow>
               ) : (
                 events.map((event) => (
-                  <TableRow key={event.id}>
+                  <TableRow
+                    key={event.id}
+                    hover
+                    onClick={() => onEventClick && onEventClick(event)}
+                    sx={{ cursor: onEventClick ? 'pointer' : 'default' }}
+                  >
                     <TableCell>
+
                       <Typography variant="body2" fontWeight="medium">
                         {event.title}
                       </Typography>
@@ -270,39 +281,61 @@ const EventList: React.FC = () => {
                     <TableCell>
                       <Chip
                         label={event.status || 'Active'}
-                        color={
-                          event.status === 'active' || event.status === 'ONGOING'
-                            ? 'success'
-                            : event.status === 'upcoming' || event.status === 'UPCOMING'
-                              ? 'info'
-                              : event.status === 'RECENT'
-                                ? 'primary'
-                                : 'default'
-                        }
-                        sx={
-                          event.status === 'INACTIVE'
-                            ? { bgcolor: 'grey.700', color: 'white' }
-                            : {}
-                        }
                         size="small"
+                        sx={{
+                          fontWeight: 'bold',
+                          color: 'white',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                          bgcolor: (() => {
+                            switch ((event.status || 'ACTIVE').toUpperCase()) {
+                              case 'ONGOING':
+                              case 'ACTIVE':
+                                return '#10b981';
+                              case 'UPCOMING':
+                                return '#f59e0b';
+                              case 'RECENT':
+                                return '#3b82f6';
+                              case 'INACTIVE':
+                                return '#6b7280';
+                              default:
+                                return '#9ca3af';
+                            }
+                          })(),
+                        }}
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <IconButton onClick={() => handleOpenDetails(event)} color="info">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetails(event);
+                        }}
+                        color="info"
+                      >
                         <VisibilityIcon />
                       </IconButton>
                       <IconButton
-                        onClick={() => handleToggleStatus(event)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleStatus(event);
+                        }}
                         color={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'warning' : 'success'}
                         size="small"
                         title={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'Deactivate' : 'Activate'}
                       >
                         <PowerIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleDelete(event.id)} color="error">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(event.id);
+                        }}
+                        color="error"
+                      >
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>
+
                   </TableRow>
                 ))
               )}
