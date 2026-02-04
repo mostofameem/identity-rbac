@@ -112,20 +112,21 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
 
     if (!open) return null;
 
-    const getStatusColor = (status?: string) => {
-        switch (status?.toUpperCase()) {
+    const getStatusStyles = (status?: string) => {
+        const s = status?.toUpperCase();
+        switch (s) {
             case 'ONGOING':
             case 'ACTIVE':
-                return 'success';
+                return { bgcolor: '#10b981', color: 'white', fontWeight: 'bold' };
             case 'UPCOMING':
-                return 'info';
+                return { bgcolor: '#f59e0b', color: 'white', fontWeight: 'bold' };
             case 'RECENT':
-                return 'primary';
+                return { bgcolor: '#3b82f6', color: 'white', fontWeight: 'bold' };
             case 'ENDED':
             case 'COMPLETED':
-                return 'default';
+                return { bgcolor: '#6b7280', color: 'white', fontWeight: 'bold' };
             default:
-                return 'default';
+                return { bgcolor: '#9ca3af', color: 'white', fontWeight: 'bold' };
         }
     };
 
@@ -173,11 +174,10 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
                             <Box display="flex" alignItems="center" gap={1}>
                                 <Chip
                                     label={getStatusLabel(event?.status)}
-                                    color={getStatusColor(event?.status)}
                                     size="small"
                                     sx={{
-                                        bgcolor: 'rgba(255,255,255,0.9)',
-                                        fontWeight: 'bold',
+                                        ...getStatusStyles(event?.status),
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                                     }}
                                 />
                             </Box>
@@ -185,22 +185,29 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
                     </Box>
 
                     <Box display="flex" alignItems="center" gap={2}>
-                        <Box display="flex" alignItems="center" gap={0.5} sx={{ bgcolor: 'rgba(255,255,255,0.1)', px: 1.5, py: 0.5, borderRadius: 2 }}>
+                        <Box display="flex" alignItems="center" gap={1} sx={{ bgcolor: 'rgba(255,255,255,0.15)', px: 2, py: 0.75, borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                            <PowerIcon
+                                sx={{
+                                    color: editData.shouldAutoCreateEvent ? '#4ade80' : '#f87171',
+                                    fontSize: 18
+                                }}
+                            />
+                            <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, letterSpacing: '0.5px' }}>
+                                AUTO-RECREATE: {editData.shouldAutoCreateEvent ? 'ENABLED' : 'DISABLED'}
+                            </Typography>
                             <IconButton
                                 onClick={handleToggleAutoCreate}
-                                color={editData.shouldAutoCreateEvent ? "warning" : "success"}
                                 size="small"
-                                title={editData.shouldAutoCreateEvent ? "Disable Auto-Create" : "Enable Auto-Create"}
                                 sx={{
-                                    color: editData.shouldAutoCreateEvent ? 'orange' : '#4caf50',
-                                    p: 0.5
+                                    color: 'white',
+                                    ml: 0.5,
+                                    bgcolor: 'rgba(255,255,255,0.1)',
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
                                 }}
+                                title={editData.shouldAutoCreateEvent ? "Disable Auto-Recreate" : "Enable Auto-Recreate"}
                             >
-                                <PowerIcon />
+                                <EditIcon sx={{ fontSize: 14 }} />
                             </IconButton>
-                            <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                Auto Create: {editData.shouldAutoCreateEvent ? 'ON' : 'OFF'}
-                            </Typography>
                         </Box>
 
                         {!isEditing ? (

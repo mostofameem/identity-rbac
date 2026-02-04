@@ -106,7 +106,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           </Badge>
         </td>
         <td className="px-6 py-4">
-          <div className="text-sm text-gray-700 max-w-xs">
+          <div className="text-sm text-gray-700">
             {permission.description || 'No description available'}
           </div>
         </td>

@@ -281,21 +281,27 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
                     <TableCell>
                       <Chip
                         label={event.status || 'Active'}
-                        color={
-                          event.status === 'active' || event.status === 'ONGOING'
-                            ? 'success'
-                            : event.status === 'upcoming' || event.status === 'UPCOMING'
-                              ? 'info'
-                              : event.status === 'RECENT'
-                                ? 'primary'
-                                : 'default'
-                        }
-                        sx={
-                          event.status === 'INACTIVE'
-                            ? { bgcolor: 'grey.700', color: 'white' }
-                            : {}
-                        }
                         size="small"
+                        sx={{
+                          fontWeight: 'bold',
+                          color: 'white',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                          bgcolor: (() => {
+                            switch ((event.status || 'ACTIVE').toUpperCase()) {
+                              case 'ONGOING':
+                              case 'ACTIVE':
+                                return '#10b981';
+                              case 'UPCOMING':
+                                return '#f59e0b';
+                              case 'RECENT':
+                                return '#3b82f6';
+                              case 'INACTIVE':
+                                return '#6b7280';
+                              default:
+                                return '#9ca3af';
+                            }
+                          })(),
+                        }}
                       />
                     </TableCell>
                     <TableCell align="right">

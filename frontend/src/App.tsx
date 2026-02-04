@@ -17,6 +17,7 @@ import { PageLayout } from './components/layout';
 import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
 import EventList from './pages/events/components/EventList';
 import EventsPage from './pages/events/EventsPage';
+import EventTypesPage from './pages/events/EventTypesPage';
 import LoginPage from './components/LoginPage';
 
 
@@ -152,6 +153,20 @@ const AppRoutes: React.FC = () => {
               subtitle="Manage all events"
             >
               <EventsPage />
+            </PageWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/event-types"
+        element={
+          <ProtectedRoute>
+            <PageWrapper
+              title="Event Types"
+              subtitle="Manage event types"
+            >
+              <EventTypesPage />
             </PageWrapper>
           </ProtectedRoute>
         }
