@@ -79,7 +79,8 @@ type TransactionRepo interface {
 }
 
 type HotEventsRepo interface {
-	GetTotalHotEvents(ctx context.Context) (int, error)
-	CreateHotEvent(ctx context.Context, event entity.HotEvents) error
-	DeleteHotEvent(ctx context.Context, eventID int, eventTypeID int) error
+	GetTotalHotEvents(ctx context.Context, tx *sqlx.Tx) (int, error)
+	CreateHotEvent(ctx context.Context, tx *sqlx.Tx, event entity.HotEvents) error
+	IsHotEventExist(ctx context.Context, tx *sqlx.Tx, eventID int, eventTypeID int) (bool, error)
+	DeleteHotEvent(ctx context.Context, tx *sqlx.Tx, eventID int, eventTypeID int) error
 }

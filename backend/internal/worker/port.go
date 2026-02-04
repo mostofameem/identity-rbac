@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"identity-rbac/internal/entity"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type EventRepo interface {
@@ -14,6 +16,6 @@ type EventTypeSettingsRepo interface {
 }
 
 type HotEventsRepo interface {
-	GetHotEvents(ctx context.Context) []entity.HotEvents
-	UpdateLastRecreatedHotEvent(ctx context.Context, eventID, eventTypeID int) error
+	GetHotEvents(ctx context.Context, tx *sqlx.Tx) []entity.HotEvents
+	UpdateLastRecreatedHotEvent(ctx context.Context, tx *sqlx.Tx, eventID, eventTypeID int) error
 }

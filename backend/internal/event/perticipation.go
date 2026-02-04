@@ -2,9 +2,11 @@ package event
 
 import (
 	"context"
+	"identity-rbac/internal/entity"
 	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
 	"log"
+	"time"
 )
 
 func (s *service) PerticipateEvent(ctx context.Context, req PerticipateEventReq) (err error) {
@@ -201,4 +203,40 @@ func (s *service) UpdateGuestCount(ctx context.Context, userId int, eventId int,
 
 func getUpdatedParticipantCount(currentGuestCount, updatedGuestCount int) int {
 	return updatedGuestCount - currentGuestCount
+}
+
+func validateParticipation(event *entity.Events, now time.Time, totalParticipants int) error {
+	if !event.IsActive {
+		return util.ErrEventNotActive
+	}
+
+	if event.RegistrationOpensAt == nil || event.RegistrationClosesAt == nil {
+		return util.ErrEventRegistrationTimeNotInRange
+	}
+
+	if now.Before(*event.RegistrationOpensAt) || now.After(*event.RegistrationClosesAt) {
+		return util.ErrEventAlreadyEnded
+	}
+
+	if totalParticipants > event.MaxParticipants {
+		return util.ErrEventMaxParticipantsExceeded
+	}
+
+	return nil
+}
+
+func (s *service) GetEventParticipationList(ctx context.Context, req GetEventParticipantsReq) ([]EventParticipantDetailDto, util.Pagination, error) {
+	participants, err := s.participantRepo.GetEventParticipants(ctx, req)
+	if err != nil {
+		return nil, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+
+	totalItems, err := s.participantRepo.GetEventParticipantsCount(ctx, req)
+	if err != nil {
+		return nil, util.Pagination{}, util.ErrSomethingWentWrong
+	}
+
+	pagination := util.GetPaginationResponse(totalItems, req.Page, req.Limit)
+
+	return participants, pagination, nil
 }

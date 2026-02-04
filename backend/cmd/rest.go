@@ -80,7 +80,18 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	participantRepo := repo.NewParticipantRepo(db)
 	eventSettingRepo := repo.NewEventTypeSettingRepo(db)
 	transaction := repo.NewTransaction(db)
-	eventSvc := event.NewEventSerVice(cnf, eventRepo, eventTypeRepo, eventTypeSettingRepo, participantRepo, eventSettingRepo, transaction)
+	hotEventsRepo := repo.NewHotEventsRepo(db)
+
+	eventSvc := event.NewEventSerVice(
+		cnf,
+		eventRepo,
+		eventTypeRepo,
+		eventTypeSettingRepo,
+		participantRepo,
+		eventSettingRepo,
+		transaction,
+		hotEventsRepo,
+	)
 
 	rateLimiterSvc := redis.NewTokenBucketRateLimiterService(redisClient, cnf.RateLimit)
 
