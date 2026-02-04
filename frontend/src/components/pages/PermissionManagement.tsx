@@ -15,14 +15,14 @@ import React, { useState, useEffect } from 'react';
 import { adminApiClient } from '../../services';
 import { Permission } from '../../types/admin';
 import { useMessage } from '../../hooks';
-import { 
-  Button, 
-  Card, 
-  Table, 
-  Badge, 
+import {
+  Button,
+  Card,
+  Table,
+  Badge,
   SearchInput,
   MessageDisplay,
-  Column 
+  Column
 } from '../shared';
 import { UI_MESSAGES, FORM_LABELS } from '../../constants/ui';
 
@@ -32,10 +32,10 @@ interface PermissionManagementProps {
   setLoading: (loading: boolean) => void;
 }
 
-const PermissionManagement: React.FC<PermissionManagementProps> = ({ 
-  showMessage, 
-  loading, 
-  setLoading 
+const PermissionManagement: React.FC<PermissionManagementProps> = ({
+  showMessage,
+  loading,
+  setLoading
 }) => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [permissionFilter, setPermissionFilter] = useState('');
@@ -52,7 +52,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       const response = await adminApiClient.getPermissions(permissionFilter);
       setPermissions(response.data.data || []);
     } catch (err: any) {
-      const errorMessage = err.response?.status === 403 
+      const errorMessage = err.response?.status === 403
         ? 'You are not authorized to view permissions. Please contact your administrator.'
         : err.response?.data?.message || 'Failed to fetch permissions';
       showLocalMessage(errorMessage, 'error');
@@ -76,12 +76,11 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     { key: 'resource', label: 'Resource', width: '120px' },
     { key: 'action', label: 'Action', width: '100px' },
     { key: 'description', label: FORM_LABELS.DESCRIPTION },
-    { key: 'createdAt', label: FORM_LABELS.CREATED_AT, width: '120px' },
   ];
 
   const renderPermissionRow = (permission: Permission, index: number) => {
     const [resource, action] = permission.name.split('.');
-    
+
     return (
       <tr key={permission.id} className="hover:bg-gray-50 transition-colors">
         <td className="px-6 py-4 whitespace-nowrap">
@@ -110,13 +109,6 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           <div className="text-sm text-gray-700 max-w-xs">
             {permission.description || 'No description available'}
           </div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-          {new Date(permission.createdAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          })}
         </td>
       </tr>
     );
@@ -154,7 +146,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
       />
 
       {/* Permissions List */}
-      <Card 
+      <Card
         title={`System Permissions (${permissions.length})`}
         subtitle="View and manage all system permissions"
         headerAction={
@@ -164,9 +156,9 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
               onSearch={setPermissionFilter}
               className="w-64"
             />
-            <Button 
-              variant="primary" 
-              size="sm" 
+            <Button
+              variant="primary"
+              size="sm"
               onClick={fetchPermissions}
               loading={loading}
             >
@@ -181,8 +173,8 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           data={permissions}
           renderRow={renderPermissionRow}
           emptyMessage={
-            permissionFilter 
-              ? `No permissions match "${permissionFilter}"` 
+            permissionFilter
+              ? `No permissions match "${permissionFilter}"`
               : 'No permissions available in the system'
           }
           loading={loading}

@@ -10,7 +10,7 @@
  * </PageLayout>
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../Sidebar';
 
@@ -28,18 +28,27 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   headerAction,
 }) => {
   const { user } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   return (
-    <div className="h-screen bg-gray-100">
-      <Sidebar />
-      <div className="ml-0 sm:ml-64 h-full overflow-auto">
-        <header className="bg-white shadow">
+    <div className="h-screen bg-gray-100 flex overflow-hidden">
+      <Sidebar
+        collapsed={isSidebarCollapsed}
+        onToggle={toggleSidebar}
+      />
+
+      <div className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+        <header className="bg-white shadow z-40">
           <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+                <h1 className="text-3xl font-bold text-gray-900 truncate">{title}</h1>
                 {subtitle && (
-                  <p className="mt-1 text-sm text-gray-600">{subtitle}</p>
+                  <p className="mt-1 text-sm text-gray-600 truncate">{subtitle}</p>
                 )}
               </div>
               <div className="flex items-center space-x-4">
@@ -48,8 +57,11 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             </div>
           </div>
         </header>
-        <main className="p-6">
-          {children}
+
+        <main className="flex-1 overflow-auto p-6 bg-gray-50">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
