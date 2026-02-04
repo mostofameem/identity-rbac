@@ -327,27 +327,10 @@ func (s *service) GetEventTypeSettings(ctx context.Context, eventTypeID int) (Ev
 		return EventTypeSettingsResponse{}, err
 	}
 
-	// Format the time as HH:MM if it exists
-	autoCreateAt := ""
-	if eventTypeSettings.AutoCreateAt != nil && *eventTypeSettings.AutoCreateAt != "" {
-		timeStr := *eventTypeSettings.AutoCreateAt
-		// Try parsing with time.RFC3339 format first (for timestamps like "0000-01-01T12:00:00Z")
-		t, err := time.Parse(time.RFC3339, timeStr)
-		if err != nil {
-			// If that fails, try parsing as just time (HH:MM:SS)
-			t, err = time.Parse("15:04:05", timeStr)
-		}
-		if err == nil {
-			autoCreateAt = t.Format("15:04")
-		} else {
-			autoCreateAt = timeStr
-		}
-	}
-
 	return EventTypeSettingsResponse{
 		Id:                         eventTypeSettings.Id,
 		EventTypeId:                eventTypeSettings.EventTypeID,
-		AutoCreateAt:               autoCreateAt,
+		AutoCreateAt:               *eventTypeSettings.AutoCreateAt,
 		AutoEventIntervalInMinutes: eventTypeSettings.AutoEventIntervalInMinutes,
 		CreatedBy:                  eventTypeSettings.CreatedBy,
 		IsActive:                   eventTypeSettings.IsActive,

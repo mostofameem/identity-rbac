@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/enum"
@@ -153,6 +154,10 @@ func (handlers *Handlers) GetEventTypeSettings(w http.ResponseWriter, r *http.Re
 
 	eventTypeSettings, err := handlers.eventSvc.GetEventTypeSettings(r.Context(), id)
 	if err != nil {
+		if errors.Is(err, util.ErrNotFound) {
+			utils.SendError(w, http.StatusNotFound, "Event type settings not found")
+			return
+		}
 		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
 		return
 	}
