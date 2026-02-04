@@ -1,17 +1,19 @@
 package worker
 
+import (
+	"context"
+	"identity-rbac/internal/entity"
+)
+
 type EventRepo interface {
-	GetAutoCreateEvents()
-	CreateAutoCreateEvnt()
+	GetEventDetailsIn(ctx context.Context, eventIDs ...int) []entity.Events
 }
 
-type AutoEventCreateWorkerService interface {
+type EventTypeSettingsRepo interface {
+	GetEventTypeSettingsIn(ctx context.Context, eventTypeIDs ...int) []entity.EventTypeSettings
 }
 
-type EventSettingsRepo interface {
-	GetRunningEventIds()
-}
-
-type AutoEventCreateLogsRepo interface {
-	
+type HotEventsRepo interface {
+	GetHotEvents(ctx context.Context) []entity.HotEvents
+	UpdateLastRecreatedHotEvent(ctx context.Context, eventID, eventTypeID int) error
 }

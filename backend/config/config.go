@@ -21,10 +21,10 @@ type Config struct {
 	RateLimit              *RateLimitConfig
 	MigrationSource        string `mapstructure:"MIGRATION_SOURCE" validate:"required"`
 	TokenExpireTimeInHours int    `mapstructure:"TOKEN_EXPIRE_TIME_IN_HOURS" validate:"required"`
-
-	EmailInvitationTTL int `mapstructure:"EMAIL_INVITATION_TTL_IN_MINUTE" validate:"required"`
-	AccessTokenTTL     int `mapstructure:"ACCESS_TOKEN_TTL_IN_MINUTE"     validate:"required"`
-	RefreshTokenTTL    int `mapstructure:"REFRESH_TOKEN_TTL_IN_MINUTE"    validate:"required"`
+	MaxHotEventLimit       int    `mapstructure:"MAX_HOT_EVENT_LIMIT" validate:"required"`
+	EmailInvitationTTL     int    `mapstructure:"EMAIL_INVITATION_TTL_IN_MINUTE" validate:"required"`
+	AccessTokenTTL         int    `mapstructure:"ACCESS_TOKEN_TTL_IN_MINUTE"     validate:"required"`
+	RefreshTokenTTL        int    `mapstructure:"REFRESH_TOKEN_TTL_IN_MINUTE"    validate:"required"`
 }
 
 var config *Config

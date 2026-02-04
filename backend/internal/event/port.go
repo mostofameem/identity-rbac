@@ -77,3 +77,9 @@ type TransactionRepo interface {
 	CommitTx(ctx context.Context, tx *sqlx.Tx) error
 	RollbackTx(ctx context.Context, tx *sqlx.Tx) error
 }
+
+type HotEventsRepo interface {
+	GetTotalHotEvents(ctx context.Context) (int, error)
+	CreateHotEvent(ctx context.Context, event entity.HotEvents) error
+	DeleteHotEvent(ctx context.Context, eventID int, eventTypeID int) error
+}

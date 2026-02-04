@@ -7,6 +7,7 @@ import (
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/event"
+	"identity-rbac/internal/worker"
 	"identity-rbac/pkg/logger"
 	"log/slog"
 	"time"
@@ -17,6 +18,7 @@ import (
 
 type EventRepo interface {
 	event.EventRepo
+	worker.EventRepo
 }
 
 type eventRepo struct {
@@ -367,4 +369,20 @@ func (r *eventRepo) getPublicEventQueryBuilder(userId int, status string) BuildQ
 			LeftJoin("event_types et ON e.event_type_id = et.id").
 			LeftJoin("participants p ON e.id = p.event_id AND p.user_id = ?", userId)
 	}
+}
+
+func (r *eventRepo) GetEventDetailsIn(ctx context.Context, eventIDs ...int) []entity.Events {
+	query, args, err := r.psql.Select("*").
+		From(r.table).
+		Where(sq.Eq{"id": eventIDs}).
+		Limit(min(uint64(len(eventIDs)), 100)).
+		ToSql()
+	if err != nil {
+		return []entity.Events{}
+	}
+	var events []entity.Events
+	if err := r.db.SelectContext(ctx, &events, query, args...); err != nil {
+		return []entity.Events{}
+	}
+	return events
 }

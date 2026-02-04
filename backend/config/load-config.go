@@ -44,6 +44,7 @@ func LoadConfig() error {
 		EmailInvitationTTL:     viper.GetInt("EMAIL_INVITATION_TTL_IN_MINUTE"),
 		AccessTokenTTL:         viper.GetInt("ACCESS_TOKEN_TTL_IN_MINUTE"),
 		RefreshTokenTTL:        viper.GetInt("REFRESH_TOKEN_TTL_IN_MINUTE"),
+		MaxHotEventLimit:       viper.GetInt("MAX_HOT_EVENT_LIMIT"),
 		DB: &DBConfig{
 			Host:                 viper.GetString("DB_HOST"),
 			Port:                 viper.GetInt("DB_PORT"),

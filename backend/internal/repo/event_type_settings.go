@@ -8,6 +8,7 @@ import (
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/event"
 	"identity-rbac/internal/util"
+	"identity-rbac/internal/worker"
 	"identity-rbac/pkg/logger"
 	"log/slog"
 	"time"
@@ -18,6 +19,7 @@ import (
 
 type EventTypeSettingRepo interface {
 	event.EventTypeSettingRepo
+	worker.EventTypeSettingsRepo
 }
 
 type eventTypeSettingRepo struct {
@@ -209,4 +211,30 @@ func (repo *eventTypeSettingRepo) Update(ctx context.Context, req event.EventTyp
 	}
 
 	return id, nil
+}
+
+func (repo *eventTypeSettingRepo) GetEventTypeSettingsIn(ctx context.Context, eventTypeIDs ...int) []entity.EventTypeSettings {
+	query, args, err := repo.psql.Select("*").
+		From(repo.table).
+		Where(sq.Eq{"event_type_id": eventTypeIDs}).
+		Limit(min(uint64(len(eventTypeIDs)), 100)).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build select query", logger.Extra(map[string]any{
+			"event_type_ids": eventTypeIDs,
+			"error":          err.Error(),
+		}))
+		return []entity.EventTypeSettings{}
+	}
+
+	var eventTypeSettings []entity.EventTypeSettings
+	if err := repo.db.SelectContext(ctx, &eventTypeSettings, query, args...); err != nil {
+		slog.Error("Failed to select event type settings", logger.Extra(map[string]any{
+			"event_type_ids": eventTypeIDs,
+			"error":          err.Error(),
+		}))
+		return []entity.EventTypeSettings{}
+	}
+
+	return eventTypeSettings
 }
