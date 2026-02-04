@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"identity-rbac/config"
 	mail "identity-rbac/internal/Mail"
 	"identity-rbac/internal/api/handlers"
@@ -13,8 +14,12 @@ import (
 	"identity-rbac/internal/redis"
 	repo "identity-rbac/internal/repo"
 	"identity-rbac/internal/token"
+	"identity-rbac/internal/worker"
 	"identity-rbac/pkg/logger"
 	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -98,8 +103,40 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	handlers := handlers.NewHandlers(cnf, rbacSvc, eventSvc, rateLimiterSvc)
 
 	middleware := middlewares.NewMiddleware(cnf, userRepo, roleRepo, permissionRepo, roleHasPermissionRepo, userHasRoleRepo)
+
 	server := web.NewServer(cnf, handlers, middleware)
-	server.Start()
+
+	workerTransaction := repo.NewTransaction(db)
+	autoEventCreateWorker := worker.NewAutoEventCreateWorker(
+		cnf,
+		eventRepo,
+		eventSettingRepo,
+		workerTransaction,
+		hotEventsRepo,
+		cacheService,
+	)
+
+	// Create main context that listens for the interrupt signal from the OS.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Create a derived context for the worker that can be cancelled independently
+	workerCtx, cancelWorker := context.WithCancel(ctx)
+	defer cancelWorker()
+
+	server.Wg.Add(1)
+	go func() {
+		defer server.Wg.Done()
+		autoEventCreateWorker.Run(workerCtx)
+	}()
+
+	// Start the server, and if it exits for any reason, cancel the worker context
+	server.Start(ctx, func() {
+		slog.Warn("Server exited, cancelling background workers...")
+		cancelWorker()
+	})
+
+	// Wait for interruption signal or all goroutines to finish
 	server.Wg.Wait()
 
 	return nil

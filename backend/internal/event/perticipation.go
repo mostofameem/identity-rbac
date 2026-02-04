@@ -212,11 +212,7 @@ func validateParticipation(event *entity.Events, now time.Time, totalParticipant
 		return util.ErrEventNotActive
 	}
 
-	if event.RegistrationOpensAt == nil || event.RegistrationClosesAt == nil {
-		return util.ErrEventRegistrationTimeNotInRange
-	}
-
-	if now.Before(*event.RegistrationOpensAt) || now.After(*event.RegistrationClosesAt) {
+	if now.Before(event.RegistrationOpensAt) || now.After(event.RegistrationClosesAt) {
 		return util.ErrEventAlreadyEnded
 	}
 

@@ -215,11 +215,11 @@ func getEventStatus(event *entity.Events, now time.Time) enum.EventStatusType {
 		return enum.EventStatusInactive
 	}
 
-	if now.Before(*event.RegistrationOpensAt) {
+	if now.Before(event.RegistrationOpensAt) {
 		return enum.EventStatusUpcoming
 	}
 
-	if now.After(*event.RegistrationClosesAt) {
+	if now.After(event.RegistrationClosesAt) {
 		return enum.EventStatusRecent
 	}
 

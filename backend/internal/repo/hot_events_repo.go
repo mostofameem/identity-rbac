@@ -31,22 +31,22 @@ func NewHotEventsRepo(db *DB) HotEventsRepo {
 	}
 }
 
-func (r *hotEventsRepo) GetHotEvents(ctx context.Context, tx *sqlx.Tx) []entity.HotEvents {
+func (r *hotEventsRepo) GetHotEvents(ctx context.Context, tx *sqlx.Tx) ([]entity.HotEvents, error) {
 	query, args, err := r.psql.Select("*").From(r.table).ToSql()
 	if err != nil {
 		slog.Error("Failed to build select query", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
-		return []entity.HotEvents{}
+		return []entity.HotEvents{}, err
 	}
 	var events []entity.HotEvents
 	if err := tx.SelectContext(ctx, &events, query, args...); err != nil {
 		slog.Error("Failed to select hot events", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
-		return []entity.HotEvents{}
+		return []entity.HotEvents{}, err
 	}
-	return events
+	return events, nil
 }
 
 func (r *hotEventsRepo) CreateHotEvent(ctx context.Context, tx *sqlx.Tx, event entity.HotEvents) error {

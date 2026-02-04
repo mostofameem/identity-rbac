@@ -413,3 +413,37 @@ func (r *eventRepo) UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *s
 
 	return nil
 }
+
+func (r *eventRepo) AutoCreateEvent(ctx context.Context, req entity.Events) error {
+	query, args, err := r.psql.Insert(r.table).
+		Columns(
+			"title", "description", "event_type_id", "start_at",
+			"registration_opens_at", "registration_closes_at",
+			"should_auto_create_event", "max_participants", "created_by", "created_at", "updated_at", "is_active", "updated_by",
+		).
+		Values(
+			req.Title, req.Description, req.EventTypeId, req.StartAt,
+			req.RegistrationOpensAt, req.RegistrationClosesAt,
+			false, req.MaxParticipants, 1, time.Now(), time.Now(), true, 1,
+		).
+		Suffix("RETURNING id").
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build insert query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"req":   req,
+		}))
+		return err
+	}
+
+	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute insert query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
+}

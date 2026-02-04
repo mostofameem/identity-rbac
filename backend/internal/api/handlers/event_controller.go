@@ -16,13 +16,13 @@ import (
 )
 
 type CreateEventRequest struct {
-	Title                string     `json:"title"                validation:"required"`
-	Description          string     `json:"description"`
-	EventTypeId          int        `json:"eventTypeId"          validation:"required"`
-	StartAt              time.Time  `json:"startAt"              validation:"required"`
-	RegistrationOpensAt  *time.Time `json:"registrationOpensAt"  validation:"required"`
-	RegistrationClosesAt *time.Time `json:"registrationClosesAt" validation:"required"`
-	MaxParticipants      int        `json:"maxParticipants"      validation:"required"`
+	Title                string    `json:"title"                validation:"required"`
+	Description          string    `json:"description"`
+	EventTypeId          int       `json:"eventTypeId"          validation:"required"`
+	StartAt              time.Time `json:"startAt"              validation:"required"`
+	RegistrationOpensAt  time.Time `json:"registrationOpensAt"  validation:"required"`
+	RegistrationClosesAt time.Time `json:"registrationClosesAt" validation:"required"`
+	MaxParticipants      int       `json:"maxParticipants"      validation:"required"`
 }
 
 type GetEventRequest struct {

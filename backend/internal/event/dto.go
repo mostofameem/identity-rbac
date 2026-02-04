@@ -10,8 +10,8 @@ type CreateEventReq struct {
 	Description           string
 	EventTypeId           int
 	StartAt               time.Time
-	RegistrationOpensAt   *time.Time
-	RegistrationClosesAt  *time.Time
+	RegistrationOpensAt   time.Time
+	RegistrationClosesAt  time.Time
 	ShouldAutoCreateEvent bool
 	MaxParticipants       int
 	CreatedBy             *int
@@ -24,8 +24,8 @@ type EventResponse struct {
 	Description           string          `json:"description"`
 	EventTypeId           GetEventTypeDto `json:"eventType"`
 	StartAt               time.Time       `json:"startAt"`
-	RegistrationOpensAt   *time.Time      `json:"registrationOpensAt"`
-	RegistrationClosesAt  *time.Time      `json:"registrationClosesAt"`
+	RegistrationOpensAt   time.Time       `json:"registrationOpensAt"`
+	RegistrationClosesAt  time.Time       `json:"registrationClosesAt"`
 	ShouldAutoCreateEvent bool            `json:"shouldAutoCreateEvent"`
 	TotalParticipants     int             `json:"totalParticipants"`
 	MaxParticipants       int             `json:"maxParticipants"`
@@ -96,8 +96,8 @@ type EventCustomerResponse struct {
 	Description          string               `json:"description"`
 	EventType            GetEventTypeResponse `json:"eventType"`
 	StartAt              time.Time            `json:"startAt"`
-	RegistrationOpensAt  *time.Time           `json:"registrationOpensAt"`
-	RegistrationClosesAt *time.Time           `json:"registrationClosesAt"`
+	RegistrationOpensAt  time.Time            `json:"registrationOpensAt"`
+	RegistrationClosesAt time.Time            `json:"registrationClosesAt"`
 	TotalParticipants    int                  `json:"totalParticipants"`
 	MaxParticipants      int                  `json:"maxParticipants"`
 	Status               enum.EventStatusType `json:"status"`
