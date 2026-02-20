@@ -40,7 +40,12 @@ func (r *hotEventsRepo) GetHotEvents(ctx context.Context, tx *sqlx.Tx) ([]entity
 		return []entity.HotEvents{}, err
 	}
 	var events []entity.HotEvents
-	if err := tx.SelectContext(ctx, &events, query, args...); err != nil {
+	var db sqlx.QueryerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if err := sqlx.SelectContext(ctx, db, &events, query, args...); err != nil {
 		slog.Error("Failed to select hot events", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
@@ -52,20 +57,25 @@ func (r *hotEventsRepo) GetHotEvents(ctx context.Context, tx *sqlx.Tx) ([]entity
 func (r *hotEventsRepo) CreateHotEvent(ctx context.Context, tx *sqlx.Tx, event entity.HotEvents) error {
 	query, args, err := r.psql.Insert(r.table).
 		Columns("event_id", "event_type_id", "last_recreated_at", "created_at", "updated_at").
-		Values(event.EventID, event.EventTypeID, event.LastRecreatedAt, event.CreatedAt, event.UpdatedAt).
+		Values(event.EventId, event.EventTypeId, event.LastRecreatedAt, event.CreatedAt, event.UpdatedAt).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build insert query", logger.Extra(map[string]any{
-			"event_id":      event.EventID,
-			"event_type_id": event.EventTypeID,
+			"event_id":      event.EventId,
+			"event_type_id": event.EventTypeId,
 			"error":         err.Error(),
 		}))
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+	var db sqlx.ExecerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if _, err := db.ExecContext(ctx, query, args...); err != nil {
 		slog.Error("Failed to insert hot event", logger.Extra(map[string]any{
-			"event_id":      event.EventID,
-			"event_type_id": event.EventTypeID,
+			"event_id":      event.EventId,
+			"event_type_id": event.EventTypeId,
 			"error":         err.Error(),
 		}))
 		return err
@@ -85,7 +95,12 @@ func (r *hotEventsRepo) DeleteHotEvent(ctx context.Context, tx *sqlx.Tx, eventID
 		}))
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+	var db sqlx.ExecerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if _, err := db.ExecContext(ctx, query, args...); err != nil {
 		slog.Error("Failed to delete hot event", logger.Extra(map[string]any{
 			"event_id":      eventID,
 			"event_type_id": eventTypeID,
@@ -110,7 +125,12 @@ func (r *hotEventsRepo) UpdateLastRecreatedHotEvent(ctx context.Context, tx *sql
 		}))
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+	var db sqlx.ExecerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if _, err := db.ExecContext(ctx, query, args...); err != nil {
 		slog.Error("Failed to update hot event", logger.Extra(map[string]any{
 			"event_id":      eventID,
 			"event_type_id": eventTypeID,
@@ -130,7 +150,12 @@ func (r *hotEventsRepo) GetTotalHotEvents(ctx context.Context, tx *sqlx.Tx) (int
 		return 0, err
 	}
 	var count int
-	if err := tx.GetContext(ctx, &count, query, args...); err != nil {
+	var db sqlx.QueryerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if err := sqlx.GetContext(ctx, db, &count, query, args...); err != nil {
 		slog.Error("Failed to select hot events count", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
@@ -152,7 +177,12 @@ func (r *hotEventsRepo) IsHotEventExist(ctx context.Context, tx *sqlx.Tx, eventI
 		return false, err
 	}
 	var count int
-	if err := tx.GetContext(ctx, &count, query, args...); err != nil {
+	var db sqlx.QueryerContext = r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if err := sqlx.GetContext(ctx, db, &count, query, args...); err != nil {
 		slog.Error("Failed to select hot events count", logger.Extra(map[string]any{
 			"event_id":      eventID,
 			"event_type_id": eventTypeID,

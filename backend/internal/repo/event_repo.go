@@ -375,6 +375,8 @@ func (r *eventRepo) GetEventDetailsIn(ctx context.Context, eventIDs ...int) []en
 	query, args, err := r.psql.Select("*").
 		From(r.table).
 		Where(sq.Eq{"id": eventIDs}).
+		Where(sq.Eq{"is_active": true}).
+		Where(sq.Expr("start_at <= ?", time.Now())).
 		Limit(min(uint64(len(eventIDs)), 100)).
 		ToSql()
 	if err != nil {
@@ -419,12 +421,15 @@ func (r *eventRepo) AutoCreateEvent(ctx context.Context, req entity.Events) erro
 		Columns(
 			"title", "description", "event_type_id", "start_at",
 			"registration_opens_at", "registration_closes_at",
-			"should_auto_create_event", "max_participants", "created_by", "created_at", "updated_at", "is_active", "updated_by",
+			"should_auto_create_event", "max_participants",
+			"created_by", "created_at", "updated_at", "is_active", "updated_by",
+			"remarks",
 		).
 		Values(
 			req.Title, req.Description, req.EventTypeId, req.StartAt,
 			req.RegistrationOpensAt, req.RegistrationClosesAt,
 			false, req.MaxParticipants, 1, time.Now(), time.Now(), true, 1,
+			req.Remarks,
 		).
 		Suffix("RETURNING id").
 		ToSql()

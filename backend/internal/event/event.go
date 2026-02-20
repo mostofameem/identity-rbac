@@ -50,8 +50,8 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 
 	if req.ShouldAutoCreateEvent {
 		hotEvent := entity.HotEvents{
-			EventID:     eventId,
-			EventTypeID: req.EventTypeId,
+			EventId:     eventId,
+			EventTypeId: req.EventTypeId,
 		}
 		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, hotEvent)
 		if err != nil {
@@ -275,8 +275,8 @@ func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) 
 			}
 			if !exist {
 				err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
-					EventID:         id,
-					EventTypeID:     event.EventTypeId,
+					EventId:         id,
+					EventTypeId:     event.EventTypeId,
 					LastRecreatedAt: time.Now(),
 					CreatedAt:       time.Now(),
 					UpdatedAt:       time.Now(),
@@ -347,8 +347,8 @@ func (s *service) UpdateShouldAutoCreateEventStatus(ctx context.Context, id int,
 		}
 
 		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
-			EventID:         id,
-			EventTypeID:     event.EventTypeId,
+			EventId:         id,
+			EventTypeId:     event.EventTypeId,
 			LastRecreatedAt: event.CreatedAt,
 			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),

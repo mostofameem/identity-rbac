@@ -83,7 +83,6 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	eventTypeRepo := repo.NewEventTypeRepo(db)
 	eventTypeSettingRepo := repo.NewEventTypeSettingRepo(db)
 	participantRepo := repo.NewParticipantRepo(db)
-	eventSettingRepo := repo.NewEventTypeSettingRepo(db)
 	transaction := repo.NewTransaction(db)
 	hotEventsRepo := repo.NewHotEventsRepo(db)
 
@@ -93,7 +92,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		eventTypeRepo,
 		eventTypeSettingRepo,
 		participantRepo,
-		eventSettingRepo,
+		eventTypeSettingRepo,
 		transaction,
 		hotEventsRepo,
 	)
@@ -110,7 +109,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	autoEventCreateWorker := worker.NewAutoEventCreateWorker(
 		cnf,
 		eventRepo,
-		eventSettingRepo,
+		eventTypeSettingRepo,
 		workerTransaction,
 		hotEventsRepo,
 		cacheService,
@@ -130,7 +129,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		autoEventCreateWorker.Run(workerCtx)
 	}()
 
-	// Start the server, and if it exits for any reason, cancel the worker context
+	//Start the server, and if it exits for any reason, cancel the worker context
 	server.Start(ctx, func() {
 		slog.Warn("Server exited, cancelling background workers...")
 		cancelWorker()
