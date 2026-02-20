@@ -265,6 +265,7 @@ export const eventService = {
         status: data.status || 'upcoming',
         isActive: data.isActive,
         shouldAutoCreateEvent: data.shouldAutoCreateEvent,
+        remarks: data.remarks ?? null,
         eventTypeId: data.eventTypeId?.toString() || '',
         eventType: data.eventType ? {
           id: data.eventType.id?.toString() || '',

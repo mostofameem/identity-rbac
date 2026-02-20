@@ -30,6 +30,7 @@ import {
     PowerSettingsNew as PowerIcon,
     Edit as EditIcon,
     Save as SaveIcon,
+    Comment as CommentIcon,
 } from '@mui/icons-material';
 import { TextField, Switch, FormControlLabel } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -293,7 +294,25 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
                             </Card>
                         )}
 
+                        {/* Remarks Card */}
+                        {event.remarks && (
+                            <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2, borderLeft: '4px solid #6366f1' }}>
+                                <CardContent>
+                                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                        <CommentIcon sx={{ color: '#6366f1' }} />
+                                        <Typography variant="h6" fontWeight="600" color="#6366f1">
+                                            Remarks
+                                        </Typography>
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ pl: 4 }}>
+                                        {event.remarks}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+
                             {/* Event Information Card */}
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <Card sx={{ height: '100%', borderRadius: 2, boxShadow: 2 }}>
