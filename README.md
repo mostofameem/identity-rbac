@@ -62,7 +62,26 @@ The Hot Events engine was the core motivation behind this project. For teams or 
 
 ---
 
+## 🚀 Future Work
+
+The current system is functional and solves the core problem, but there's more to build. Here's what's planned next:
+
+### 🔔 User Notifications
+Participants and event managers should never miss an update. Planned notification features include:
+- Email/in-app alerts when a new event is created (especially auto-created Hot Events)
+- Reminders before registration opens or closes
+- Notifications when an event is about to start or has been cancelled
+
+### 🤝 User Auto-Participation
+For truly recurring events where attendance is expected by default:
+- Users will be able to opt-in to **auto-participate** in specific event types
+- When a Hot Event is auto-created, opted-in users will be automatically registered as participants
+- Admin controls to manage auto-participation lists per event type
+
+---
+
 ## Table of Contents
+
 
 
 - [Installation](#installation)
