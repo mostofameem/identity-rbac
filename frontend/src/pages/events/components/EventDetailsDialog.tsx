@@ -30,6 +30,7 @@ import {
     PowerSettingsNew as PowerIcon,
     Edit as EditIcon,
     Save as SaveIcon,
+    Comment as CommentIcon,
 } from '@mui/icons-material';
 import { TextField, Switch, FormControlLabel } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -88,11 +89,16 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
         }
     };
 
-    const handleToggleAutoCreate = () => {
-        if (!event) return;
-        const newValue = !editData.shouldAutoCreateEvent;
-        setEditData(prev => ({ ...prev, shouldAutoCreateEvent: newValue }));
-        // Note: Backend API not yet implemented for this, but updating local state for UI
+    const handleToggleAutoCreate = async () => {
+        if (!event?.id) return;
+        try {
+            const newStatus = event.shouldAutoCreateEvent ? 'INACTIVE' : 'ACTIVE';
+            await eventService.updateShouldAutoCreateEvent(event.id, newStatus);
+            await fetchEventDetails(event.id);
+        } catch (err: any) {
+            console.error('Error toggling auto-recreate:', err);
+            alert(err.message || 'Failed to update auto-recreate status');
+        }
     };
 
     const handleSave = async () => {
@@ -186,28 +192,26 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
 
                     <Box display="flex" alignItems="center" gap={2}>
                         <Box display="flex" alignItems="center" gap={1} sx={{ bgcolor: 'rgba(255,255,255,0.15)', px: 2, py: 0.75, borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                            <PowerIcon
-                                sx={{
-                                    color: editData.shouldAutoCreateEvent ? '#4ade80' : '#f87171',
-                                    fontSize: 18
-                                }}
-                            />
-                            <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, letterSpacing: '0.5px' }}>
-                                AUTO-RECREATE: {editData.shouldAutoCreateEvent ? 'ENABLED' : 'DISABLED'}
-                            </Typography>
                             <IconButton
                                 onClick={handleToggleAutoCreate}
                                 size="small"
                                 sx={{
-                                    color: 'white',
-                                    ml: 0.5,
                                     bgcolor: 'rgba(255,255,255,0.1)',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                                    mr: 0.5
                                 }}
-                                title={editData.shouldAutoCreateEvent ? "Disable Auto-Recreate" : "Enable Auto-Recreate"}
+                                title={editData.shouldAutoCreateEvent ? "Disable Hot Event" : "Enable Hot Event"}
                             >
-                                <EditIcon sx={{ fontSize: 14 }} />
+                                <PowerIcon
+                                    sx={{
+                                        color: editData.shouldAutoCreateEvent ? '#4ade80' : '#f87171',
+                                        fontSize: 18
+                                    }}
+                                />
                             </IconButton>
+                            <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, letterSpacing: '0.5px' }}>
+                                Hot Event 🔥
+                            </Typography>
                         </Box>
 
                         {!isEditing ? (
@@ -290,7 +294,25 @@ const EventDetailsDialog: React.FC<EventDetailsDialogProps> = ({ open, onClose, 
                             </Card>
                         )}
 
+                        {/* Remarks Card */}
+                        {event.remarks && (
+                            <Card sx={{ mb: 3, borderRadius: 2, boxShadow: 2, borderLeft: '4px solid #6366f1' }}>
+                                <CardContent>
+                                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                        <CommentIcon sx={{ color: '#6366f1' }} />
+                                        <Typography variant="h6" fontWeight="600" color="#6366f1">
+                                            Remarks
+                                        </Typography>
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ pl: 4 }}>
+                                        {event.remarks}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+
                             {/* Event Information Card */}
                             <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <Card sx={{ height: '100%', borderRadius: 2, boxShadow: 2 }}>

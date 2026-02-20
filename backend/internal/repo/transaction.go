@@ -3,12 +3,14 @@ package repo
 import (
 	"context"
 	"identity-rbac/internal/event"
+	"identity-rbac/internal/worker"
 
 	"github.com/jmoiron/sqlx"
 )
 
 type Transaction interface {
 	event.TransactionRepo
+	worker.WorkerTransactionRepo
 }
 
 type transaction struct {

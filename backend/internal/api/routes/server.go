@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"fmt"
 	"identity-rbac/config"
 	"identity-rbac/internal/api/handlers"
@@ -9,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -26,7 +28,7 @@ func NewServer(cnf *config.Config, handlers *handlers.Handlers, middleware *midd
 	}
 }
 
-func (server *Server) Start() {
+func (server *Server) Start(ctx context.Context, onServerExit func()) {
 	manager := middlewares.NewManager()
 
 	mux := http.NewServeMux()
@@ -36,18 +38,36 @@ func (server *Server) Start() {
 
 	handler := middlewares.EnableCors(mux)
 
-	server.Wg.Add(1)
+	addr := fmt.Sprintf(":%d", server.cnf.HttpPort)
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: handler,
+	}
 
+	server.Wg.Add(1)
 	go func() {
 		defer server.Wg.Done()
-
-		addr := fmt.Sprintf(":%d", server.cnf.HttpPort)
+		defer onServerExit() // Trigger callback when server exits
 
 		slog.Info(fmt.Sprintf("Listening at %s", addr))
 
-		if err := http.ListenAndServe(addr, handler); err != nil {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error(err.Error())
 		}
 	}()
 
+	server.Wg.Add(1)
+	go func() {
+		defer server.Wg.Done()
+		<-ctx.Done()
+		slog.Info("Shutting down server...")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error(fmt.Sprintf("Server forced to shutdown: %v", err))
+		}
+		slog.Info("Server exited")
+	}()
 }

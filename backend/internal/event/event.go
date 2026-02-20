@@ -3,7 +3,6 @@ package event
 import (
 	"context"
 	"fmt"
-	"identity-rbac/config"
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
@@ -11,46 +10,30 @@ import (
 	"time"
 )
 
-const DEFAULT_PARTICIPANT_COUNT = 1
-
-type service struct {
-	cnf                  *config.Config
-	eventRepo            EventRepo
-	eventTypeRepo        EventTypeRepo
-	eventTypeSettingRepo EventTypeSettingRepo
-	participantRepo      ParticipantRepo
-	eventSettingRepo     EventTypeSettingRepo
-	transactionRepo      TransactionRepo
-}
-
-func NewEventSerVice(
-	cnf *config.Config,
-	eventRepo EventRepo,
-	eventTypeRepo EventTypeRepo,
-	eventTypeSettingRepo EventTypeSettingRepo,
-	participantRepo ParticipantRepo,
-	eventSettingRepo EventTypeSettingRepo,
-	transactionRepo TransactionRepo,
-) Service {
-	return &service{
-		cnf:                  cnf,
-		eventRepo:            eventRepo,
-		eventTypeRepo:        eventTypeRepo,
-		eventTypeSettingRepo: eventTypeSettingRepo,
-		participantRepo:      participantRepo,
-		eventSettingRepo:     eventSettingRepo,
-		transactionRepo:      transactionRepo,
-	}
-}
-
 func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error) {
 	// Validate event type exists
-	eventType, err := s.eventTypeRepo.GetByID(ctx, nil, req.EventTypeId)
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer s.transactionRepo.RollbackTx(ctx, tx)
+
+	eventType, err := s.eventTypeRepo.GetByID(ctx, tx, req.EventTypeId)
 	if err != nil {
 		return nil, err
 	}
 	if eventType == nil {
 		return nil, fmt.Errorf("Event type not found.")
+	}
+
+	if req.ShouldAutoCreateEvent {
+		totalHotEvents, err := s.hotEventsRepo.GetTotalHotEvents(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		if totalHotEvents >= s.cnf.MaxHotEventLimit {
+			return nil, fmt.Errorf("Maximum number of hot events reached.")
+		}
 	}
 
 	// Create the event
@@ -63,6 +46,17 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 	createdEvent, err := s.eventRepo.GetByID(ctx, nil, eventId)
 	if err != nil {
 		return nil, err
+	}
+
+	if req.ShouldAutoCreateEvent {
+		hotEvent := entity.HotEvents{
+			EventId:     eventId,
+			EventTypeId: req.EventTypeId,
+		}
+		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, hotEvent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Convert to response DTO
@@ -134,47 +128,6 @@ func (s *service) GetEventDetails(ctx context.Context, id int) (EventResponse, e
 
 	return *response, nil
 
-}
-
-func (s *service) CreateEventType(ctx context.Context, req CreateEventTypeReq) (int, error) {
-
-	eventType, err := s.eventTypeRepo.GetByName(ctx, req.Name)
-	if err != nil {
-		return 0, err
-	}
-	if eventType != nil {
-		return 0, util.ErrAlreadyExist
-	}
-
-	id, err := s.eventTypeRepo.Create(ctx, req)
-
-	return id, err
-}
-
-func (s *service) GetEventTypes(ctx context.Context, req GetEventTypesReq) ([]GetEventTypeResponse, util.Pagination, error) {
-
-	eventTypes, err := s.eventTypeRepo.GetAllWithPagination(ctx, req)
-	if err != nil {
-		return []GetEventTypeResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
-	}
-
-	eventTypeRes := make([]GetEventTypeResponse, len(eventTypes))
-	for i, eventType := range eventTypes {
-		eventTypeRes[i] = GetEventTypeResponse{
-			Id:          eventType.Id,
-			Name:        eventType.Name,
-			Description: eventType.Description,
-			IsActive:    eventType.IsActive,
-		}
-	}
-
-	totalItem, err := s.eventTypeRepo.GetTotalEventTypeCount(ctx, req)
-	if err != nil {
-		return []GetEventTypeResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
-	}
-	pagination := util.GetPaginationResponse(totalItem, req.Page, req.Limit)
-
-	return eventTypeRes, pagination, nil
 }
 
 func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error) {
@@ -257,139 +210,20 @@ func (s *service) GetPublicEvents(ctx context.Context, req GetPublicEventsReq) (
 	return events, pagination, nil
 }
 
-func (s *service) getEventTypesWhereIdsIn(ctx context.Context, eventTypeIds []int) ([]GetEventTypeResponse, error) {
-	eventTypes, err := s.eventTypeRepo.GetByIDs(ctx, eventTypeIds)
-	if err != nil {
-		return []GetEventTypeResponse{}, err
-	}
-
-	eventTypeResponse := make([]GetEventTypeResponse, len(eventTypes))
-	for i, eventType := range eventTypes {
-		eventTypeResponse[i] = GetEventTypeResponse{
-			Id:          eventType.Id,
-			Name:        eventType.Name,
-			Description: eventType.Description,
-			IsActive:    eventType.IsActive,
-		}
-	}
-
-	return eventTypeResponse, nil
-}
-
-func validateParticipation(event *entity.Events, now time.Time, totalParticipants int) error {
-	if !event.IsActive {
-		return util.ErrEventNotActive
-	}
-
-	if event.RegistrationOpensAt == nil || event.RegistrationClosesAt == nil {
-		return util.ErrEventRegistrationTimeNotInRange
-	}
-
-	if now.Before(*event.RegistrationOpensAt) || now.After(*event.RegistrationClosesAt) {
-		return util.ErrEventAlreadyEnded
-	}
-
-	if totalParticipants > event.MaxParticipants {
-		return util.ErrEventMaxParticipantsExceeded
-	}
-
-	return nil
-}
-
-func (s *service) EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error) {
-	eventSetting, err := s.eventSettingRepo.GetByEventTypeID(ctx, req.EventTypeId)
-	if err != nil {
-		return 0, util.ErrSomethingWentWrong
-	}
-
-	if eventSetting != nil {
-		id, err := s.eventSettingRepo.Update(ctx, req)
-		if err != nil {
-			return 0, util.ErrSomethingWentWrong
-		}
-
-		return id, nil
-	}
-
-	id, err := s.eventTypeSettingRepo.Create(ctx, req)
-	if err != nil {
-		slog.Error("Failed to create event type settings", "error", err)
-		return 0, err
-	}
-
-	return id, nil
-}
-
-func (s *service) GetEventTypeSettings(ctx context.Context, eventTypeID int) (EventTypeSettingsResponse, error) {
-	eventTypeSettings, err := s.eventTypeSettingRepo.GetByEventTypeID(ctx, eventTypeID)
-
-	if err != nil {
-		return EventTypeSettingsResponse{}, err
-	}
-
-	return EventTypeSettingsResponse{
-		Id:                         eventTypeSettings.Id,
-		EventTypeId:                eventTypeSettings.EventTypeID,
-		AutoCreateAt:               *eventTypeSettings.AutoCreateAt,
-		AutoEventIntervalInMinutes: eventTypeSettings.AutoEventIntervalInMinutes,
-		CreatedBy:                  eventTypeSettings.CreatedBy,
-		IsActive:                   eventTypeSettings.IsActive,
-	}, nil
-}
-
 func getEventStatus(event *entity.Events, now time.Time) enum.EventStatusType {
 	if !event.IsActive {
 		return enum.EventStatusInactive
 	}
 
-	if now.Before(*event.RegistrationOpensAt) {
+	if now.Before(event.RegistrationOpensAt) {
 		return enum.EventStatusUpcoming
 	}
 
-	if now.After(*event.RegistrationClosesAt) {
+	if now.After(event.RegistrationClosesAt) {
 		return enum.EventStatusRecent
 	}
 
 	return enum.EventStatusOngoing
-}
-
-func (s *service) UpdateEventTypeStatus(ctx context.Context, id int, status string) error {
-
-	tx, err := s.transactionRepo.BeginTx(ctx)
-	if err != nil {
-		return util.ErrSomethingWentWrong
-	}
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-			panic(p)
-		}
-		if err != nil {
-			_ = tx.Rollback()
-			return
-		}
-		err = tx.Commit()
-	}()
-
-	eventType, err := s.eventTypeRepo.GetByID(ctx, tx, id)
-	if err != nil {
-		slog.Error("Failed to get event type", "error", err)
-		return util.ErrSomethingWentWrong
-	}
-
-	if eventType == nil {
-		slog.Error("Event type not found", "id", id)
-		return util.ErrNotFound
-	}
-
-	isActive := status == "ACTIVE"
-
-	err = s.eventTypeRepo.UpdateIsActiveStatus(ctx, tx, id, isActive)
-	if err != nil {
-		return util.ErrSomethingWentWrong
-	}
-
-	return nil
 }
 
 func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) error {
@@ -428,21 +262,101 @@ func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) 
 		return util.ErrSomethingWentWrong
 	}
 
+	if !isActive {
+		err = s.hotEventsRepo.DeleteHotEvent(ctx, tx, id, event.EventTypeId)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	} else {
+		if event.ShouldAutoCreateEvent {
+			exist, err := s.hotEventsRepo.IsHotEventExist(ctx, tx, id, event.EventTypeId)
+			if err != nil {
+				return util.ErrSomethingWentWrong
+			}
+			if !exist {
+				err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
+					EventId:         id,
+					EventTypeId:     event.EventTypeId,
+					LastRecreatedAt: time.Now(),
+					CreatedAt:       time.Now(),
+					UpdatedAt:       time.Now(),
+				})
+				if err != nil {
+					return util.ErrSomethingWentWrong
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
-func (s *service) GetEventParticipationList(ctx context.Context, req GetEventParticipantsReq) ([]EventParticipantDetailDto, util.Pagination, error) {
-	participants, err := s.participantRepo.GetEventParticipants(ctx, req)
+func (s *service) UpdateShouldAutoCreateEventStatus(ctx context.Context, id int, status string) error {
+
+	tx, err := s.transactionRepo.BeginTx(ctx)
 	if err != nil {
-		return nil, util.Pagination{}, util.ErrSomethingWentWrong
+		return util.ErrSomethingWentWrong
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	event, err := s.eventRepo.GetByID(ctx, tx, id)
+	if err != nil {
+		slog.Error("Failed to get event type", "error", err)
+		return util.ErrSomethingWentWrong
 	}
 
-	totalItems, err := s.participantRepo.GetEventParticipantsCount(ctx, req)
-	if err != nil {
-		return nil, util.Pagination{}, util.ErrSomethingWentWrong
+	isActive := status == "ACTIVE"
+	if event.ShouldAutoCreateEvent == isActive {
+		return util.ErrEventAlreadyInStatus
 	}
 
-	pagination := util.GetPaginationResponse(totalItems, req.Page, req.Limit)
+	if event == nil {
+		slog.Error("Event not found", "id", id)
+		return util.ErrNotFound
+	}
 
-	return participants, pagination, nil
+	if event.ShouldAutoCreateEvent {
+		err = s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, false)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+
+		err = s.hotEventsRepo.DeleteHotEvent(ctx, tx, id, event.EventTypeId)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	} else {
+		totalHotEvents, err := s.hotEventsRepo.GetTotalHotEvents(ctx, tx)
+		if totalHotEvents >= s.cnf.MaxHotEventLimit {
+			return util.ErrHotEventsLimitReached
+		}
+
+		err = s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, true)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+
+		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
+			EventId:         id,
+			EventTypeId:     event.EventTypeId,
+			LastRecreatedAt: event.CreatedAt,
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		})
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+	}
+
+	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"identity-rbac/internal/api/utils"
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/event"
+	"identity-rbac/internal/worker"
 	"identity-rbac/pkg/logger"
 	"log/slog"
 	"time"
@@ -17,6 +18,7 @@ import (
 
 type EventRepo interface {
 	event.EventRepo
+	worker.EventRepo
 }
 
 type eventRepo struct {
@@ -367,4 +369,86 @@ func (r *eventRepo) getPublicEventQueryBuilder(userId int, status string) BuildQ
 			LeftJoin("event_types et ON e.event_type_id = et.id").
 			LeftJoin("participants p ON e.id = p.event_id AND p.user_id = ?", userId)
 	}
+}
+
+func (r *eventRepo) GetEventDetailsIn(ctx context.Context, eventIDs ...int) []entity.Events {
+	query, args, err := r.psql.Select("*").
+		From(r.table).
+		Where(sq.Eq{"id": eventIDs}).
+		Where(sq.Eq{"is_active": true}).
+		Where(sq.Expr("start_at <= ?", time.Now())).
+		Limit(min(uint64(len(eventIDs)), 100)).
+		ToSql()
+	if err != nil {
+		return []entity.Events{}
+	}
+	var events []entity.Events
+	if err := r.db.SelectContext(ctx, &events, query, args...); err != nil {
+		return []entity.Events{}
+	}
+	return events
+}
+
+func (r *eventRepo) UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *sqlx.Tx, id int, shouldAutoCreateEvent bool) error {
+
+	query, args, err := r.psql.
+		Update(r.table).
+		Set("should_auto_create_event", shouldAutoCreateEvent).
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"id":    id,
+		}))
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
+}
+
+func (r *eventRepo) AutoCreateEvent(ctx context.Context, req entity.Events) error {
+	query, args, err := r.psql.Insert(r.table).
+		Columns(
+			"title", "description", "event_type_id", "start_at",
+			"registration_opens_at", "registration_closes_at",
+			"should_auto_create_event", "max_participants",
+			"created_by", "created_at", "updated_at", "is_active", "updated_by",
+			"remarks",
+		).
+		Values(
+			req.Title, req.Description, req.EventTypeId, req.StartAt,
+			req.RegistrationOpensAt, req.RegistrationClosesAt,
+			false, req.MaxParticipants, 1, time.Now(), time.Now(), true, 1,
+			req.Remarks,
+		).
+		Suffix("RETURNING id").
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build insert query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"req":   req,
+		}))
+		return err
+	}
+
+	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute insert query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
 }

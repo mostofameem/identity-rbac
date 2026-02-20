@@ -265,6 +265,7 @@ export const eventService = {
         status: data.status || 'upcoming',
         isActive: data.isActive,
         shouldAutoCreateEvent: data.shouldAutoCreateEvent,
+        remarks: data.remarks ?? null,
         eventTypeId: data.eventTypeId?.toString() || '',
         eventType: data.eventType ? {
           id: data.eventType.id?.toString() || '',
@@ -370,6 +371,14 @@ export const eventService = {
       };
     } catch (error) {
       return handleApiError(error);
+    }
+  },
+
+  updateShouldAutoCreateEvent: async (id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> => {
+    try {
+      await api.put(`/events/${id}/update-should-auto-create-event`, { status });
+    } catch (error) {
+      handleApiError(error);
     }
   },
 };

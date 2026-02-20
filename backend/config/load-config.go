@@ -35,15 +35,17 @@ func LoadConfig() error {
 	viper.SetDefault("RATE_LIMIT_REFILL_RATE_PER_MINUTE", 10.0)
 
 	config = &Config{
-		Mode:                   Mode(viper.GetString("MODE")),
-		ServiceName:            viper.GetString("SERVICE_NAME"),
-		HttpPort:               viper.GetInt("HTTP_PORT"),
-		JwtSecret:              viper.GetString("JWT_SECRET"),
-		MigrationSource:        viper.GetString("MIGRATION_SOURCE"),
-		TokenExpireTimeInHours: viper.GetInt("TOKEN_EXPIRE_TIME_IN_HOURS"),
-		EmailInvitationTTL:     viper.GetInt("EMAIL_INVITATION_TTL_IN_MINUTE"),
-		AccessTokenTTL:         viper.GetInt("ACCESS_TOKEN_TTL_IN_MINUTE"),
-		RefreshTokenTTL:        viper.GetInt("REFRESH_TOKEN_TTL_IN_MINUTE"),
+		Mode:                                Mode(viper.GetString("MODE")),
+		ServiceName:                         viper.GetString("SERVICE_NAME"),
+		HttpPort:                            viper.GetInt("HTTP_PORT"),
+		JwtSecret:                           viper.GetString("JWT_SECRET"),
+		MigrationSource:                     viper.GetString("MIGRATION_SOURCE"),
+		TokenExpireTimeInHours:              viper.GetInt("TOKEN_EXPIRE_TIME_IN_HOURS"),
+		EmailInvitationTTL:                  viper.GetInt("EMAIL_INVITATION_TTL_IN_MINUTE"),
+		AccessTokenTTL:                      viper.GetInt("ACCESS_TOKEN_TTL_IN_MINUTE"),
+		RefreshTokenTTL:                     viper.GetInt("REFRESH_TOKEN_TTL_IN_MINUTE"),
+		AutoEventCreateWorkerDelayInMinutes: viper.GetInt("EVENT_AUTO_CREATE_WORKER_DELAY_IN_MINUTE"),
+		MaxHotEventLimit:                    viper.GetInt("MAX_HOT_EVENT_LIMIT"),
 		DB: &DBConfig{
 			Host:                 viper.GetString("DB_HOST"),
 			Port:                 viper.GetInt("DB_PORT"),

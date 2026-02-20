@@ -16,13 +16,13 @@ import (
 )
 
 type CreateEventRequest struct {
-	Title                string     `json:"title"                validation:"required"`
-	Description          string     `json:"description"`
-	EventTypeId          int        `json:"eventTypeId"          validation:"required"`
-	StartAt              time.Time  `json:"startAt"              validation:"required"`
-	RegistrationOpensAt  *time.Time `json:"registrationOpensAt"  validation:"required"`
-	RegistrationClosesAt *time.Time `json:"registrationClosesAt" validation:"required"`
-	MaxParticipants      int        `json:"maxParticipants"      validation:"required"`
+	Title                string    `json:"title"                validation:"required"`
+	Description          string    `json:"description"`
+	EventTypeId          int       `json:"eventTypeId"          validation:"required"`
+	StartAt              time.Time `json:"startAt"              validation:"required"`
+	RegistrationOpensAt  time.Time `json:"registrationOpensAt"  validation:"required"`
+	RegistrationClosesAt time.Time `json:"registrationClosesAt" validation:"required"`
+	MaxParticipants      int       `json:"maxParticipants"      validation:"required"`
 }
 
 type GetEventRequest struct {
@@ -253,5 +253,49 @@ func (handlers *Handlers) GetEventParticipants(w http.ResponseWriter, r *http.Re
 		"data":       participants,
 		"pagination": pagination,
 		"message":    "Successfully fetched event participants.",
+	})
+}
+
+func (handlers *Handlers) UpdateShouldAutoCreateEvent(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return
+	}
+
+	var request EventStatusChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := utils.Validate(request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Validation error")
+		return
+	}
+
+	//rate limiting
+	key := handlers.rateLimiterSvc.GetShouldAutoCreateEventKey(id)
+	isAllowed, err := handlers.rateLimiterSvc.IsAllowed(r.Context(), key)
+	if err != nil {
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+	if !isAllowed {
+		utils.SendError(w, http.StatusTooManyRequests, "Too many requests, please try again later.")
+		return
+	}
+
+	err = handlers.eventSvc.UpdateShouldAutoCreateEventStatus(r.Context(), id, string(request.Status))
+	if err != nil {
+		if errors.Is(err, util.ErrSomethingWentWrong) {
+			utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Successfully toggled hot event status.",
 	})
 }
