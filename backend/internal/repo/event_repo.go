@@ -371,22 +371,81 @@ func (r *eventRepo) getPublicEventQueryBuilder(userId int, status string) BuildQ
 	}
 }
 
-func (r *eventRepo) GetEventDetailsIn(ctx context.Context, eventIDs ...int) []entity.Events {
-	query, args, err := r.psql.Select("*").
-		From(r.table).
-		Where(sq.Eq{"id": eventIDs}).
-		Where(sq.Eq{"is_active": true}).
-		Where(sq.Expr("start_at <= ?", time.Now())).
-		Limit(min(uint64(len(eventIDs)), 100)).
+// GetAutoCreateEventTemplates is the worker's scan: every active event flagged
+// should_auto_create_event, joined with its type's recurrence settings and the
+// last occurrence slot already materialized for it.
+func (r *eventRepo) GetAutoCreateEventTemplates(ctx context.Context) ([]entity.AutoCreateEventTemplate, error) {
+	query, args, err := r.psql.Select(
+		"e.id",
+		"e.title",
+		"COALESCE(e.description, '') AS description",
+		"e.event_type_id",
+		"e.start_at",
+		// registration dates are nullable — a NULL scans as an error into
+		// time.Time and would abort the whole worker tick, so coalesce to
+		// start_at (registration opens/closes when the event starts).
+		"COALESCE(e.registration_opens_at, e.start_at) AS registration_opens_at",
+		"COALESCE(e.registration_closes_at, e.start_at) AS registration_closes_at",
+		"e.max_participants",
+		"e.remarks",
+		"ets.recurrence",
+		"ets.auto_create_at",
+		"COALESCE(occ.last_done, e.start_at::date) AS last_done",
+		"COALESCE(occ.has_occurrence, false) AS has_occurrence",
+	).
+		From(r.table + " e").
+		Join("event_type_settings ets ON ets.event_type_id = e.event_type_id AND ets.is_active = true").
+		LeftJoin("LATERAL (SELECT MAX(o.scheduled_date) AS last_done, COUNT(o.id) > 0 AS has_occurrence FROM event_occurrences o WHERE o.event_id = e.id) occ ON true").
+		Where(sq.Eq{
+			"e.should_auto_create_event": true,
+			"e.is_active":                true,
+			"e.is_deleted":               false,
+		}).
 		ToSql()
 	if err != nil {
-		return []entity.Events{}
+		slog.Error("Failed to build auto create templates query", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return nil, err
 	}
-	var events []entity.Events
-	if err := r.db.SelectContext(ctx, &events, query, args...); err != nil {
-		return []entity.Events{}
+
+	var templates []entity.AutoCreateEventTemplate
+	if err := r.db.SelectContext(ctx, &templates, query, args...); err != nil {
+		slog.Error("Failed to select auto create templates", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return nil, err
 	}
-	return events
+
+	return templates, nil
+}
+
+// GetTotalAutoCreateEvents counts events currently flagged for auto creation.
+func (r *eventRepo) GetTotalAutoCreateEvents(ctx context.Context) (int, error) {
+	query, args, err := r.psql.Select("COUNT(id)").
+		From(r.table).
+		Where(sq.Eq{
+			"should_auto_create_event": true,
+			"is_active":                true,
+			"is_deleted":               false,
+		}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build count query", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return 0, err
+	}
+
+	var total int
+	if err := r.db.GetContext(ctx, &total, query, args...); err != nil {
+		slog.Error("Failed to count auto create events", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+		return 0, err
+	}
+
+	return total, nil
 }
 
 func (r *eventRepo) UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *sqlx.Tx, id int, shouldAutoCreateEvent bool) error {
@@ -416,7 +475,15 @@ func (r *eventRepo) UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *s
 	return nil
 }
 
-func (r *eventRepo) AutoCreateEvent(ctx context.Context, req entity.Events) error {
+// CreateEventInTx inserts a worker-created occurrence clone inside the same
+// transaction that claimed the occurrence slot, so a crash can never leave a
+// clone without its log row (or vice versa). A clone is never itself a
+// template, so should_auto_create_event is always false here.
+func (r *eventRepo) CreateEventInTx(ctx context.Context, tx *sqlx.Tx, req entity.Events, systemUserID int) error {
+	if tx == nil {
+		return errors.New("transaction is required for CreateEventInTx")
+	}
+
 	query, args, err := r.psql.Insert(r.table).
 		Columns(
 			"title", "description", "event_type_id", "start_at",
@@ -428,10 +495,9 @@ func (r *eventRepo) AutoCreateEvent(ctx context.Context, req entity.Events) erro
 		Values(
 			req.Title, req.Description, req.EventTypeId, req.StartAt,
 			req.RegistrationOpensAt, req.RegistrationClosesAt,
-			false, req.MaxParticipants, 1, time.Now(), time.Now(), true, 1,
+			false, req.MaxParticipants, systemUserID, time.Now(), time.Now(), true, systemUserID,
 			req.Remarks,
 		).
-		Suffix("RETURNING id").
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build insert query", logger.Extra(map[string]any{
@@ -441,7 +507,7 @@ func (r *eventRepo) AutoCreateEvent(ctx context.Context, req entity.Events) erro
 		return err
 	}
 
-	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
 		slog.Error("Failed to execute insert query", logger.Extra(map[string]any{
 			"error": err.Error(),
 			"query": query,

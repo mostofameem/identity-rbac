@@ -12,17 +12,12 @@ type AutoEventCreateWorkerService interface {
 }
 
 type EventRepo interface {
-	AutoCreateEvent(ctx context.Context, event entity.Events) error
-	GetEventDetailsIn(ctx context.Context, eventIDs ...int) []entity.Events
+	GetAutoCreateEventTemplates(ctx context.Context) ([]entity.AutoCreateEventTemplate, error)
+	CreateEventInTx(ctx context.Context, tx *sqlx.Tx, event entity.Events, systemUserID int) error
 }
 
-type EventTypeSettingsRepo interface {
-	GetEventTypeSettingsIn(ctx context.Context, eventTypeIDs ...int) []entity.EventTypeSettings
-}
-
-type HotEventsRepo interface {
-	GetHotEvents(ctx context.Context, tx *sqlx.Tx) ([]entity.HotEvents, error)
-	UpdateLastRecreatedHotEvent(ctx context.Context, tx *sqlx.Tx, eventID, eventTypeID int) error
+type OccurrenceRepo interface {
+	ClaimOccurrence(ctx context.Context, tx *sqlx.Tx, occurrence entity.EventOccurrence) (bool, error)
 }
 
 type WorkerTransactionRepo interface {

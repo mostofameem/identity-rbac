@@ -33,6 +33,7 @@ func LoadConfig() error {
 
 	viper.SetDefault("RATE_LIMIT_CAPACITY", 10)
 	viper.SetDefault("RATE_LIMIT_REFILL_RATE_PER_MINUTE", 10.0)
+	viper.SetDefault("SYSTEM_USER_ID", 1)
 
 	config = &Config{
 		Mode:                                Mode(viper.GetString("MODE")),
@@ -46,6 +47,7 @@ func LoadConfig() error {
 		RefreshTokenTTL:                     viper.GetInt("REFRESH_TOKEN_TTL_IN_MINUTE"),
 		AutoEventCreateWorkerDelayInMinutes: viper.GetInt("EVENT_AUTO_CREATE_WORKER_DELAY_IN_MINUTE"),
 		MaxHotEventLimit:                    viper.GetInt("MAX_HOT_EVENT_LIMIT"),
+		SystemUserID:                        viper.GetInt("SYSTEM_USER_ID"),
 		DB: &DBConfig{
 			Host:                 viper.GetString("DB_HOST"),
 			Port:                 viper.GetInt("DB_PORT"),

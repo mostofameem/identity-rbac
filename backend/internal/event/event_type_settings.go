@@ -2,29 +2,28 @@ package event
 
 import (
 	"context"
+	"errors"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
-	"log/slog"
 )
 
-func (s *service) EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error) {
-	eventSetting, err := s.eventSettingRepo.GetByEventTypeID(ctx, req.EventTypeId)
-	if err != nil {
+func (s *service) UpdateEventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error) {
+	if !enum.RecurrenceType(req.Recurrence).IsValid() {
+		return 0, util.ErrInvalidRecurrence
+	}
+
+	eventSetting, err := s.eventTypeSettingRepo.GetByEventTypeID(ctx, req.EventTypeId)
+	if err != nil && !errors.Is(err, util.ErrNotFound) {
 		return 0, util.ErrSomethingWentWrong
 	}
 
-	if eventSetting != nil {
-		id, err := s.eventSettingRepo.Update(ctx, req)
-		if err != nil {
-			return 0, util.ErrSomethingWentWrong
-		}
-
-		return id, nil
+	if eventSetting == nil {
+		return 0, util.ErrNotFound
 	}
 
-	id, err := s.eventTypeSettingRepo.Create(ctx, req)
+	id, err := s.eventTypeSettingRepo.Update(ctx, req)
 	if err != nil {
-		slog.Error("Failed to create event type settings", "error", err)
-		return 0, err
+		return 0, util.ErrSomethingWentWrong
 	}
 
 	return id, nil
@@ -37,12 +36,18 @@ func (s *service) GetEventTypeSettings(ctx context.Context, eventTypeID int) (Ev
 		return EventTypeSettingsResponse{}, err
 	}
 
+	// auto_create_at is nullable — guard the dereference.
+	autoCreateAt := ""
+	if eventTypeSettings.AutoCreateAt != nil {
+		autoCreateAt = *eventTypeSettings.AutoCreateAt
+	}
+
 	return EventTypeSettingsResponse{
-		Id:                         eventTypeSettings.Id,
-		EventTypeId:                eventTypeSettings.EventTypeID,
-		AutoCreateAt:               *eventTypeSettings.AutoCreateAt,
-		AutoEventIntervalInMinutes: eventTypeSettings.AutoEventIntervalInMinutes,
-		CreatedBy:                  eventTypeSettings.CreatedBy,
-		IsActive:                   eventTypeSettings.IsActive,
+		Id:           eventTypeSettings.Id,
+		EventTypeId:  eventTypeSettings.EventTypeID,
+		AutoCreateAt: autoCreateAt,
+		Recurrence:   eventTypeSettings.Recurrence,
+		CreatedBy:    eventTypeSettings.CreatedBy,
+		IsActive:     eventTypeSettings.IsActive,
 	}, nil
 }

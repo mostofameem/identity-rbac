@@ -8,9 +8,8 @@ type service struct {
 	eventTypeRepo        EventTypeRepo
 	eventTypeSettingRepo EventTypeSettingRepo
 	participantRepo      ParticipantRepo
-	eventSettingRepo     EventTypeSettingRepo
 	transactionRepo      TransactionRepo
-	hotEventsRepo        HotEventsRepo
+	occurrenceRepo       OccurrenceRepo
 }
 
 func NewEventSerVice(
@@ -19,9 +18,8 @@ func NewEventSerVice(
 	eventTypeRepo EventTypeRepo,
 	eventTypeSettingRepo EventTypeSettingRepo,
 	participantRepo ParticipantRepo,
-	eventSettingRepo EventTypeSettingRepo,
 	transactionRepo TransactionRepo,
-	hotEventsRepo HotEventsRepo,
+	occurrenceRepo OccurrenceRepo,
 ) Service {
 	return &service{
 		cnf:                  cnf,
@@ -29,8 +27,7 @@ func NewEventSerVice(
 		eventTypeRepo:        eventTypeRepo,
 		eventTypeSettingRepo: eventTypeSettingRepo,
 		participantRepo:      participantRepo,
-		eventSettingRepo:     eventSettingRepo,
 		transactionRepo:      transactionRepo,
-		hotEventsRepo:        hotEventsRepo,
+		occurrenceRepo:       occurrenceRepo,
 	}
 }

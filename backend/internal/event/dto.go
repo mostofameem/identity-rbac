@@ -127,21 +127,33 @@ type PerticipateEventReq struct {
 }
 
 type EventTypeSettingsRequest struct {
-	EventTypeId                int
-	AutoCreateAt               string
-	AutoEventIntervalInMinutes int
-	RequestBy                  int
-	Remarks                    string
-	IsActive                   bool
+	EventTypeId int
+	AutoCreateAt string
+	Recurrence   string
+	RequestBy    int
+	Remarks      string
+	IsActive     bool
 }
 
 type EventTypeSettingsResponse struct {
-	Id                         int
-	EventTypeId                int
-	AutoCreateAt               string
-	AutoEventIntervalInMinutes int
-	CreatedBy                  *int
-	IsActive                   bool
+	Id           int    `json:"id"`
+	EventTypeId  int    `json:"eventTypeId"`
+	AutoCreateAt string `json:"autoCreateAt"`
+	Recurrence   string `json:"recurrence"`
+	CreatedBy    *int   `json:"createdBy"`
+	IsActive     bool   `json:"isActive"`
+}
+
+type EventOccurrenceDto struct {
+	ScheduledDate time.Time `db:"scheduled_date" json:"scheduledDate"`
+	StartAt       time.Time `db:"start_at"       json:"startAt"`
+	PerformedAt   time.Time `db:"performed_at"   json:"performedAt"`
+}
+
+type EventOccurrencesResponse struct {
+	Recurrence   string               `json:"recurrence"`
+	NextDueDate  *time.Time           `json:"nextDueDate"`
+	Occurrences  []EventOccurrenceDto `json:"occurrences"`
 }
 
 type EventTypeResponse struct {

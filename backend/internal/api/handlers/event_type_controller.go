@@ -25,10 +25,10 @@ type GetEventTypes struct {
 }
 
 type EventTypeSettingsRequest struct {
-	EventTypeId                int    `json:"eventTypeId"                validation:"required"`
-	AutoCreateAt               string `json:"autoCreateAt"               validation:"required"`
-	AutoEventIntervalInMinutes int    `json:"autoEventIntervalInMinutes" validation:"required"`
-	IsActive                   bool   `json:"isActive"                   validation:"required"`
+	EventTypeId  int    `json:"eventTypeId"  validation:"required"`
+	AutoCreateAt string `json:"autoCreateAt" validation:"required"`
+	Recurrence   string `json:"recurrence"   validation:"required,oneof=DAILY WEEKLY MONTHLY YEARLY ONCE"`
+	IsActive     bool   `json:"isActive"     validation:"required"`
 }
 
 type EventTypeStatusChangeRequest struct {
@@ -100,7 +100,7 @@ func (handlers *Handlers) GetEventTypes(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-func (handlers *Handlers) CreateEventTypeSettings(w http.ResponseWriter, r *http.Request) {
+func (handlers *Handlers) UpdateEventTypeSettings(w http.ResponseWriter, r *http.Request) {
 	var req EventTypeSettingsRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -127,15 +127,19 @@ func (handlers *Handlers) CreateEventTypeSettings(w http.ResponseWriter, r *http
 		return
 	}
 
-	id, err := handlers.eventSvc.EventTypeSettings(r.Context(), event.EventTypeSettingsRequest{
-		EventTypeId:                req.EventTypeId,
-		AutoCreateAt:               req.AutoCreateAt,
-		AutoEventIntervalInMinutes: req.AutoEventIntervalInMinutes,
-		RequestBy:                  *createdBy,
-		IsActive:                   req.IsActive,
+	id, err := handlers.eventSvc.UpdateEventTypeSettings(r.Context(), event.EventTypeSettingsRequest{
+		EventTypeId:  req.EventTypeId,
+		AutoCreateAt: req.AutoCreateAt,
+		Recurrence:   req.Recurrence,
+		RequestBy:    *createdBy,
+		IsActive:     req.IsActive,
 	})
 
 	if err != nil {
+		if errors.Is(err, util.ErrInvalidRecurrence) {
+			utils.SendError(w, http.StatusBadRequest, "Invalid recurrence, must be DAILY, WEEKLY, MONTHLY, YEARLY or ONCE")
+			return
+		}
 		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
 		return
 	}

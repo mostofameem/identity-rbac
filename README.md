@@ -116,7 +116,7 @@ cp .env.example .env
 ### ✅ Step 2: Database Migration
 Initialize the required database tables:   
 
-    make migrate
+    make migrate-up
 
 Alternative
 ```bash

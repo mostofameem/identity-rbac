@@ -3,9 +3,12 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+# .npmrc sets legacy-peer-deps=true — without it npm ci fails on the
+# react-scripts/typescript-5 peer conflict. Dev deps are required here
+# (react-scripts, typescript) for the build step below.
+COPY package*.json .npmrc ./
 
-RUN npm ci --only=production
+RUN npm ci
 
 COPY . .
 

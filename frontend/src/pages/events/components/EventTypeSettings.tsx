@@ -26,7 +26,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Save as SaveIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { EventTypeSetting } from '../types/event.types';
+import { EventTypeSetting, Recurrence, RECURRENCE_OPTIONS, recurrenceLabel } from '../types/event.types';
 import { eventTypeService } from '../services/eventService';
 
 interface EventTypeSettingsProps {
@@ -38,6 +38,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
   const [eventTypes, setEventTypes] = useState<any[]>([]);
   const [selectedEventType, setSelectedEventType] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [recurrence, setRecurrence] = useState<Recurrence>('DAILY');
   const [newSetting, setNewSetting] = useState<Partial<EventTypeSetting>>({
     key: 'autoCreateAt',
     value: '09:00',
@@ -71,6 +72,12 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
       // If the backend returns a single object (which it usually does for settings)
       // we need to wrap it into an array for the table mapping to work correctly.
       if (response && typeof response === 'object' && !Array.isArray(response)) {
+        const responseRecurrence = response.recurrence || 'DAILY';
+        setRecurrence(
+          RECURRENCE_OPTIONS.some((option) => option.value === responseRecurrence)
+            ? responseRecurrence as Recurrence
+            : 'DAILY'
+        );
         setSettings([{
           id: response.id.toString(),
           key: 'autoCreateAt',
@@ -119,7 +126,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
       const settingToAdd = {
         eventTypeId: selectedEventType,
         autoCreateAt: newSetting.value || '09:00',
-        autoEventIntervalInMinutes: 1440, // Default to 24 hours
+        recurrence,
         isActive: newSetting.isRequired !== false,
       };
 
@@ -148,7 +155,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
       const payload = {
         eventTypeId: selectedEventType,
         autoCreateAt: autoCreateAt,
-        autoEventIntervalInMinutes: 1440, // 24 hours default
+        recurrence,
         isActive: isActive,
       };
 
@@ -217,17 +224,20 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
               </div>
 
               <div className="col-span-12 md:col-span-4">
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Interval (Minutes)"
-                  name="interval"
-                  value={1440}
-                  variant="outlined"
-                  size="small"
-                  helperText="Default: 1440 (24 hours)"
-                  disabled
-                />
+                <FormControl fullWidth variant="outlined" margin="normal">
+                  <InputLabel>Repeats</InputLabel>
+                  <Select
+                    value={recurrence}
+                    onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+                    label="Repeats"
+                  >
+                    {RECURRENCE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </div>
 
               <div className="col-span-12 md:col-span-3">
@@ -281,6 +291,7 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
                 <TableHead>
                   <TableRow>
                     <TableCell>Auto Create At</TableCell>
+                    <TableCell>Repeats</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
@@ -303,6 +314,9 @@ const EventTypeSettings: React.FC<EventTypeSettingsProps> = ({ eventTypeId }) =>
                           helperText="Time in 24-hour format"
                           sx={{ minWidth: 150 }}
                         />
+                      </TableCell>
+                      <TableCell>
+                        {recurrenceLabel(recurrence)}
                       </TableCell>
                       <TableCell>
                         <Switch

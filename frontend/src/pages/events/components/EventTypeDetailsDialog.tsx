@@ -16,6 +16,7 @@ import {
     CircularProgress,
     Stack,
     TextField,
+    MenuItem,
     Switch,
     FormControlLabel,
     IconButton
@@ -30,7 +31,7 @@ import {
     Schedule,
     Info
 } from '@mui/icons-material';
-import { EventType } from '../types/event.types';
+import { EventType, Recurrence, RECURRENCE_OPTIONS, recurrenceLabel } from '../types/event.types';
 import { eventTypeService } from '../services/eventService';
 
 interface EventTypeDetailsDialogProps {
@@ -45,9 +46,13 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<Partial<EventType>>({});
     const [saving, setSaving] = useState(false);
-    const [settings, setSettings] = useState({
+    const [settings, setSettings] = useState<{
+        autoCreateAt: string;
+        recurrence: Recurrence;
+        isActive: boolean;
+    }>({
         autoCreateAt: '09:00',
-        autoEventIntervalInMinutes: 1440,
+        recurrence: 'DAILY',
         isActive: false,
     });
     const [settingsLoading, setSettingsLoading] = useState(false);
@@ -80,14 +85,14 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
             const data = await eventTypeService.getEventTypeSettings(id);
             if (data) {
                 const autoCreateAt = data.AutoCreateAt || data.autoCreateAt || '09:00';
-                const intervalValue = data.AutoEventIntervalInMinutes !== undefined
-                    ? data.AutoEventIntervalInMinutes
-                    : (data.autoEventIntervalInMinutes || 1440);
+                const recurrenceValue = data.Recurrence || data.recurrence || 'DAILY';
                 const activeValue = data.IsActive !== undefined ? data.IsActive : (data.isActive === true);
 
                 setSettings({
                     autoCreateAt: autoCreateAt,
-                    autoEventIntervalInMinutes: typeof intervalValue === 'string' ? parseInt(intervalValue) : intervalValue,
+                    recurrence: (RECURRENCE_OPTIONS.some((option) => option.value === recurrenceValue)
+                        ? recurrenceValue
+                        : 'DAILY') as Recurrence,
                     isActive: activeValue === true || activeValue === 'true',
                 });
                 setNoSettings(false);
@@ -110,7 +115,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
             await eventTypeService.createEventTypeSetting({
                 eventTypeId: eventType.id,
                 autoCreateAt: settings.autoCreateAt,
-                autoEventIntervalInMinutes: settings.autoEventIntervalInMinutes,
+                recurrence: settings.recurrence,
                 isActive: settings.isActive,
             });
 
@@ -261,20 +266,26 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" color="text.secondary" fontWeight="600" textTransform="uppercase">
-                                        Interval (Minutes)
+                                        Repeats
                                     </Typography>
                                     <TextField
                                         fullWidth
-                                        type="number"
+                                        select={isEditing}
                                         disabled={!isEditing}
-                                        value={settings.autoEventIntervalInMinutes}
+                                        value={isEditing ? settings.recurrence : recurrenceLabel(settings.recurrence)}
                                         onChange={(e) => setSettings(prev => ({
                                             ...prev,
-                                            autoEventIntervalInMinutes: parseInt(e.target.value) || 1440
+                                            recurrence: e.target.value as Recurrence
                                         }))}
                                         size="small"
                                         sx={{ mt: 0.5 }}
-                                    />
+                                    >
+                                        {RECURRENCE_OPTIONS.map((option) => (
+                                            <MenuItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
                                 </Box>
                             </Box>
 

@@ -299,3 +299,25 @@ func (handlers *Handlers) UpdateShouldAutoCreateEvent(w http.ResponseWriter, r *
 		"message": "Successfully toggled hot event status.",
 	})
 }
+
+func (handlers *Handlers) GetEventOccurrences(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return
+	}
+
+	occurrences, err := handlers.eventSvc.GetEventOccurrences(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, util.ErrNotFound) {
+			utils.SendError(w, http.StatusNotFound, "Event not found.")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"data":    occurrences,
+		"message": "Successfully fetched event occurrences.",
+	})
+}

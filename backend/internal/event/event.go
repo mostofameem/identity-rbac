@@ -2,37 +2,30 @@ package event
 
 import (
 	"context"
-	"fmt"
 	"identity-rbac/internal/entity"
 	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
-	"log/slog"
 	"time"
 )
 
 func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error) {
 	// Validate event type exists
-	tx, err := s.transactionRepo.BeginTx(ctx)
+	eventType, err := s.eventTypeRepo.GetByID(ctx, nil, req.EventTypeId)
 	if err != nil {
-		return nil, err
-	}
-	defer s.transactionRepo.RollbackTx(ctx, tx)
-
-	eventType, err := s.eventTypeRepo.GetByID(ctx, tx, req.EventTypeId)
-	if err != nil {
-		return nil, err
+		return nil, util.ErrSomethingWentWrong
 	}
 	if eventType == nil {
-		return nil, fmt.Errorf("Event type not found.")
+		return nil, util.ErrNotFound
 	}
 
+	// Enforce the hot event limit when the new event is flagged for auto creation
 	if req.ShouldAutoCreateEvent {
-		totalHotEvents, err := s.hotEventsRepo.GetTotalHotEvents(ctx, tx)
+		totalAutoCreateEvents, err := s.eventRepo.GetTotalAutoCreateEvents(ctx)
 		if err != nil {
-			return nil, err
+			return nil, util.ErrSomethingWentWrong
 		}
-		if totalHotEvents >= s.cnf.MaxHotEventLimit {
-			return nil, fmt.Errorf("Maximum number of hot events reached.")
+		if totalAutoCreateEvents >= s.cnf.MaxHotEventLimit {
+			return nil, util.ErrHotEventsLimitReached
 		}
 	}
 
@@ -46,17 +39,6 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 	createdEvent, err := s.eventRepo.GetByID(ctx, nil, eventId)
 	if err != nil {
 		return nil, err
-	}
-
-	if req.ShouldAutoCreateEvent {
-		hotEvent := entity.HotEvents{
-			EventId:     eventId,
-			EventTypeId: req.EventTypeId,
-		}
-		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, hotEvent)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// Convert to response DTO
@@ -227,136 +209,60 @@ func getEventStatus(event *entity.Events, now time.Time) enum.EventStatusType {
 }
 
 func (s *service) UpdateEventStatus(ctx context.Context, id int, status string) error {
+	event, err := s.eventRepo.GetByID(ctx, nil, id)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+	if event == nil {
+		return util.ErrNotFound
+	}
 
 	tx, err := s.transactionRepo.BeginTx(ctx)
 	if err != nil {
 		return util.ErrSomethingWentWrong
 	}
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-			panic(p)
-		}
-		if err != nil {
-			_ = tx.Rollback()
-			return
-		}
-		err = tx.Commit()
-	}()
+	defer s.transactionRepo.RollbackTx(ctx, tx)
 
-	event, err := s.eventRepo.GetByID(ctx, tx, id)
-	if err != nil {
-		slog.Error("Failed to get event type", "error", err)
+	if err := s.eventRepo.UpdateIsActiveStatus(ctx, tx, id, status == "ACTIVE"); err != nil {
 		return util.ErrSomethingWentWrong
 	}
 
-	if event == nil {
-		slog.Error("Event not found", "id", id)
-		return util.ErrNotFound
-	}
-
-	isActive := status == "ACTIVE"
-
-	err = s.eventRepo.UpdateIsActiveStatus(ctx, tx, id, isActive)
-	if err != nil {
-		return util.ErrSomethingWentWrong
-	}
-
-	if !isActive {
-		err = s.hotEventsRepo.DeleteHotEvent(ctx, tx, id, event.EventTypeId)
-		if err != nil {
-			return util.ErrSomethingWentWrong
-		}
-	} else {
-		if event.ShouldAutoCreateEvent {
-			exist, err := s.hotEventsRepo.IsHotEventExist(ctx, tx, id, event.EventTypeId)
-			if err != nil {
-				return util.ErrSomethingWentWrong
-			}
-			if !exist {
-				err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
-					EventId:         id,
-					EventTypeId:     event.EventTypeId,
-					LastRecreatedAt: time.Now(),
-					CreatedAt:       time.Now(),
-					UpdatedAt:       time.Now(),
-				})
-				if err != nil {
-					return util.ErrSomethingWentWrong
-				}
-			}
-		}
-	}
-
-	return nil
+	return s.transactionRepo.CommitTx(ctx, tx)
 }
 
 func (s *service) UpdateShouldAutoCreateEventStatus(ctx context.Context, id int, status string) error {
+	event, err := s.eventRepo.GetByID(ctx, nil, id)
+	if err != nil {
+		return util.ErrSomethingWentWrong
+	}
+	if event == nil {
+		return util.ErrNotFound
+	}
+
+	shouldAutoCreateEvent := status == "ACTIVE"
+	if event.ShouldAutoCreateEvent == shouldAutoCreateEvent {
+		return util.ErrEventAlreadyInStatus
+	}
+
+	if shouldAutoCreateEvent {
+		totalAutoCreateEvents, err := s.eventRepo.GetTotalAutoCreateEvents(ctx)
+		if err != nil {
+			return util.ErrSomethingWentWrong
+		}
+		if totalAutoCreateEvents >= s.cnf.MaxHotEventLimit {
+			return util.ErrHotEventsLimitReached
+		}
+	}
 
 	tx, err := s.transactionRepo.BeginTx(ctx)
 	if err != nil {
 		return util.ErrSomethingWentWrong
 	}
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-			panic(p)
-		}
-		if err != nil {
-			_ = tx.Rollback()
-			return
-		}
-		err = tx.Commit()
-	}()
+	defer s.transactionRepo.RollbackTx(ctx, tx)
 
-	event, err := s.eventRepo.GetByID(ctx, tx, id)
-	if err != nil {
-		slog.Error("Failed to get event type", "error", err)
+	if err := s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, shouldAutoCreateEvent); err != nil {
 		return util.ErrSomethingWentWrong
 	}
 
-	isActive := status == "ACTIVE"
-	if event.ShouldAutoCreateEvent == isActive {
-		return util.ErrEventAlreadyInStatus
-	}
-
-	if event == nil {
-		slog.Error("Event not found", "id", id)
-		return util.ErrNotFound
-	}
-
-	if event.ShouldAutoCreateEvent {
-		err = s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, false)
-		if err != nil {
-			return util.ErrSomethingWentWrong
-		}
-
-		err = s.hotEventsRepo.DeleteHotEvent(ctx, tx, id, event.EventTypeId)
-		if err != nil {
-			return util.ErrSomethingWentWrong
-		}
-	} else {
-		totalHotEvents, err := s.hotEventsRepo.GetTotalHotEvents(ctx, tx)
-		if totalHotEvents >= s.cnf.MaxHotEventLimit {
-			return util.ErrHotEventsLimitReached
-		}
-
-		err = s.eventRepo.UpdateShouldAutoCreateEventStatus(ctx, tx, id, true)
-		if err != nil {
-			return util.ErrSomethingWentWrong
-		}
-
-		err = s.hotEventsRepo.CreateHotEvent(ctx, tx, entity.HotEvents{
-			EventId:         id,
-			EventTypeId:     event.EventTypeId,
-			LastRecreatedAt: event.CreatedAt,
-			CreatedAt:       time.Now(),
-			UpdatedAt:       time.Now(),
-		})
-		if err != nil {
-			return util.ErrSomethingWentWrong
-		}
-	}
-
-	return nil
+	return s.transactionRepo.CommitTx(ctx, tx)
 }

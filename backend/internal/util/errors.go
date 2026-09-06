@@ -22,4 +22,5 @@ var (
 	ErrAlreadyGoing               = fmt.Errorf("You are already going to this event.")
 	ErrHotEventsLimitReached      = fmt.Errorf("Hot events limit reached.")
 	ErrEventAlreadyInStatus       = fmt.Errorf("Event is already in this status.")
+	ErrInvalidRecurrence          = fmt.Errorf("invalid recurrence, must be DAILY, WEEKLY, MONTHLY, YEARLY or ONCE")
 )

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"identity-rbac/config"
 	"identity-rbac/internal/rbac"
@@ -42,6 +43,13 @@ func serveSeeding(cmd *cobra.Command, args []string) error {
 	err = createSuperAdminRoleAndAssignPermissions(db)
 	if err != nil {
 		slog.Error("Failed to create user role and assign permissions:", logger.Extra(map[string]any{
+			"error": err.Error(),
+		}))
+	}
+
+	err = seedEventTypesAndSettings(db)
+	if err != nil {
+		slog.Error("Failed to seed event types and settings:", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 	}
@@ -171,5 +179,89 @@ func addRoleHasPermission(db *repo.DB, userId, roleId, totalPermissionNumber int
 	}
 
 	fmt.Println("Role has permissions added successfully.")
+	return nil
+}
+
+// seedEventTypesAndSettings inserts the default event types with their
+// auto-creation settings — one per recurrence so every cadence is available
+// out of the box. Idempotent: existing rows (matched by name / event type)
+// are left untouched, so serve-seeding can be re-run safely.
+func seedEventTypesAndSettings(db *repo.DB) error {
+	type eventTypesSeed struct {
+		Name         string
+		Description  string
+		AutoCreateAt string
+		Recurrence   string
+	}
+
+	eventTypes := []eventTypesSeed{
+		{"Daily", "Daily event type", "08:00", "DAILY"},
+		{"Weekly", "Weekly event type", "09:00", "WEEKLY"},
+		{"Monthly", "Monthly event type", "09:00", "MONTHLY"},
+		{"Yearly", "Yearly event type", "09:00", "YEARLY"},
+		{"Once", "Once event type", "09:00", "ONCE"},
+	}
+
+	for _, et := range eventTypes {
+		eventTypeId, err := getOrInsertEventType(db, et.Name, et.Description)
+		if err != nil {
+			return err
+		}
+
+		err = insertEventTypeSettingsIfMissing(db, eventTypeId, et.AutoCreateAt, et.Recurrence)
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("Event types and settings seeded successfully.")
+	return nil
+}
+
+func getOrInsertEventType(db *repo.DB, name, description string) (int, error) {
+	var id int
+	err := db.Db.QueryRow(
+		"SELECT id FROM event_types WHERE name = $1 LIMIT 1", name,
+	).Scan(&id)
+	if err == nil {
+		fmt.Printf("Event type %s already exists with ID: %d\n", name, id)
+		return id, nil
+	}
+	if err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to check event type %s: %w", name, err)
+	}
+
+	err = db.Db.QueryRow(
+		"INSERT INTO event_types (name, description, created_by, created_at, updated_at, is_active) VALUES ($1, $2, $3, $4, $4, true) RETURNING id",
+		name, description, 1, time.Now(),
+	).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert event type %s: %w", name, err)
+	}
+	fmt.Printf("Inserted event type %s with ID: %d\n", name, id)
+	return id, nil
+}
+
+func insertEventTypeSettingsIfMissing(db *repo.DB, eventTypeId int, autoCreateAt, recurrence string) error {
+	var id int
+	err := db.Db.QueryRow(
+		"SELECT id FROM event_type_settings WHERE event_type_id = $1 LIMIT 1", eventTypeId,
+	).Scan(&id)
+	if err == nil {
+		fmt.Printf("Event type settings already exist for event type ID: %d\n", eventTypeId)
+		return nil
+	}
+	if err != sql.ErrNoRows {
+		return fmt.Errorf("failed to check event type settings for %d: %w", eventTypeId, err)
+	}
+
+	err = db.Db.QueryRow(
+		"INSERT INTO event_type_settings (event_type_id, auto_create_at, recurrence, created_by, updated_by, remarks, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $4, $5, true, $6, $6) RETURNING id",
+		eventTypeId, autoCreateAt, recurrence, 1, "Seeded default settings", time.Now(),
+	).Scan(&id)
+	if err != nil {
+		return fmt.Errorf("failed to insert event type settings for %d: %w", eventTypeId, err)
+	}
+	fmt.Printf("Inserted event type settings with ID: %d for event type ID: %d\n", id, eventTypeId)
 	return nil
 }

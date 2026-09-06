@@ -12,6 +12,7 @@ import (
 	"identity-rbac/pkg/logger"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -65,30 +66,15 @@ func serveAddUser(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("super admin role not found")
 	}
 
-	emailInvitationToken, err := tokenService.GenerateEmailInvitationToken(context.Background(), userInfo.Email, []int{superAdminRole[0].Id})
-	if err != nil {
-		slog.Error("Failed to generate email invitation token:", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
-
-	templateData := map[string]interface{}{
-		"UserName":      userInfo.FullName,
-		"UserEmail":     userInfo.Email,
-		"CompanyName":   "Identity RBAC",
-		"InvitationURL": fmt.Sprintf("%s=%s", cnf.Mail.FrontendURL, emailInvitationToken),
-		"ExpiresAt":     time.Now().Add(7 * 24 * time.Hour).Format("January 2, 2006"),
-		"SupportEmail":  "support@your-company.com",
-	}
-
-	err = mailService.SendTemplateEmail(userInfo.Email, "email_invitation", templateData)
-	if err != nil {
-		slog.Error("Failed to send email invitation:", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-		return err
-	}
+	// Send the invitation asynchronously (overlaps with the onboarding insert)
+	// goroutine would be killed mid-send.
+	var emailWg sync.WaitGroup
+	emailWg.Add(1)
+	defer emailWg.Wait()
+	go func() {
+		defer emailWg.Done()
+		sendInvitationEmail(cnf, mailService, tokenService, userInfo.Email, userInfo.FullName, superAdminRole[0].Id)
+	}()
 
 	err = userOnboardingProcessRepo.Create(context.Background(), &rbac.UserOnboardingProcess{
 		Email:     userInfo.Email,
@@ -107,11 +93,55 @@ func serveAddUser(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	slog.Info("Email invitation sent successfully.", logger.Extra(map[string]any{
-		"email": userInfo.Email,
+	return nil
+}
+
+// sendInvitationEmail generates the invitation token and emails it. It is
+// is unavailable.
+func sendInvitationEmail(
+	cnf *config.Config,
+	mailService mail.MailService,
+	tokenService token.TokenService,
+	userEmail, userFullName string,
+	roleId int,
+) {
+	emailInvitationToken, err := tokenService.GenerateEmailInvitationToken(context.Background(), userEmail, []int{roleId})
+	if err != nil {
+		slog.Error("Failed to generate email invitation token:", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"email": userEmail,
+		}))
+		return
+	}
+
+	invitationURL := fmt.Sprintf("%s=%s", cnf.Mail.FrontendURL, emailInvitationToken)
+
+	slog.Info("Invitation link generated.", logger.Extra(map[string]any{
+		"email":          userEmail,
+		"invitation_url": invitationURL,
+		"expires_at":     time.Now().Add(7 * 24 * time.Hour).Format(time.RFC3339),
 	}))
 
-	return nil
+	templateData := map[string]interface{}{
+		"UserName":      userFullName,
+		"UserEmail":     userEmail,
+		"CompanyName":   "Identity RBAC",
+		"InvitationURL": invitationURL,
+		"ExpiresAt":     time.Now().Add(7 * 24 * time.Hour).Format("January 2, 2006"),
+		"SupportEmail":  "support@your-company.com",
+	}
+
+	if err := mailService.SendTemplateEmail(userEmail, "email_invitation", templateData); err != nil {
+		slog.Error("Failed to send email invitation:", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"email": userEmail,
+		}))
+		return
+	}
+
+	slog.Info("Email invitation sent successfully.", logger.Extra(map[string]any{
+		"email": userEmail,
+	}))
 }
 
 func loadUserFromConfig(configPath string) (*User, error) {

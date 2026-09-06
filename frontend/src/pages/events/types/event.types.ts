@@ -11,6 +11,19 @@ export interface EventTypeSetting {
   updatedAt?: string;
 }
 
+export type Recurrence = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'ONCE';
+
+export const RECURRENCE_OPTIONS: Array<{ value: Recurrence; label: string }> = [
+  { value: 'DAILY', label: 'Daily' },
+  { value: 'WEEKLY', label: 'Weekly' },
+  { value: 'MONTHLY', label: 'Monthly' },
+  { value: 'YEARLY', label: 'Yearly' },
+  { value: 'ONCE', label: 'Once' },
+];
+
+export const recurrenceLabel = (value: string): string =>
+  RECURRENCE_OPTIONS.find((option) => option.value === value)?.label || value;
+
 export interface EventType {
   id: string;
   name: string;

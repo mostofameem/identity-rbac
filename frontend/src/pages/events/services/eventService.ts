@@ -7,7 +7,8 @@ import {
   PaginatedResponse,
   ListQueryParams,
   ParticipationDetail,
-  ParticipationQueryParams
+  ParticipationQueryParams,
+  Recurrence
 } from '../types/event.types';
 
 
@@ -152,18 +153,17 @@ export const eventTypeService = {
   createEventTypeSetting: async (data: {
     eventTypeId: string;
     autoCreateAt: string;
-    autoEventIntervalInMinutes: number;
+    recurrence: Recurrence;
     isActive: boolean;
   }): Promise<any> => {
     try {
       const payload = {
         eventTypeId: parseInt(data.eventTypeId),
         autoCreateAt: data.autoCreateAt,
-        autoEventIntervalInMinutes: data.autoEventIntervalInMinutes,
+        recurrence: data.recurrence,
         isActive: data.isActive,
       };
 
-      console.log('Creating/Updating event type setting (PUT):', payload);
       const response = await api.put('/event-types/settings', payload);
       return response.data;
     } catch (error) {
@@ -174,7 +174,7 @@ export const eventTypeService = {
   updateEventTypeSetting: async (data: {
     eventTypeId: string;
     autoCreateAt: string;
-    autoEventIntervalInMinutes: number;
+    recurrence: Recurrence;
     isActive: boolean;
   }): Promise<any> => {
     try {
@@ -182,7 +182,7 @@ export const eventTypeService = {
       const payload = {
         eventTypeId: parseInt(data.eventTypeId),
         autoCreateAt: data.autoCreateAt,
-        autoEventIntervalInMinutes: data.autoEventIntervalInMinutes,
+        recurrence: data.recurrence,
         isActive: data.isActive,
       };
       const response = await api.put('/event-types/settings', payload);
@@ -379,6 +379,15 @@ export const eventService = {
       await api.put(`/events/${id}/update-should-auto-create-event`, { status });
     } catch (error) {
       handleApiError(error);
+    }
+  },
+
+  getEventOccurrences: async (id: string): Promise<any> => {
+    try {
+      const response = await api.get(`/events/${id}/occurrences`);
+      return response.data?.data ?? response.data;
+    } catch (error) {
+      return handleApiError(error);
     }
   },
 };

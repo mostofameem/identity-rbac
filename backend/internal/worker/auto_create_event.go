@@ -4,7 +4,7 @@ import (
 	"context"
 	"identity-rbac/config"
 	"identity-rbac/internal/entity"
-	"identity-rbac/internal/redis"
+	"identity-rbac/internal/enum"
 	"identity-rbac/internal/util"
 	"identity-rbac/pkg/logger"
 	"log/slog"
@@ -12,28 +12,22 @@ import (
 )
 
 type autoEventCreateWorker struct {
-	cnf                   *config.Config
-	eventRepo             EventRepo
-	evevtTypeSettingsRepo EventTypeSettingsRepo
-	workerTransactionRepo WorkerTransactionRepo
-	hotEventsRepo         HotEventsRepo
-	cache                 redis.CacheService
+	cnf             *config.Config
+	eventRepo       EventRepo
+	occurrenceRepo  OccurrenceRepo
+	transactionRepo WorkerTransactionRepo
 }
 
 func NewAutoEventCreateWorker(
 	cnf *config.Config,
 	eventRepo EventRepo,
-	eventTypeSettingsRepo EventTypeSettingsRepo,
-	workerTransactionRepo WorkerTransactionRepo,
-	hotEventsRepo HotEventsRepo,
-	cache redis.CacheService) AutoEventCreateWorkerService {
+	occurrenceRepo OccurrenceRepo,
+	transactionRepo WorkerTransactionRepo) AutoEventCreateWorkerService {
 	return &autoEventCreateWorker{
-		cnf:                   cnf,
-		eventRepo:             eventRepo,
-		evevtTypeSettingsRepo: eventTypeSettingsRepo,
-		hotEventsRepo:         hotEventsRepo,
-		workerTransactionRepo: workerTransactionRepo,
-		cache:                 cache,
+		cnf:             cnf,
+		eventRepo:       eventRepo,
+		occurrenceRepo:  occurrenceRepo,
+		transactionRepo: transactionRepo,
 	}
 }
 
@@ -58,136 +52,136 @@ func (a *autoEventCreateWorker) Run(ctx context.Context) {
 	}
 }
 
-// run a function after a delay of config.auto_event_create_worker_delay minutes
-
-// fetch events that are hot
-
-// for each event verify if current time is after event_settings.auto_create_at
-//	// if yes,
-// 		// check if  current_time - hot_event.last_recreated_hot_event >= event_settings.auto_create_at
-// 		//	if yes,
-// 			// update the last_recreated_hot_event
-// 			// create a new event with new start_at, registration_opens_at, registration_closes_at
-// 		//	if no,
-// 			// do nothing
-
+// doAutoEventCreation scans every event flagged should_auto_create_event and
+// materializes the occurrences that are due today. Occurrence slots are
+// anchored to each template's start_at and stepped by the event type's
+// recurrence (daily -> 1 day, weekly -> 1 week, monthly -> 1 month,
+// yearly -> 1 year, once -> a single creation). Each tick is idempotent:
+// the UNIQUE (event_id, scheduled_date) constraint on event_occurrences
+// guarantees at most one clone per template per calendar slot, even across
+// crashes or concurrent workers.
 func (a *autoEventCreateWorker) doAutoEventCreation(ctx context.Context) {
-	hotevents, err := a.hotEventsRepo.GetHotEvents(ctx, nil)
+	templates, err := a.eventRepo.GetAutoCreateEventTemplates(ctx)
 	if err != nil {
-		slog.Error("failed to fetch hot events", logger.Extra(map[string]any{
+		slog.Error("failed to fetch auto create event templates", logger.Extra(map[string]any{
 			"error": err.Error(),
 		}))
 		return
 	}
 
-	if hotevents == nil {
-		slog.Info("no hot events found")
+	if len(templates) == 0 {
 		return
 	}
 
-	slog.Info("fetched hot events", logger.Extra(map[string]any{
-		"total_hot_events": len(hotevents),
+	slog.Info("fetched auto create event templates", logger.Extra(map[string]any{
+		"total_templates": len(templates),
 	}))
 
-	var eventIds, eventTypeIds []int
-	for _, hotEvent := range hotevents {
-		eventIds = append(eventIds, hotEvent.EventId)
-		eventTypeIds = append(eventTypeIds, hotEvent.EventTypeId)
-	}
-
-	if len(eventIds) == 0 {
-		return
-	}
-
-	events := a.eventRepo.GetEventDetailsIn(ctx, eventIds...)
-	mapEvents := make(map[int]entity.Events)
-	for _, event := range events {
-		mapEvents[event.Id] = event
-	}
-
-	eventTypeSettings := a.evevtTypeSettingsRepo.GetEventTypeSettingsIn(ctx, eventTypeIds...)
-
-	mapEventTypeSettings := make(map[int]entity.EventTypeSettings)
-	for _, eventTypeSetting := range eventTypeSettings {
-		mapEventTypeSettings[eventTypeSetting.EventTypeID] = eventTypeSetting
-	}
-
 	now := time.Now()
-
-	for _, hotEvent := range hotevents {
-		event, ok := mapEvents[hotEvent.EventId]
-		if !ok {
-			continue
-		}
-
-		settings, ok := mapEventTypeSettings[hotEvent.EventTypeId]
-		if !ok {
-			continue
-		}
-
-		slog.Info("fetched event and settings", logger.Extra(map[string]any{
-			"event":    event,
-			"settings": settings,
-		}))
-
-		// Check if current time is after event_settings.auto_create_at
-		if settings.AutoCreateAt != nil {
-			autoCreateTime, err := time.Parse("15:04:05", *settings.AutoCreateAt)
-			if err == nil {
-				todayCreateTime := time.Date(now.Year(), now.Month(), now.Day(), autoCreateTime.Hour(), autoCreateTime.Minute(), autoCreateTime.Second(), 0, now.Location())
-				if now.Before(todayCreateTime) {
-					continue
-				}
-			}
-		}
-
-		// newStartDate = today's date + original StartAt's time-of-day
-		newStartDate := time.Date(now.Year(), now.Month(), now.Day(),
-			event.StartAt.Hour(), event.StartAt.Minute(), event.StartAt.Second(), 0, now.Location())
-
-		// Preserve the original gaps between StartAt and the registration dates
-		registrationOpensAtDiff := event.StartAt.Sub(event.RegistrationOpensAt)
-		registrationClosesAtDiff := event.StartAt.Sub(event.RegistrationClosesAt)
-
-		event.StartAt = newStartDate
-		event.RegistrationOpensAt = newStartDate.Add(-registrationOpensAtDiff)
-		event.RegistrationClosesAt = newStartDate.Add(-registrationClosesAtDiff)
-		event.Remarks = util.Ptr(autoEventRemarks)
-		a.createNewEvent(ctx, event)
+	for _, template := range templates {
+		a.processTemplate(ctx, template, now)
 	}
 }
 
-func (a *autoEventCreateWorker) createNewEvent(ctx context.Context, event entity.Events) {
-	tx, err := a.workerTransactionRepo.BeginTx(ctx)
+func (a *autoEventCreateWorker) processTemplate(ctx context.Context, template entity.AutoCreateEventTemplate, now time.Time) {
+	slot, ok := util.NextOccurrenceDate(
+		template.StartAt,
+		template.LastDone,
+		template.HasOccurrence,
+		enum.RecurrenceType(template.Recurrence),
+		now,
+	)
+	if !ok {
+		return
+	}
+
+	// Respect the daily gate: not before event_type_settings.auto_create_at.
+	// An unparseable gate fails closed — the template is skipped rather than
+	// created ungated.
+	if template.AutoCreateAt != nil {
+		open, err := util.GateIsOpen(*template.AutoCreateAt, now)
+		if err != nil {
+			slog.Warn("invalid auto_create_at, skipping template this tick", logger.Extra(map[string]any{
+				"event_id":       template.Id,
+				"auto_create_at": *template.AutoCreateAt,
+				"error":          err.Error(),
+			}))
+			return
+		}
+		if !open {
+			return
+		}
+	}
+
+	startAt := util.OccurrenceStartAt(slot, template.StartAt)
+
+	// Preserve the original gaps between StartAt and the registration dates.
+	registrationOpensAtDiff := template.StartAt.Sub(template.RegistrationOpensAt)
+	registrationClosesAtDiff := template.StartAt.Sub(template.RegistrationClosesAt)
+
+	clone := entity.Events{
+		Title:                template.Title,
+		Description:          template.Description,
+		EventTypeId:          template.EventTypeId,
+		StartAt:              startAt,
+		RegistrationOpensAt:  startAt.Add(-registrationOpensAtDiff),
+		RegistrationClosesAt: startAt.Add(-registrationClosesAtDiff),
+		MaxParticipants:      template.MaxParticipants,
+		Remarks:              util.Ptr(autoEventRemarks),
+	}
+
+	a.createOccurrence(ctx, template.Id, slot, startAt, clone)
+}
+
+// createOccurrence claims the slot and inserts the clone in one transaction.
+// The claim runs first with ON CONFLICT DO NOTHING: if this call did not win
+// the slot (already created earlier today, or a concurrent worker), nothing
+// is written. The clone insert shares the transaction, so a crash can never
+// leave a claim without its clone or a clone without its claim.
+func (a *autoEventCreateWorker) createOccurrence(ctx context.Context, eventID int, slot, startAt time.Time, clone entity.Events) {
+	tx, err := a.transactionRepo.BeginTx(ctx)
 	if err != nil {
 		slog.Error("failed to begin transaction", logger.Extra(map[string]any{
-			"error": err.Error(),
+			"event_id": eventID,
+			"error":    err.Error(),
 		}))
 		return
 	}
+	committed := false
 	defer func() {
-		if err != nil {
-			a.workerTransactionRepo.RollbackTx(ctx, tx)
+		if !committed {
+			a.transactionRepo.RollbackTx(ctx, tx)
 		}
 	}()
 
-	if err = a.eventRepo.AutoCreateEvent(ctx, event); err != nil {
+	claimed, err := a.occurrenceRepo.ClaimOccurrence(ctx, tx, entity.EventOccurrence{
+		EventId:       eventID,
+		ScheduledDate: slot,
+		StartAt:       startAt,
+		PerformedBy:   a.cnf.SystemUserID,
+	})
+	if err != nil {
+		return
+	}
+	if !claimed {
+		return
+	}
+
+	if err := a.eventRepo.CreateEventInTx(ctx, tx, clone, a.cnf.SystemUserID); err != nil {
 		return
 	}
 	slog.Info("created new event", logger.Extra(map[string]any{
-		"event": event,
+		"event_id":       eventID,
+		"scheduled_date": slot,
+		"start_at":       startAt,
 	}))
 
-	if err = a.hotEventsRepo.UpdateLastRecreatedHotEvent(ctx, tx, event.Id, event.EventTypeId); err != nil {
+	if err := a.transactionRepo.CommitTx(ctx, tx); err != nil {
+		slog.Error("failed to commit transaction", logger.Extra(map[string]any{
+			"event_id": eventID,
+			"error":    err.Error(),
+		}))
 		return
 	}
-	slog.Info("updated last recreated hot event", logger.Extra(map[string]any{
-		"event": event,
-	}))
-
-	if err = a.workerTransactionRepo.CommitTx(ctx, tx); err != nil {
-		slog.Error("failed to commit transaction", logger.Extra(map[string]any{
-			"error": err.Error(),
-		}))
-	}
+	committed = true
 }

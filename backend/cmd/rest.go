@@ -84,7 +84,7 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	eventTypeSettingRepo := repo.NewEventTypeSettingRepo(db)
 	participantRepo := repo.NewParticipantRepo(db)
 	transaction := repo.NewTransaction(db)
-	hotEventsRepo := repo.NewHotEventsRepo(db)
+	eventOccurrenceRepo := repo.NewEventOccurrenceRepo(db)
 
 	eventSvc := event.NewEventSerVice(
 		cnf,
@@ -92,9 +92,8 @@ func serveRest(cmd *cobra.Command, args []string) error {
 		eventTypeRepo,
 		eventTypeSettingRepo,
 		participantRepo,
-		eventTypeSettingRepo,
 		transaction,
-		hotEventsRepo,
+		eventOccurrenceRepo,
 	)
 
 	rateLimiterSvc := redis.NewTokenBucketRateLimiterService(redisClient, cnf.RateLimit)
@@ -109,10 +108,8 @@ func serveRest(cmd *cobra.Command, args []string) error {
 	autoEventCreateWorker := worker.NewAutoEventCreateWorker(
 		cnf,
 		eventRepo,
-		eventTypeSettingRepo,
+		eventOccurrenceRepo,
 		workerTransaction,
-		hotEventsRepo,
-		cacheService,
 	)
 
 	// Create main context that listens for the interrupt signal from the OS.

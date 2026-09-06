@@ -15,6 +15,7 @@ type Service interface {
 	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
 	UpdateEventStatus(ctx context.Context, id int, status string) error
 	UpdateShouldAutoCreateEventStatus(ctx context.Context, id int, status string) error
+	GetEventOccurrences(ctx context.Context, id int) (EventOccurrencesResponse, error)
 
 	PerticipateEvent(ctx context.Context, req PerticipateEventReq) (err error)
 	MyEventPerticipations(ctx context.Context, req GetEventPerticipationsReq) ([]EventPerticipationDto, util.Pagination, error)
@@ -27,7 +28,7 @@ type Service interface {
 	GetEventTypeDetails(ctx context.Context, id int) (EventTypeResponse, error)
 	UpdateEventTypeStatus(ctx context.Context, id int, status string) error
 
-	EventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error)
+	UpdateEventTypeSettings(ctx context.Context, req EventTypeSettingsRequest) (int, error)
 	GetEventTypeSettings(ctx context.Context, eventTypeID int) (EventTypeSettingsResponse, error)
 }
 
@@ -42,6 +43,7 @@ type EventRepo interface {
 	UpdateParticipantCount(ctx context.Context, tx *sqlx.Tx, eventID, count int) error
 	UpdateIsActiveStatus(ctx context.Context, tx *sqlx.Tx, id int, isActive bool) error
 	UpdateShouldAutoCreateEventStatus(ctx context.Context, tx *sqlx.Tx, id int, shouldAutoCreateEvent bool) error
+	GetTotalAutoCreateEvents(ctx context.Context) (int, error)
 }
 
 type EventTypeRepo interface {
@@ -80,9 +82,6 @@ type TransactionRepo interface {
 	RollbackTx(ctx context.Context, tx *sqlx.Tx) error
 }
 
-type HotEventsRepo interface {
-	GetTotalHotEvents(ctx context.Context, tx *sqlx.Tx) (int, error)
-	CreateHotEvent(ctx context.Context, tx *sqlx.Tx, event entity.HotEvents) error
-	IsHotEventExist(ctx context.Context, tx *sqlx.Tx, eventID int, eventTypeID int) (bool, error)
-	DeleteHotEvent(ctx context.Context, tx *sqlx.Tx, eventID int, eventTypeID int) error
+type OccurrenceRepo interface {
+	GetOccurrences(ctx context.Context, eventID int) ([]entity.EventOccurrence, error)
 }

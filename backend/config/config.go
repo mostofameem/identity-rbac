@@ -22,6 +22,7 @@ type Config struct {
 	MigrationSource                     string `mapstructure:"MIGRATION_SOURCE"              validate:"required"`
 	TokenExpireTimeInHours              int    `mapstructure:"TOKEN_EXPIRE_TIME_IN_HOURS" validate:"required"`
 	MaxHotEventLimit                    int    `mapstructure:"MAX_HOT_EVENT_LIMIT"        validate:"required"`
+	SystemUserID                        int    `mapstructure:"SYSTEM_USER_ID"             validate:"required"`
 	AutoEventCreateWorkerDelayInMinutes int    `mapstructure:"EVENT_AUTO_CREATE_WORKER_DELAY_IN_MINUTE" validate:"required"`
 	EmailInvitationTTL                  int    `mapstructure:"EMAIL_INVITATION_TTL_IN_MINUTE" validate:"required"`
 	AccessTokenTTL                      int    `mapstructure:"ACCESS_TOKEN_TTL_IN_MINUTE"     validate:"required"`

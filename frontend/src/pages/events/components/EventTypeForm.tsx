@@ -6,6 +6,7 @@ import {
   DialogActions,
   Button,
   TextField,
+  MenuItem,
   FormControlLabel,
   Switch,
   Box,
@@ -21,7 +22,7 @@ import {
   AutoAwesome,
   Info
 } from '@mui/icons-material';
-import { EventType } from '../types/event.types';
+import { EventType, Recurrence, RECURRENCE_OPTIONS, recurrenceLabel } from '../types/event.types';
 import { eventTypeService } from '../services/eventService';
 
 interface EventTypeFormProps {
@@ -46,9 +47,13 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
     settings: [],
   });
 
-  const [eventTypeSettings, setEventTypeSettings] = useState({
+  const [eventTypeSettings, setEventTypeSettings] = useState<{
+    autoCreateAt: string;
+    recurrence: Recurrence;
+    isActive: boolean;
+  }>({
     autoCreateAt: '09:00',
-    autoEventIntervalInMinutes: 1440, // 24 hours
+    recurrence: 'DAILY',
     isActive: false,
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -75,7 +80,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
       });
       setEventTypeSettings({
         autoCreateAt: '09:00',
-        autoEventIntervalInMinutes: 1440,
+        recurrence: 'DAILY',
         isActive: false,
       });
     }
@@ -91,14 +96,14 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
       if (data) {
         // Handle both PascalCase (backend) and potential camelCase
         const autoCreateAt = data.AutoCreateAt || data.autoCreateAt || '09:00';
-        const intervalValue = data.AutoEventIntervalInMinutes !== undefined
-          ? data.AutoEventIntervalInMinutes
-          : (data.autoEventIntervalInMinutes || 1440);
+        const recurrenceValue = data.Recurrence || data.recurrence || 'DAILY';
         const activeValue = data.IsActive !== undefined ? data.IsActive : (data.isActive === true);
 
         setEventTypeSettings({
           autoCreateAt: autoCreateAt,
-          autoEventIntervalInMinutes: typeof intervalValue === 'string' ? parseInt(intervalValue) : intervalValue,
+          recurrence: (RECURRENCE_OPTIONS.some((option) => option.value === recurrenceValue)
+            ? recurrenceValue
+            : 'DAILY') as Recurrence,
           isActive: activeValue === true || activeValue === 'true',
         });
       }
@@ -142,7 +147,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
       await eventTypeService.createEventTypeSetting({
         eventTypeId: eventType.id,
         autoCreateAt: eventTypeSettings.autoCreateAt,
-        autoEventIntervalInMinutes: eventTypeSettings.autoEventIntervalInMinutes,
+        recurrence: eventTypeSettings.recurrence,
         isActive: eventTypeSettings.isActive,
       });
 
@@ -288,22 +293,28 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
                     fullWidth
                   />
                   <TextField
-                    label="Interval (Min)"
-                    type="number"
-                    value={eventTypeSettings.autoEventIntervalInMinutes}
+                    select
+                    label="Repeats"
+                    value={eventTypeSettings.recurrence}
                     onChange={(e) => setEventTypeSettings(prev => ({
                       ...prev,
-                      autoEventIntervalInMinutes: parseInt(e.target.value) || 1440
+                      recurrence: e.target.value as Recurrence
                     }))}
                     size="small"
                     fullWidth
-                  />
+                  >
+                    {RECURRENCE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </Box>
 
                 <Box mt={1.5} display="flex" alignItems="start" gap={1}>
                   <Info color="info" sx={{ fontSize: 16, mt: 0.3 }} />
                   <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', lineHeight: 1.2 }}>
-                    Events will be created automatically at the specified time and interval.
+                    Events will be created automatically at the specified time, repeating {recurrenceLabel(eventTypeSettings.recurrence).toLowerCase()}.
                   </Typography>
                 </Box>
               </Box>
