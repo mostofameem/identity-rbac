@@ -11,8 +11,6 @@ import {
   Switch,
   Box,
   Typography,
-  Card,
-  CardContent,
   Alert,
   CircularProgress
 } from '@mui/material';
@@ -24,6 +22,8 @@ import {
 } from '@mui/icons-material';
 import { EventType, Recurrence, RECURRENCE_OPTIONS, recurrenceLabel } from '../types/event.types';
 import { eventTypeService } from '../services/eventService';
+import AutoCreateTimePicker, { toAutoCreateTime } from './AutoCreateTimePicker';
+import { brandGradient } from '../../../theme/theme';
 
 interface EventTypeFormProps {
   open: boolean;
@@ -95,7 +95,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
       console.log('Fetched settings data:', data);
       if (data) {
         // Handle both PascalCase (backend) and potential camelCase
-        const autoCreateAt = data.AutoCreateAt || data.autoCreateAt || '09:00';
+        const autoCreateAt = toAutoCreateTime(data.AutoCreateAt || data.autoCreateAt);
         const recurrenceValue = data.Recurrence || data.recurrence || 'DAILY';
         const activeValue = data.IsActive !== undefined ? data.IsActive : (data.isActive === true);
 
@@ -182,22 +182,20 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
       open={open}
       onClose={onClose}
       maxWidth={false}
-      PaperProps={{
-        sx: {
-          width: '500px',
-          maxWidth: '95vw',
-          borderRadius: 3,
-          boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-          overflow: 'hidden'
+      slotProps={{
+        paper: {
+          sx: {
+            width: '500px',
+            maxWidth: '95vw',
+            overflow: 'hidden'
+          }
         }
       }}
     >
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{
           p: 2.5,
-          background: eventType
-            ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)'
-            : 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+          background: brandGradient,
           color: 'white',
           display: 'flex',
           alignItems: 'center',
@@ -209,7 +207,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
           </Typography>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 2.5, bgcolor: '#ffffff' }}>
+        <DialogContent sx={{ p: 2.5, bgcolor: 'background.paper' }}>
           <Box display="flex" flexDirection="column" gap={2}>
             {/* Basic Info Section */}
             <Box>
@@ -245,7 +243,7 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
               <Box sx={{
                 p: 2,
                 borderRadius: 2,
-                bgcolor: '#f8fafc',
+                bgcolor: 'background.default',
                 border: '1px solid',
                 borderColor: 'divider'
               }}>
@@ -284,12 +282,10 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
                 )}
 
                 <Box display="grid" gridTemplateColumns="1fr 1fr" gap={2}>
-                  <TextField
-                    label="Create At (HH:MM)"
-                    value={eventTypeSettings.autoCreateAt}
-                    onChange={(e) => setEventTypeSettings(prev => ({ ...prev, autoCreateAt: e.target.value }))}
-                    size="small"
-                    placeholder="09:00"
+                  <AutoCreateTimePicker
+                    label="Create At"
+                    value={toAutoCreateTime(eventTypeSettings.autoCreateAt)}
+                    onChange={(value) => setEventTypeSettings(prev => ({ ...prev, autoCreateAt: value }))}
                     fullWidth
                   />
                   <TextField
@@ -321,23 +317,15 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
             )}
 
             {!eventType?.id && (
-              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#fff7ed', border: '1px dashed', borderColor: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Info color="warning" fontSize="small" />
-                <Typography variant="caption" fontWeight="500">
-                  Save to enable auto-creation settings.
-                </Typography>
-              </Box>
+              <Alert severity="warning" icon={<Info fontSize="small" />} sx={{ py: 0 }}>
+                Save to enable auto-creation settings.
+              </Alert>
             )}
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2, px: 2.5, bgcolor: '#ffffff', borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button
-            onClick={onClose}
-            color="inherit"
-            variant="text"
-            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-          >
+        <DialogActions sx={{ p: 2, px: 2.5, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button onClick={onClose} color="inherit" variant="text">
             Cancel
           </Button>
           <Button
@@ -345,13 +333,6 @@ const EventTypeForm: React.FC<EventTypeFormProps> = ({
             color="primary"
             variant="contained"
             disabled={settingsLoading}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 700,
-              boxShadow: 'none',
-              '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
-            }}
             startIcon={settingsLoading ? <CircularProgress size={16} color="inherit" /> : null}
           >
             {settingsLoading ? 'Saving...' : (eventType ? 'Save Changes' : 'Create Type')}

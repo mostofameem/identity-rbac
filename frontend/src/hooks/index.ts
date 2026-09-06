@@ -7,6 +7,7 @@
 
 export { useMessage } from './useMessage';
 export { useApi } from './useApi';
+export { default as useDebouncedValue } from './useDebouncedValue';
 
 export type { MessageType, UseMessageReturn } from './useMessage';
 export type { UseApiReturn } from './useApi';

@@ -2,23 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
-  Container,
-  Typography,
   IconButton,
-  Table,
-  TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  Paper,
-  TablePagination,
-  Chip,
   TextField,
+  Typography,
+  Chip,
   MenuItem,
   FormControl,
   InputLabel,
+  Paper,
   Select,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,10 +26,31 @@ import type { Event as EventType } from '../types/event.types';
 import EventForm from './EventForm';
 import EventDetailsDialog from './EventDetailsDialog';
 import { eventService } from '../services/eventService';
+import PageHeader from '../../../components/PageHeader';
+import DataTable from '../../../components/DataTable';
+import type { DataTableColumn } from '../../../components/DataTable';
+import StatusChip from '../../../components/StatusChip';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { useSnackbar } from '../../../context/SnackbarContext';
+import { useDebouncedValue } from '../../../hooks';
 
 interface EventListProps {
   onEventClick?: (event: EventType) => void;
 }
+
+const COLUMNS: DataTableColumn[] = [
+  { key: 'title', label: 'Title' },
+  { key: 'type', label: 'Type' },
+  { key: 'start', label: 'Start Time' },
+  { key: 'closes', label: 'Reg. Closes' },
+  { key: 'participants', label: 'Participants' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions', align: 'right' },
+];
+
+type PendingAction =
+  | { kind: 'delete'; event: EventType }
+  | { kind: 'toggle'; event: EventType };
 
 const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
   const [events, setEvents] = useState<EventType[]>([]);
@@ -49,6 +65,10 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
   const [loading, setLoading] = useState(true);
   const [searchTitle, setSearchTitle] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [pending, setPending] = useState<PendingAction | null>(null);
+
+  const snackbar = useSnackbar();
+  const debouncedSearch = useDebouncedValue(searchTitle, 500);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -56,38 +76,30 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
       const response = await eventService.getEvents({
         page: page + 1,
         limit: rowsPerPage,
-        search: searchTitle || undefined,
+        search: debouncedSearch || undefined,
         status: selectedStatus || undefined,
       });
       setEvents(response.data || []);
       setTotal(response.total || 0);
     } catch (error: any) {
       console.error('Error fetching events:', error);
-      alert(error.message || 'Failed to fetch events. Please try again.');
+      snackbar.error(error.message || 'Failed to fetch events. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTitle, selectedStatus]);
+  }, [page, rowsPerPage, debouncedSearch, selectedStatus, snackbar]);
 
   useEffect(() => {
     fetchEvents();
-  }, [page, rowsPerPage, selectedStatus, fetchEvents]);
+  }, [fetchEvents]);
 
-  // Debounced search for title
+  // Reset to the first page when a new search settles
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (page !== 0) {
-        setPage(0);
-      } else {
-        fetchEvents();
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTitle, page, fetchEvents]);
+    setPage(0);
+  }, [debouncedSearch, selectedStatus]);
 
   const handleStatusChange = (event: any) => {
     setSelectedStatus(event.target.value);
-    setPage(0);
   };
 
   const handleOpen = (event?: EventType) => {
@@ -119,39 +131,35 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
       }
       await fetchEvents();
       handleClose();
+      snackbar.success(selectedEvent ? 'Event updated' : 'Event created');
     } catch (error: any) {
       console.error('Error saving event:', error);
-      alert(error.message || 'Failed to save event. Please try again.');
+      snackbar.error(error.message || 'Failed to save event. Please try again.');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
-      try {
-        await eventService.deleteEvent(id);
-        await fetchEvents();
-      } catch (error: any) {
-        console.error('Error deleting event:', error);
-        alert(error.message || 'Failed to delete event. Please try again.');
-      }
+    try {
+      await eventService.deleteEvent(id);
+      await fetchEvents();
+      snackbar.success('Event deleted');
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      snackbar.error(error.message || 'Failed to delete event. Please try again.');
+      throw error; // keep the dialog open so the failure is visible
     }
   };
 
   const handleToggleStatus = async (event: EventType) => {
     const currentStatus = (event.status || '').toUpperCase();
-    const isCurrentlyActive = event.isActive !== undefined ? event.isActive : (currentStatus === 'ACTIVE' || currentStatus === 'ONGOING');
+    const isCurrentlyActive =
+      event.isActive !== undefined
+        ? event.isActive
+        : currentStatus === 'ACTIVE' || currentStatus === 'ONGOING';
     const newStatus: any = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
-    const confirmMessage = `Are you sure you want to ${isCurrentlyActive ? 'deactivate' : 'activate'} this event?`;
-
-    if (window.confirm(confirmMessage)) {
-      try {
-        await eventService.changeEventStatus(event.id, newStatus);
-        await fetchEvents();
-      } catch (error: any) {
-        console.error('Error toggling event status:', error);
-        alert(error.message || 'Failed to toggle status. Please try again.');
-      }
-    }
+    await eventService.changeEventStatus(event.id, newStatus);
+    await fetchEvents();
+    snackbar.success(isCurrentlyActive ? 'Event deactivated' : 'Event activated');
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -163,44 +171,124 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
     setPage(0);
   };
 
+  const renderRow = (event: EventType) => {
+    const currentStatus = (event.status || '').toUpperCase();
+    const isCurrentlyActive =
+      event.isActive !== undefined
+        ? event.isActive
+        : currentStatus === 'ACTIVE' || currentStatus === 'ONGOING';
+
+    return (
+      <>
+        <TableCell>
+          <Typography variant="body2" fontWeight={600}>
+            {event.title}
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <Chip label={event.eventType?.name || 'N/A'} size="small" variant="outlined" />
+        </TableCell>
+        <TableCell>
+          {new Date(event.startAt).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </TableCell>
+        <TableCell>
+          {new Date(event.registrationClosesAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })}
+        </TableCell>
+        <TableCell>
+          <Typography variant="body2">
+            {(event as any).totalParticipants || 0} / {event.maxParticipants || '∞'}
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <StatusChip status={event.status || 'ACTIVE'} />
+        </TableCell>
+        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+          <Tooltip title="View details">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenDetails(event);
+              }}
+            >
+              <VisibilityIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={isCurrentlyActive ? 'Deactivate' : 'Activate'}>
+            <IconButton
+              size="small"
+              color={isCurrentlyActive ? 'warning' : 'success'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPending({ kind: 'toggle', event });
+              }}
+            >
+              <PowerIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPending({ kind: 'delete', event });
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </TableCell>
+      </>
+    );
+  };
+
   return (
-    <Container maxWidth="lg">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Events
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpen()}
-        >
-          Create Event
-        </Button>
-      </Box>
+    <Box>
+      <PageHeader
+        title="Events"
+        subtitle="Manage all events"
+        actions={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()}>
+            Create Event
+          </Button>
+        }
+      />
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
-          label="Search by Name"
+          label="Search by name"
           variant="outlined"
           size="small"
           value={searchTitle}
           onChange={(e) => setSearchTitle(e.target.value)}
           sx={{ minWidth: 250 }}
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />,
+          slotProps={{
+            input: {
+              startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />,
+            },
           }}
         />
         <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel id="status-filter-label">Filter by Status</InputLabel>
+          <InputLabel id="status-filter-label">Status</InputLabel>
           <Select
             labelId="status-filter-label"
             id="status-filter"
             value={selectedStatus}
-            label="Filter by Status"
+            label="Status"
             onChange={handleStatusChange}
           >
-            <MenuItem value="">All Statuses</MenuItem>
+            <MenuItem value="">All statuses</MenuItem>
             <MenuItem value="ONGOING">Ongoing</MenuItem>
             <MenuItem value="UPCOMING">Upcoming</MenuItem>
             <MenuItem value="RECENT">Recent</MenuItem>
@@ -209,147 +297,23 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
         </FormControl>
       </Box>
 
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Start Time</TableCell>
-                <TableCell>Reg. Closes</TableCell>
-                <TableCell>Participants</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : events.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    No events found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                events.map((event) => (
-                  <TableRow
-                    key={event.id}
-                    hover
-                    onClick={() => onEventClick && onEventClick(event)}
-                    sx={{ cursor: onEventClick ? 'pointer' : 'default' }}
-                  >
-                    <TableCell>
-
-                      <Typography variant="body2" fontWeight="medium">
-                        {event.title}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={event.eventType?.name || 'N/A'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {new Date(event.startAt).toLocaleString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(event.registrationClosesAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {(event as any).totalParticipants || 0} / {event.maxParticipants || '∞'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={event.status || 'Active'}
-                        size="small"
-                        sx={{
-                          fontWeight: 'bold',
-                          color: 'white',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                          bgcolor: (() => {
-                            switch ((event.status || 'ACTIVE').toUpperCase()) {
-                              case 'ONGOING':
-                              case 'ACTIVE':
-                                return '#10b981';
-                              case 'UPCOMING':
-                                return '#f59e0b';
-                              case 'RECENT':
-                                return '#3b82f6';
-                              case 'INACTIVE':
-                                return '#6b7280';
-                              default:
-                                return '#9ca3af';
-                            }
-                          })(),
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenDetails(event);
-                        }}
-                        color="info"
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleStatus(event);
-                        }}
-                        color={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'warning' : 'success'}
-                        size="small"
-                        title={(event.isActive !== undefined ? event.isActive : (((event.status || '') as string).toUpperCase() === 'ACTIVE' || ((event.status || '') as string).toUpperCase() === 'ONGOING')) ? 'Deactivate' : 'Activate'}
-                      >
-                        <PowerIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(event.id);
-                        }}
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={total}
-          rowsPerPage={rowsPerPage}
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
+        <DataTable
+          columns={COLUMNS}
+          rows={events}
+          rowKey={(event) => event.id}
+          renderRow={renderRow}
+          loading={loading}
+          skeletonRows={rowsPerPage > 8 ? 8 : rowsPerPage}
+          emptyTitle="No events found"
+          emptyDescription="Try adjusting your search or filters, or create a new event."
+          onRowClick={onEventClick}
           page={page}
+          rowsPerPage={rowsPerPage}
+          count={total}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]}
         />
       </Paper>
 
@@ -365,7 +329,46 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
         onClose={handleCloseDetails}
         event={viewEvent}
       />
-    </Container>
+
+      <ConfirmDialog
+        open={pending?.kind === 'delete'}
+        onClose={() => setPending(null)}
+        onConfirm={() => handleDelete((pending as { kind: 'delete'; event: EventType }).event.id)}
+        title="Delete event?"
+        message={`This will permanently remove "${(pending as { kind: 'delete'; event: EventType } | null)?.event?.title ?? ''}". This action cannot be undone.`}
+        confirmLabel="Delete"
+        tone="danger"
+      />
+
+      <ConfirmDialog
+        open={pending?.kind === 'toggle'}
+        onClose={() => setPending(null)}
+        onConfirm={async () => {
+          if (pending?.kind === 'toggle') {
+            try {
+              await handleToggleStatus(pending.event);
+            } catch (error: any) {
+              console.error('Error toggling event status:', error);
+              snackbar.error(error.message || 'Failed to toggle status. Please try again.');
+              throw error;
+            }
+          }
+        }}
+        title={
+          pending?.kind === 'toggle' && (pending.event.isActive !== undefined
+            ? pending.event.isActive
+            : (pending.event.status || '').toUpperCase() === 'ACTIVE' || (pending.event.status || '').toUpperCase() === 'ONGOING')
+            ? 'Deactivate event?'
+            : 'Activate event?'
+        }
+        message="The event's visibility to participants will change accordingly."
+        confirmLabel={pending?.kind === 'toggle' && (pending.event.isActive !== undefined
+          ? pending.event.isActive
+          : (pending.event.status || '').toUpperCase() === 'ACTIVE' || (pending.event.status || '').toUpperCase() === 'ONGOING')
+          ? 'Deactivate'
+          : 'Activate'}
+      />
+    </Box>
   );
 };
 

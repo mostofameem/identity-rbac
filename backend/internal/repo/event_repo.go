@@ -389,7 +389,9 @@ func (r *eventRepo) GetAutoCreateEventTemplates(ctx context.Context) ([]entity.A
 		"e.max_participants",
 		"e.remarks",
 		"ets.recurrence",
-		"ets.auto_create_at",
+		// HH:MI only — GateIsOpen parses "15:04"; a raw TIME scan arrives as
+		// an RFC3339 timestamp it can't parse and the template is skipped.
+		"TO_CHAR(ets.auto_create_at, 'HH24:MI') AS auto_create_at",
 		"COALESCE(occ.last_done, e.start_at::date) AS last_done",
 		"COALESCE(occ.has_occurrence, false) AS has_occurrence",
 	).

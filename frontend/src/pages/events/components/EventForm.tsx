@@ -24,8 +24,10 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { Event as EventIcon } from '@mui/icons-material';
 import { Event, EventType } from '../types/event.types';
 import { eventService, eventTypeService } from '../services/eventService';
+import { brandGradient } from '../../../theme/theme';
 
 interface EventFormProps {
   open: boolean;
@@ -172,12 +174,23 @@ const EventForm: React.FC<EventFormProps> = ({ open, onClose, onSave, event }) =
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <form onSubmit={handleSubmit} noValidate>
-        <DialogTitle>{event ? 'Edit Event' : 'Create New Event'}</DialogTitle>
-        <DialogContent dividers>
-          <div className="space-y-6">
+        <DialogTitle
+          sx={{
+            background: brandGradient,
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+          }}
+        >
+          <EventIcon fontSize="small" />
+          {event ? 'Edit Event' : 'Create New Event'}
+        </DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: 'background.default' }}>
+          <div className="space-y-5">
             {/* General Information Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-              <Typography variant="subtitle1" className="font-semibold mb-3 text-gray-700">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80">
+              <Typography variant="subtitle1" className="font-semibold mb-3 text-slate-700">
                 General Information
               </Typography>
               <div className="grid grid-cols-12 gap-4">
@@ -250,8 +263,8 @@ const EventForm: React.FC<EventFormProps> = ({ open, onClose, onSave, event }) =
             </div>
 
             {/* Logistics Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-              <Typography variant="subtitle1" className="font-semibold mb-3 text-gray-700">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80">
+              <Typography variant="subtitle1" className="font-semibold mb-3 text-slate-700">
                 Logistics
               </Typography>
               <div className="grid grid-cols-12 gap-4">
@@ -263,15 +276,15 @@ const EventForm: React.FC<EventFormProps> = ({ open, onClose, onSave, event }) =
                     name="maxParticipants"
                     value={formData.maxParticipants || ''}
                     onChange={handleChange}
-                    inputProps={{ min: 0 }}
+                    slotProps={{ htmlInput: { min: 0 } }}
                   />
                 </div>
               </div>
             </div>
 
             {/* Schedule Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-              <Typography variant="subtitle1" className="font-semibold mb-3 text-gray-700">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80">
+              <Typography variant="subtitle1" className="font-semibold mb-3 text-slate-700">
                 Event Schedule
               </Typography>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -291,8 +304,8 @@ const EventForm: React.FC<EventFormProps> = ({ open, onClose, onSave, event }) =
             </div>
 
             {/* Registration Window Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-              <Typography variant="subtitle1" className="font-semibold mb-3 text-gray-700">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80">
+              <Typography variant="subtitle1" className="font-semibold mb-3 text-slate-700">
                 Registration Window
               </Typography>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -324,14 +337,14 @@ const EventForm: React.FC<EventFormProps> = ({ open, onClose, onSave, event }) =
 
             {/* Dynamic Event Settings Section */}
             {selectedEventType && selectedEventType.settings && selectedEventType.settings.length > 0 && (
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <Typography variant="subtitle1" className="font-semibold mb-3 text-blue-800">
+              <div className="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
+                <Typography variant="subtitle1" className="font-semibold mb-3 text-indigo-800">
                   {selectedEventType.name} Configuration
                 </Typography>
                 <div className="grid grid-cols-12 gap-4">
                   {selectedEventType.settings.map((setting) => (
                     <div key={setting.id} className="col-span-12 md:col-span-6">
-                      <Typography variant="body2" className="mb-1 text-gray-600 font-medium">
+                      <Typography variant="body2" className="mb-1 text-slate-600 font-medium">
                         {setting.key} {setting.isRequired && <span className="text-red-500">*</span>}
                       </Typography>
                       {renderSettingInput(
@@ -346,8 +359,8 @@ const EventForm: React.FC<EventFormProps> = ({ open, onClose, onSave, event }) =
             )}
           </div>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} color="inherit">
+        <DialogActions sx={{ bgcolor: 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button onClick={onClose} color="inherit" variant="text">
             Cancel
           </Button>
           <Button type="submit" color="primary" variant="contained">

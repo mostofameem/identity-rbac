@@ -195,11 +195,13 @@ func seedEventTypesAndSettings(db *repo.DB) error {
 	}
 
 	eventTypes := []eventTypesSeed{
-		{"Daily", "Daily event type", "08:00", "DAILY"},
-		{"Weekly", "Weekly event type", "09:00", "WEEKLY"},
-		{"Monthly", "Monthly event type", "09:00", "MONTHLY"},
-		{"Yearly", "Yearly event type", "09:00", "YEARLY"},
-		{"Once", "Once event type", "09:00", "ONCE"},
+		{"Daily Breakfast", "Daily event type", "08:00", "DAILY"},
+		{"Daily Lunch", "Daily event type", "12:00", "DAILY"},
+		{"Daily Dinner", "Daily event type", "18:00", "DAILY"},
+		{"Weekly Meeting", "Weekly event type", "09:00", "WEEKLY"},
+		{"Monthly Review", "Monthly event type", "09:00", "MONTHLY"},
+		{"Yearly Planning", "Yearly event type", "09:00", "YEARLY"},
+		{"Once-off Event", "Once event type", "09:00", "ONCE"},
 	}
 
 	for _, et := range eventTypes {

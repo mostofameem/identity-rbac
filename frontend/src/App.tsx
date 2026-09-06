@@ -1,13 +1,8 @@
 /**
  * Main App Component
- * 
- * The root component that handles routing and authentication.
- * Uses the new PageLayout and refactored page components.
- * 
- * Features:
- * - Protected routes with authentication
- * - Consistent layout across all pages
- * - Clean routing structure
+ *
+ * Root component with routing and authentication context. Pages own their
+ * headers; PageLayout supplies only the shell (sidebar + content column).
  */
 
 import React, { useEffect } from 'react';
@@ -15,54 +10,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PageLayout } from './components/layout';
 import { UserManagement, RoleManagement, PermissionManagement } from './components/pages';
-import EventList from './pages/events/components/EventList';
 import EventsPage from './pages/events/EventsPage';
 import EventTypesPage from './pages/events/EventTypesPage';
 import LoginPage from './components/LoginPage';
-
-
 import GoogleAuthCallback from './components/GoogleAuthCallback';
 import HomePage from './components/HomePage';
 import InvitationPage from './components/InvitationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { logConfig, validateConfig } from './config/env';
-import { useMessage } from './hooks';
 
-/**
- * Page Wrapper Component
- * 
- * Wraps page components with consistent layout and message handling
- */
-interface PageWrapperProps {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}
-
-const PageWrapper: React.FC<PageWrapperProps> = ({ title, subtitle, children }) => {
-  const { message, messageType, showMessage, clearMessage } = useMessage();
-  const [loading, setLoading] = React.useState(false);
-
-  const handleShowMessage = (msg: string, isError: boolean = false) => {
-    showMessage(msg, isError ? 'error' : 'success');
-  };
-
-  return (
-    <PageLayout title={title} subtitle={subtitle}>
-      {React.cloneElement(children as React.ReactElement, {
-        showMessage: handleShowMessage,
-        loading,
-        setLoading,
-      })}
-    </PageLayout>
-  );
-};
-
-/**
- * App Routes Component
- * 
- * Defines all application routes with proper authentication checks
- */
 const AppRoutes: React.FC = () => {
   const { user } = useAuth();
 
@@ -79,7 +35,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* Home Route */}
+      {/* Home Route (wraps itself in PageLayout) */}
       <Route
         path="/"
         element={
@@ -94,16 +50,9 @@ const AppRoutes: React.FC = () => {
         path="/users"
         element={
           <ProtectedRoute requiredPermission="user">
-            <PageWrapper
-              title="User Management"
-              subtitle="Manage users and their role assignments"
-            >
-              <UserManagement
-                showMessage={() => { }}
-                loading={false}
-                setLoading={() => { }}
-              />
-            </PageWrapper>
+            <PageLayout>
+              <UserManagement />
+            </PageLayout>
           </ProtectedRoute>
         }
       />
@@ -112,16 +61,9 @@ const AppRoutes: React.FC = () => {
         path="/roles"
         element={
           <ProtectedRoute requiredPermission="role">
-            <PageWrapper
-              title="Role Management"
-              subtitle="Create and manage system roles with permissions"
-            >
-              <RoleManagement
-                showMessage={() => { }}
-                loading={false}
-                setLoading={() => { }}
-              />
-            </PageWrapper>
+            <PageLayout>
+              <RoleManagement />
+            </PageLayout>
           </ProtectedRoute>
         }
       />
@@ -130,16 +72,9 @@ const AppRoutes: React.FC = () => {
         path="/permissions"
         element={
           <ProtectedRoute requiredPermission="permission.view">
-            <PageWrapper
-              title="Permission Management"
-              subtitle="View and manage system permissions"
-            >
-              <PermissionManagement
-                showMessage={() => { }}
-                loading={false}
-                setLoading={() => { }}
-              />
-            </PageWrapper>
+            <PageLayout>
+              <PermissionManagement />
+            </PageLayout>
           </ProtectedRoute>
         }
       />
@@ -148,12 +83,9 @@ const AppRoutes: React.FC = () => {
         path="/events"
         element={
           <ProtectedRoute>
-            <PageWrapper
-              title="Events"
-              subtitle="Manage all events"
-            >
+            <PageLayout>
               <EventsPage />
-            </PageWrapper>
+            </PageLayout>
           </ProtectedRoute>
         }
       />
@@ -162,17 +94,12 @@ const AppRoutes: React.FC = () => {
         path="/event-types"
         element={
           <ProtectedRoute>
-            <PageWrapper
-              title="Event Types"
-              subtitle="Manage event types"
-            >
+            <PageLayout>
               <EventTypesPage />
-            </PageWrapper>
+            </PageLayout>
           </ProtectedRoute>
         }
       />
-
-
 
       {/* Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -180,11 +107,6 @@ const AppRoutes: React.FC = () => {
   );
 };
 
-/**
- * Main App Component
- * 
- * Root component with routing and authentication context
- */
 const App: React.FC = () => {
   useEffect(() => {
     // Initialize configuration
@@ -199,7 +121,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-slate-50">
           <AppRoutes />
         </div>
       </Router>

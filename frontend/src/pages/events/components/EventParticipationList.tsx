@@ -1,235 +1,176 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Box,
-    Button,
-    Container,
-    Typography,
-    IconButton,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    TablePagination,
-    TextField,
-    Card,
-    CardContent,
-    Divider,
+  Box,
+  Card,
+  CardContent,
+  Divider,
+  Paper,
+  TableCell,
+  TextField,
+  Typography,
 } from '@mui/material';
-
-import {
-    ArrowBack as ArrowBackIcon,
-    Search as SearchIcon,
-} from '@mui/icons-material';
+import { Search as SearchIcon } from '@mui/icons-material';
 import type { Event as EventType, ParticipationDetail } from '../types/event.types';
 import { eventService } from '../services/eventService';
+import PageHeader from '../../../components/PageHeader';
+import DataTable from '../../../components/DataTable';
+import type { DataTableColumn } from '../../../components/DataTable';
+import StatusChip from '../../../components/StatusChip';
+import FieldLabel from '../../../components/FieldLabel';
+import { useSnackbar } from '../../../context/SnackbarContext';
+import { useDebouncedValue } from '../../../hooks';
 
 interface EventParticipationListProps {
-    event: EventType;
-    onBack: () => void;
+  event: EventType;
+  onBack: () => void;
 }
 
+const COLUMNS: DataTableColumn[] = [
+  { key: 'email', label: 'User Email' },
+  { key: 'guests', label: 'Guest Count' },
+  { key: 'status', label: 'Status' },
+  { key: 'joined', label: 'Joined At' },
+  { key: 'remarks', label: 'Remarks' },
+];
+
 const EventParticipationList: React.FC<EventParticipationListProps> = ({ event, onBack }) => {
-    const [participants, setParticipants] = useState<ParticipationDetail[]>([]);
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(50);
-    const [total, setTotal] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [searchEmail, setSearchEmail] = useState('');
+  const [participants, setParticipants] = useState<ParticipationDetail[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [searchEmail, setSearchEmail] = useState('');
 
-    const fetchParticipants = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await eventService.getEventParticipants(event.id, {
-                page: page + 1,
-                limit: rowsPerPage,
-                email: searchEmail || undefined,
-            });
-            setParticipants(response.data || []);
-            setTotal(response.total || 0);
-        } catch (error: any) {
-            console.error('Error fetching participants:', error);
-            alert(error.message || 'Failed to fetch participants. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, [event.id, page, rowsPerPage, searchEmail]);
+  const snackbar = useSnackbar();
+  const debouncedEmail = useDebouncedValue(searchEmail, 500);
 
-    useEffect(() => {
-        fetchParticipants();
-    }, [page, rowsPerPage, fetchParticipants]);
+  const fetchParticipants = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await eventService.getEventParticipants(event.id, {
+        page: page + 1,
+        limit: rowsPerPage,
+        email: debouncedEmail || undefined,
+      });
+      setParticipants(response.data || []);
+      setTotal(response.total || 0);
+    } catch (error: any) {
+      console.error('Error fetching participants:', error);
+      snackbar.error(error.message || 'Failed to fetch participants. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [event.id, page, rowsPerPage, debouncedEmail, snackbar]);
 
-    // Debounced search for email
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (page !== 0) {
-                setPage(0);
-            } else {
-                fetchParticipants();
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchEmail, page, fetchParticipants]);
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
 
-    const handleChangePage = (event: unknown, newPage: number) => {
-        setPage(newPage);
-    };
+  // Reset to the first page when a new search settles
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedEmail]);
 
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
 
-    return (
-        <Container maxWidth="lg">
-            <Box display="flex" alignItems="center" mb={3}>
-                <IconButton onClick={onBack} sx={{ mr: 2 }}>
-                    <ArrowBackIcon />
-                </IconButton>
-                <Typography variant="h4" component="h1">
-                    Participation List
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const renderRow = (participant: ParticipationDetail) => (
+    <>
+      <TableCell>
+        <Typography variant="body2" fontWeight={600}>
+          {participant.userEmail}
+        </Typography>
+      </TableCell>
+      <TableCell>{participant.guestCount}</TableCell>
+      <TableCell>
+        <StatusChip status={participant.status} />
+      </TableCell>
+      <TableCell>{new Date(participant.createdAt).toLocaleString()}</TableCell>
+      <TableCell>{participant.remarks || '—'}</TableCell>
+    </>
+  );
+
+  const summary = [
+    { label: 'Event title', value: event.title, bold: true },
+    { label: 'Event type', value: event.eventType?.name || 'N/A' },
+    { label: 'Start time', value: new Date(event.startAt).toLocaleString() },
+    { label: 'Status', value: <StatusChip status={event.status || 'ACTIVE'} /> },
+    { label: 'Total participants', value: event.totalParticipants || 0, bold: true, primary: true },
+    { label: 'Maximum spots', value: event.maxParticipants || 'Unlimited' },
+  ];
+
+  return (
+    <Box>
+      <PageHeader title="Participation List" subtitle={event.title} onBack={onBack} />
+
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom color="primary">
+            Event details
+          </Typography>
+          <Divider sx={{ mb: 2.5 }} />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+            {summary.map((item) => (
+              <Box key={item.label}>
+                <FieldLabel>{item.label}</FieldLabel>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    mt: 0.5,
+                    fontWeight: item.bold ? 700 : 400,
+                    color: item.primary ? 'primary.main' : 'text.primary',
+                  }}
+                >
+                  {item.value}
                 </Typography>
-            </Box>
+              </Box>
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
 
-            <Card sx={{ mb: 4, bgcolor: 'background.paper', borderRadius: 2 }}>
-                <CardContent>
-                    <Typography variant="h6" gutterBottom color="primary">
-                        Event Details
-                    </Typography>
-                    <Divider sx={{ mb: 2 }} />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Event Title
-                            </Typography>
-                            <Typography variant="body1" fontWeight="bold">
-                                {event.title}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Event Type
-                            </Typography>
-                            <Typography variant="body1">
-                                {event.eventType?.name || 'N/A'}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Start Time
-                            </Typography>
-                            <Typography variant="body1">
-                                {new Date(event.startAt).toLocaleString()}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Status
-                            </Typography>
-                            <Typography variant="body1">
-                                {event.status || 'Active'}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Total Participants
-                            </Typography>
-                            <Typography variant="body1" fontWeight="bold" color="primary">
-                                {event.totalParticipants || 0}
-                            </Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Maximum Spots
-                            </Typography>
-                            <Typography variant="body1">
-                                {event.maxParticipants || 'Unlimited'}
-                            </Typography>
-                        </Box>
-                    </Box>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+        <TextField
+          label="Search by email"
+          variant="outlined"
+          size="small"
+          value={searchEmail}
+          onChange={(e) => setSearchEmail(e.target.value)}
+          sx={{ minWidth: 300 }}
+          slotProps={{
+            input: {
+              startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />,
+            },
+          }}
+        />
+      </Box>
 
-
-                </CardContent>
-            </Card>
-
-            <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-                <TextField
-                    label="Search by Email"
-                    variant="outlined"
-                    size="small"
-                    value={searchEmail}
-                    onChange={(e) => setSearchEmail(e.target.value)}
-                    sx={{ minWidth: 300 }}
-                    InputProps={{
-                        startAdornment: <SearchIcon sx={{ color: 'action.active', mr: 1 }} />,
-                    }}
-                />
-            </Box>
-
-            <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow sx={{ bgcolor: 'action.hover' }}>
-                                <TableCell sx={{ fontWeight: 'bold' }}>User Email</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Guest Count</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Joined At</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                                        Loading participants...
-                                    </TableCell>
-                                </TableRow>
-                            ) : participants.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                                        No participants found
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                participants.map((participant, index) => (
-                                    <TableRow key={index} hover>
-                                        <TableCell>{participant.userEmail}</TableCell>
-                                        <TableCell>{participant.guestCount}</TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" sx={{
-                                                textTransform: 'capitalize',
-                                                color: participant.status === 'GOING' ? 'success.main' : 'text.secondary'
-                                            }}>
-                                                {participant.status.toLowerCase()}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(participant.createdAt).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            {participant.remarks || '-'}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <TablePagination
-                    rowsPerPageOptions={[20, 50, 100]}
-                    component="div"
-                    count={total}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-            </Paper>
-        </Container>
-    );
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
+        <DataTable
+          columns={COLUMNS}
+          rows={participants}
+          rowKey={(_, index) => index}
+          renderRow={renderRow}
+          loading={loading}
+          skeletonRows={rowsPerPage > 8 ? 8 : rowsPerPage}
+          emptyTitle="No participants found"
+          emptyDescription="Nobody has joined this event yet, or no one matches your search."
+          page={page}
+          rowsPerPage={rowsPerPage}
+          count={total}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[20, 50, 100]}
+        />
+      </Paper>
+    </Box>
+  );
 };
 
 export default EventParticipationList;

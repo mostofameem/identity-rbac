@@ -28,12 +28,12 @@ const Badge: React.FC<BadgeProps> = ({
   className = '',
 }) => {
   const variantClasses = {
-    default: 'bg-gray-100 text-gray-800',
-    primary: 'bg-blue-100 text-blue-800',
-    success: 'bg-green-100 text-green-800',
-    danger: 'bg-red-100 text-red-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    info: 'bg-indigo-100 text-indigo-800',
+    default: 'bg-slate-100 text-slate-600 border border-slate-200',
+    primary: 'bg-primary-50 text-primary-700 border border-primary-100',
+    success: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+    danger: 'bg-red-50 text-red-700 border border-red-100',
+    warning: 'bg-amber-50 text-amber-800 border border-amber-100',
+    info: 'bg-indigo-50 text-indigo-700 border border-indigo-100',
   };
 
   const sizeClasses = {
@@ -43,11 +43,11 @@ const Badge: React.FC<BadgeProps> = ({
   };
 
   const dotColors = {
-    default: 'bg-gray-400',
-    primary: 'bg-blue-400',
-    success: 'bg-green-400',
+    default: 'bg-slate-400',
+    primary: 'bg-primary-400',
+    success: 'bg-emerald-400',
     danger: 'bg-red-400',
-    warning: 'bg-yellow-400',
+    warning: 'bg-amber-400',
     info: 'bg-indigo-400',
   };
 

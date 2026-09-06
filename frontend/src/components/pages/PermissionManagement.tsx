@@ -25,22 +25,28 @@ import {
   Column
 } from '../shared';
 import { UI_MESSAGES, FORM_LABELS } from '../../constants/ui';
+import PageHeader from '../PageHeader';
 
 interface PermissionManagementProps {
-  showMessage: (message: string, isError?: boolean) => void;
-  loading: boolean;
-  setLoading: (loading: boolean) => void;
+  showMessage?: (message: string, isError?: boolean) => void;
+  loading?: boolean;
+  setLoading?: (loading: boolean) => void;
 }
 
 const PermissionManagement: React.FC<PermissionManagementProps> = ({
-  showMessage,
-  loading,
-  setLoading
+  showMessage: externalShowMessage,
+  loading: externalLoading,
+  setLoading: externalSetLoading
 }) => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [permissionFilter, setPermissionFilter] = useState('');
 
   const { message, messageType, showMessage: showLocalMessage, clearMessage } = useMessage();
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = externalLoading ?? localLoading;
+  const setLoading = externalSetLoading ?? setLocalLoading;
+  const showMessage =
+    externalShowMessage ?? ((msg: string, isError?: boolean) => showLocalMessage(msg, isError ? 'error' : 'success'));
 
   useEffect(() => {
     fetchPermissions();
@@ -82,16 +88,16 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
     const [resource, action] = permission.name.split('.');
 
     return (
-      <tr key={permission.id} className="hover:bg-gray-50 transition-colors">
+      <tr key={permission.id} className="hover:bg-slate-50 transition-colors">
         <td className="px-6 py-4 whitespace-nowrap">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-gray-900">{permission.name}</div>
+              <div className="text-sm font-medium text-slate-900">{permission.name}</div>
             </div>
           </div>
         </td>
@@ -106,7 +112,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
           </Badge>
         </td>
         <td className="px-6 py-4">
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-slate-700">
             {permission.description || 'No description available'}
           </div>
         </td>
@@ -115,7 +121,7 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   };
 
   const summaryFooter = permissions.length > 0 && (
-    <div className="flex items-center justify-between text-sm text-gray-600">
+    <div className="flex items-center justify-between text-sm text-slate-600">
       <span>
         Showing {permissions.length} permission{permissions.length !== 1 ? 's' : ''}
         {permissionFilter && ` matching "${permissionFilter}"`}
@@ -138,7 +144,9 @@ const PermissionManagement: React.FC<PermissionManagementProps> = ({
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
+      <PageHeader title="Permissions" subtitle="View and manage system permissions" />
+
       <MessageDisplay
         message={message}
         type={messageType}

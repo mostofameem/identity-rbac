@@ -110,7 +110,9 @@ func (repo *eventTypeSettingRepo) GetByEventTypeID(ctx context.Context, eventTyp
 	query, args, err := repo.psql.Select(
 		"id",
 		"event_type_id",
-		"auto_create_at",
+		// TIME columns scan into Go strings as full RFC3339 timestamps
+		// ("0000-01-01T08:00:00Z"); expose just the HH:MM clock part.
+		"TO_CHAR(auto_create_at, 'HH24:MI') AS auto_create_at",
 		"recurrence",
 		"created_by",
 		"updated_by",

@@ -26,17 +26,18 @@ import {
   Column 
 } from '../shared';
 import { UI_MESSAGES, FORM_LABELS } from '../../constants/ui';
+import PageHeader from '../PageHeader';
 
 interface RoleManagementProps {
-  showMessage: (message: string, isError?: boolean) => void;
-  loading: boolean;
-  setLoading: (loading: boolean) => void;
+  showMessage?: (message: string, isError?: boolean) => void;
+  loading?: boolean;
+  setLoading?: (loading: boolean) => void;
 }
 
-const RoleManagement: React.FC<RoleManagementProps> = ({ 
-  showMessage, 
-  loading, 
-  setLoading 
+const RoleManagement: React.FC<RoleManagementProps> = ({
+  showMessage: externalShowMessage,
+  loading: externalLoading,
+  setLoading: externalSetLoading,
 }) => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -51,6 +52,11 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
   });
 
   const { message, messageType, showMessage: showLocalMessage, clearMessage } = useMessage();
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = externalLoading ?? localLoading;
+  const setLoading = externalSetLoading ?? setLocalLoading;
+  const showMessage =
+    externalShowMessage ?? ((msg: string, isError?: boolean) => showLocalMessage(msg, isError ? 'error' : 'success'));
 
   useEffect(() => {
     fetchRoles();
@@ -153,12 +159,12 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
   ];
 
   const renderRoleRow = (role: Role, index: number) => (
-    <tr key={role.id} className="hover:bg-gray-50 transition-colors">
+    <tr key={role.id} className="hover:bg-slate-50 transition-colors">
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="font-medium text-gray-900">{role.name}</div>
+        <div className="font-medium text-slate-900">{role.name}</div>
       </td>
       <td className="px-6 py-4">
-        <div className="text-sm text-gray-700 max-w-xs">{role.description}</div>
+        <div className="text-sm text-slate-700 max-w-xs">{role.description}</div>
       </td>
       <td className="px-6 py-4">
         {role.permissions && role.permissions.length > 0 ? (
@@ -175,10 +181,10 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
             )}
           </div>
         ) : (
-          <span className="text-sm text-gray-400 italic">No permissions assigned</span>
+          <span className="text-sm text-slate-400 italic">No permissions assigned</span>
         )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
         {new Date(role.createdAt).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short',
@@ -189,7 +195,9 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
+      <PageHeader title="Roles" subtitle="Create and manage system roles with permissions" />
+
       <MessageDisplay
         message={message}
         type={messageType}
@@ -222,7 +230,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
             />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Add Permissions
               </label>
               <div className="relative">
@@ -239,20 +247,20 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
                 />
                 
                 {showPermissionDropdown && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-slate-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {searchedPermissions.length > 0 ? (
                       searchedPermissions.map(permission => (
                         <div
                           key={permission.id}
-                          className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                          className="p-3 hover:bg-primary-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
                           onClick={() => selectPermission(permission)}
                         >
-                          <div className="font-medium text-gray-900 text-sm">{permission.name}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">{permission.description}</div>
+                          <div className="font-medium text-slate-900 text-sm">{permission.name}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{permission.description}</div>
                         </div>
                       ))
                     ) : (
-                      <div className="p-3 text-center text-gray-500 text-sm">
+                      <div className="p-3 text-center text-slate-500 text-sm">
                         {permissionSearch.length < 2 
                           ? "Type at least 2 characters..."
                           : "No permissions found"
@@ -267,9 +275,9 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
 
           {/* Selected Permissions */}
           {newRole.permissionIds.length > 0 && (
-            <div className="p-3 bg-gray-50 rounded-md">
+            <div className="p-3 bg-slate-50 rounded-md">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-slate-700">
                   Selected Permissions ({newRole.permissionIds.length})
                 </span>
                 <Button
@@ -301,7 +309,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
             </div>
           )}
 
-          <div className="flex justify-end pt-3 border-t border-gray-200">
+          <div className="flex justify-end pt-3 border-t border-slate-200">
             <Button
               type="submit"
               variant="primary"

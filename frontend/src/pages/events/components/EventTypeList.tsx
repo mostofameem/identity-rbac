@@ -1,31 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
-  Container,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TablePagination,
   IconButton,
+  Paper,
+  TableCell,
+  TableRow,
+  Tooltip,
   Typography,
-  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   Settings as SettingsIcon,
-  PowerSettingsNew as PowerIcon
+  PowerSettingsNew as PowerIcon,
 } from '@mui/icons-material';
 import { EventType } from '../types/event.types';
 import EventTypeForm from './EventTypeForm';
 import EventTypeDetailsDialog from './EventTypeDetailsDialog';
 import { eventTypeService } from '../services/eventService';
+import PageHeader from '../../../components/PageHeader';
+import DataTable from '../../../components/DataTable';
+import type { DataTableColumn } from '../../../components/DataTable';
+import StatusChip from '../../../components/StatusChip';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { useSnackbar } from '../../../context/SnackbarContext';
+
+const COLUMNS: DataTableColumn[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'description', label: 'Description' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions', align: 'right' },
+];
+
+type PendingAction =
+  | { kind: 'delete'; eventType: EventType }
+  | { kind: 'toggle'; eventType: EventType };
 
 const EventTypeList: React.FC = () => {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
@@ -36,8 +46,11 @@ const EventTypeList: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
-  const fetchEventTypes = async () => {
+  const snackbar = useSnackbar();
+
+  const fetchEventTypes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await eventTypeService.getEventTypes({
@@ -48,15 +61,15 @@ const EventTypeList: React.FC = () => {
       setTotal(response.total || 0);
     } catch (error: any) {
       console.error('Error fetching event types:', error);
-      alert(error.message || 'Failed to fetch event types. Please try again.');
+      snackbar.error(error.message || 'Failed to fetch event types. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, snackbar]);
 
   useEffect(() => {
     fetchEventTypes();
-  }, [page, rowsPerPage]);
+  }, [fetchEventTypes]);
 
   const handleOpen = (eventType?: EventType) => {
     setSelectedEventType(eventType || null);
@@ -86,33 +99,30 @@ const EventTypeList: React.FC = () => {
       }
       await fetchEventTypes();
       handleClose();
+      snackbar.success(selectedEventType ? 'Event type updated' : 'Event type created');
     } catch (error: any) {
       console.error('Error saving event type:', error);
-      alert(error.message || 'Failed to save event type. Please try again.');
+      snackbar.error(error.message || 'Failed to save event type. Please try again.');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this event type?')) {
-      try {
-        await eventTypeService.deleteEventType(id);
-        await fetchEventTypes();
-      } catch (error: any) {
-        console.error('Error deleting event type:', error);
-        alert(error.message || 'Failed to delete event type. Please try again.');
-      }
+    try {
+      await eventTypeService.deleteEventType(id);
+      await fetchEventTypes();
+      snackbar.success('Event type deleted');
+    } catch (error: any) {
+      console.error('Error deleting event type:', error);
+      snackbar.error(error.message || 'Failed to delete event type. Please try again.');
+      throw error;
     }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     const newStatus = currentStatus ? 'INACTIVE' : 'ACTIVE';
-    try {
-      await eventTypeService.changeEventTypeStatus(id, newStatus);
-      await fetchEventTypes();
-    } catch (error: any) {
-      console.error('Error toggling event type status:', error);
-      alert(error.message || 'Failed to update status. Please try again.');
-    }
+    await eventTypeService.changeEventTypeStatus(id, newStatus);
+    await fetchEventTypes();
+    snackbar.success(currentStatus ? 'Event type deactivated' : 'Event type activated');
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -124,124 +134,90 @@ const EventTypeList: React.FC = () => {
     setPage(0);
   };
 
-  return (
-    <Container maxWidth="lg">
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h2">
-          Event Types
+  const renderRow = (eventType: EventType) => (
+    <>
+      <TableCell>
+        <Typography variant="body2" fontWeight={600}>
+          {eventType.name}
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpen()}
-        >
-          Add Event Type
-        </Button>
-      </Box>
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" color="text.secondary">
+          {eventType.description || 'No description'}
+        </Typography>
+      </TableCell>
+      <TableCell>
+        <StatusChip status={eventType.isActive ? 'ACTIVE' : 'INACTIVE'} />
+      </TableCell>
+      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+        <Tooltip title="Settings & details">
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenDetails(eventType);
+            }}
+            size="small"
+          >
+            <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={eventType.isActive ? 'Deactivate' : 'Activate'}>
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setPending({ kind: 'toggle', eventType });
+            }}
+            color={eventType.isActive ? 'warning' : 'success'}
+            size="small"
+          >
+            <PowerIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Delete">
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setPending({ kind: 'delete', eventType });
+            }}
+            color="error"
+            size="small"
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </TableCell>
+    </>
+  );
 
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} align="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Loading...
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : eventTypes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} align="center">
-                    <Typography variant="body2" color="text.secondary">
-                      No event types found
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                eventTypes.map((eventType) => (
-                  <TableRow
-                    key={eventType.id}
-                    hover
-                    onClick={() => handleOpenDetails(eventType)}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="medium">
-                        {eventType.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {eventType.description || 'No description'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={eventType.isActive ? 'Active' : 'Inactive'}
-                        color={eventType.isActive ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenDetails(eventType);
-                        }}
-                        color="secondary"
-                        size="small"
-                        title="Settings"
-                      >
-                        <SettingsIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleStatus(eventType.id, eventType.isActive);
-                        }}
-                        color={eventType.isActive ? "warning" : "success"}
-                        size="small"
-                        title={eventType.isActive ? "Deactivate" : "Activate"}
-                      >
-                        <PowerIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(eventType.id);
-                        }}
-                        color="error"
-                        size="small"
-                        title="Delete"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={total}
-          rowsPerPage={rowsPerPage}
+  return (
+    <Box>
+      <PageHeader
+        title="Event Types"
+        subtitle="Manage event types"
+        actions={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()}>
+            Add Event Type
+          </Button>
+        }
+      />
+
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
+        <DataTable
+          columns={COLUMNS}
+          rows={eventTypes}
+          rowKey={(eventType) => eventType.id}
+          renderRow={renderRow}
+          loading={loading}
+          skeletonRows={rowsPerPage > 8 ? 8 : rowsPerPage}
+          emptyTitle="No event types found"
+          emptyDescription="Create an event type to start auto-creating scheduled events."
+          onRowClick={handleOpenDetails}
           page={page}
+          rowsPerPage={rowsPerPage}
+          count={total}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]}
         />
       </Paper>
 
@@ -260,7 +236,40 @@ const EventTypeList: React.FC = () => {
         }}
         eventType={selectedEventType}
       />
-    </Container>
+
+      <ConfirmDialog
+        open={pending?.kind === 'delete'}
+        onClose={() => setPending(null)}
+        onConfirm={() => handleDelete((pending as { kind: 'delete'; eventType: EventType }).eventType.id)}
+        title="Delete event type?"
+        message={`This will permanently remove "${(pending as { kind: 'delete'; eventType: EventType } | null)?.eventType?.name ?? ''}". This action cannot be undone.`}
+        confirmLabel="Delete"
+        tone="danger"
+      />
+
+      <ConfirmDialog
+        open={pending?.kind === 'toggle'}
+        onClose={() => setPending(null)}
+        onConfirm={async () => {
+          if (pending?.kind === 'toggle') {
+            try {
+              await handleToggleStatus(pending.eventType.id, pending.eventType.isActive);
+            } catch (error: any) {
+              console.error('Error toggling event type status:', error);
+              snackbar.error(error.message || 'Failed to update status. Please try again.');
+              throw error;
+            }
+          }
+        }}
+        title={pending?.eventType.isActive ? 'Deactivate event type?' : 'Activate event type?'}
+        message={
+          pending?.eventType.isActive
+            ? 'New events of this type will no longer be created automatically.'
+            : 'Events of this type will resume being created on schedule.'
+        }
+        confirmLabel={pending?.eventType.isActive ? 'Deactivate' : 'Activate'}
+      />
+    </Box>
   );
 };
 

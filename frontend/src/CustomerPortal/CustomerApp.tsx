@@ -11,7 +11,7 @@ const CustomerApp: React.FC = () => {
     return (
         <AuthProvider>
             <Router>
-                <div className="min-h-screen bg-gray-50">
+                <div className="min-h-screen bg-slate-950">
                     <Routes>
                         {/* Public Auth Routes */}
                         <Route path="/login" element={<LoginPage />} />

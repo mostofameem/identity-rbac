@@ -26,17 +26,18 @@ import {
   Column 
 } from '../shared';
 import { UI_MESSAGES, FORM_LABELS } from '../../constants/ui';
+import PageHeader from '../PageHeader';
 
 interface UserManagementProps {
-  showMessage: (message: string, isError?: boolean) => void;
-  loading: boolean;
-  setLoading: (loading: boolean) => void;
+  showMessage?: (message: string, isError?: boolean) => void;
+  loading?: boolean;
+  setLoading?: (loading: boolean) => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ 
-  showMessage, 
-  loading, 
-  setLoading 
+const UserManagement: React.FC<UserManagementProps> = ({
+  showMessage: externalShowMessage,
+  loading: externalLoading,
+  setLoading: externalSetLoading,
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -48,6 +49,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
   });
 
   const { message, messageType, showMessage: showLocalMessage, clearMessage } = useMessage();
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = externalLoading ?? localLoading;
+  const setLoading = externalSetLoading ?? setLocalLoading;
+  const showMessage =
+    externalShowMessage ?? ((msg: string, isError?: boolean) => showLocalMessage(msg, isError ? 'error' : 'success'));
 
   useEffect(() => {
     fetchUsers();
@@ -114,17 +120,17 @@ const UserManagement: React.FC<UserManagementProps> = ({
   ];
 
   const renderUserRow = (user: User, index: number) => (
-    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+    <tr key={user.id} className="hover:bg-slate-50 transition-colors">
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{user.email}</div>
-            <div className="text-sm text-gray-500">ID: {user.id}</div>
+            <div className="text-sm font-medium text-slate-900">{user.email}</div>
+            <div className="text-sm text-slate-500">ID: {user.id}</div>
           </div>
         </div>
       </td>
@@ -151,10 +157,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
             )}
           </div>
         ) : (
-          <span className="text-sm text-gray-400 italic">No roles assigned</span>
+          <span className="text-sm text-slate-400 italic">No roles assigned</span>
         )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
         {new Date(user.createdAt).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short',
@@ -165,7 +171,9 @@ const UserManagement: React.FC<UserManagementProps> = ({
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
+      <PageHeader title="Users" subtitle="Manage users and their role assignments" />
+
       <MessageDisplay
         message={message}
         type={messageType}
@@ -200,7 +208,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
           {/* Role Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Assign Roles <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -209,8 +217,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   key={role.id}
                   className={`flex items-center p-3 border rounded-md cursor-pointer transition-colors ${
                     newUser.roleIds.includes(role.id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
                   }`}
                 >
                   <input
@@ -221,8 +229,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   />
                   <div className={`w-4 h-4 border-2 rounded mr-3 flex items-center justify-center ${
                     newUser.roleIds.includes(role.id)
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300'
+                      ? 'border-primary-500 bg-primary-500'
+                      : 'border-slate-300'
                   }`}>
                     {newUser.roleIds.includes(role.id) && (
                       <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +240,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   </div>
                   <div>
                     <div className="font-medium text-sm">{role.name}</div>
-                    <div className="text-xs text-gray-500">{role.description}</div>
+                    <div className="text-xs text-slate-500">{role.description}</div>
                   </div>
                 </label>
               ))}
@@ -240,9 +248,9 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
             {/* Selected Roles Display */}
             {newUser.roleIds.length > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-md">
+              <div className="mt-4 p-3 bg-primary-50 rounded-md">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-slate-700">
                     Selected Roles ({newUser.roleIds.length})
                   </span>
                   <Button

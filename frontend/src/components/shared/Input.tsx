@@ -36,11 +36,11 @@ const Input: React.FC<InputProps> = ({
   ...props
 }) => {
   const inputClasses = [
-    'w-full px-3 py-2 border rounded-md transition-colors text-sm',
-    'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-    error 
-      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-      : 'border-gray-300',
+    'w-full px-3 py-2 border rounded-lg transition-all text-sm bg-white',
+    'focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500',
+    error
+      ? 'border-red-300 focus:ring-red-500/10 focus:border-red-500'
+      : 'border-slate-300',
     leftIcon ? 'pl-10' : '',
     rightIcon ? 'pr-10' : '',
     className,
@@ -49,38 +49,38 @@ const Input: React.FC<InputProps> = ({
   return (
     <div className="space-y-1">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-slate-700">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      
+
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-3 top-2.5 text-gray-400">
+          <div className="absolute left-3 top-2.5 text-slate-400">
             {leftIcon}
           </div>
         )}
-        
+
         <input
           className={inputClasses}
           required={required}
           {...props}
         />
-        
+
         {rightIcon && (
-          <div className="absolute right-3 top-2.5 text-gray-400">
+          <div className="absolute right-3 top-2.5 text-slate-400">
             {rightIcon}
           </div>
         )}
       </div>
-      
+
       {error && (
         <p className="text-sm text-red-600">{error}</p>
       )}
-      
+
       {helperText && !error && (
-        <p className="text-sm text-gray-500">{helperText}</p>
+        <p className="text-sm text-slate-500">{helperText}</p>
       )}
     </div>
   );

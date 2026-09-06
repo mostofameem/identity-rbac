@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Button,
     Typography,
     Box,
-    Divider,
-    Chip,
     Card,
     CardContent,
-    Avatar,
     Alert,
     CircularProgress,
     Stack,
@@ -25,14 +18,17 @@ import {
     Settings as SettingsIcon,
     Description,
     Close,
-    PowerSettingsNew as PowerIcon,
     Edit as EditIcon,
     Save as SaveIcon,
     Schedule,
-    Info
 } from '@mui/icons-material';
 import { EventType, Recurrence, RECURRENCE_OPTIONS, recurrenceLabel } from '../types/event.types';
 import { eventTypeService } from '../services/eventService';
+import AutoCreateTimePicker, { toAutoCreateTime } from './AutoCreateTimePicker';
+import DetailDialogShell from '../../../components/DetailDialogShell';
+import StatusChip from '../../../components/StatusChip';
+import FieldLabel from '../../../components/FieldLabel';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 interface EventTypeDetailsDialogProps {
     open: boolean;
@@ -59,6 +55,8 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
     const [settingsError, setSettingsError] = useState<string | null>(null);
     const [noSettings, setNoSettings] = useState(false);
 
+    const snackbar = useSnackbar();
+
     useEffect(() => {
         if (open && initialEventType?.id) {
             fetchEventTypeDetails(initialEventType.id);
@@ -84,7 +82,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
             setSettingsLoading(true);
             const data = await eventTypeService.getEventTypeSettings(id);
             if (data) {
-                const autoCreateAt = data.AutoCreateAt || data.autoCreateAt || '09:00';
+                const autoCreateAt = toAutoCreateTime(data.AutoCreateAt || data.autoCreateAt);
                 const recurrenceValue = data.Recurrence || data.recurrence || 'DAILY';
                 const activeValue = data.IsActive !== undefined ? data.IsActive : (data.isActive === true);
 
@@ -122,9 +120,10 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
             // Update local state
             setEventType(prev => prev ? { ...prev, ...editData } : null);
             setIsEditing(false);
+            snackbar.success('Settings saved');
         } catch (err: any) {
             console.error('Error updating event type:', err);
-            alert(err.message || 'Failed to save changes');
+            snackbar.error(err.message || 'Failed to save changes');
         } finally {
             setSaving(false);
         }
@@ -144,199 +143,161 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
     if (!open) return null;
 
     return (
-        <Dialog
+        <DetailDialogShell
             open={open}
             onClose={onClose}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{
-                sx: { borderRadius: 2, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }
-            }}
-        >
-            <DialogTitle sx={{ pb: 2, background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ color: 'white' }}>
-                    <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56 }}>
-                            <SettingsIcon sx={{ fontSize: 32 }} />
-                        </Avatar>
-                        <Box>
-                            <Typography variant="h5" fontWeight="bold" sx={{ color: 'white', mb: 0.5 }}>
-                                {eventType?.name || 'Unknown Type'}
-                            </Typography>
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <Chip
-                                    label={eventType?.isActive ? 'ACTIVE' : 'INACTIVE'}
-                                    color={eventType?.isActive ? 'success' : 'default'}
-                                    size="small"
-                                    sx={{ bgcolor: 'rgba(255,255,255,0.9)', fontWeight: 'bold' }}
-                                />
-                            </Box>
-                        </Box>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={2}>
-                        {!isEditing ? (
-                            <Button
-                                onClick={() => setIsEditing(true)}
-                                variant="contained"
-                                color="primary"
-                                startIcon={<EditIcon />}
-                                sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    bgcolor: 'rgba(255,255,255,0.2)',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
-                                }}
-                            >
-                                Edit Settings
+            maxWidth="sm"
+            icon={<SettingsIcon />}
+            title={eventType?.name || 'Unknown Type'}
+            subtitle={
+                <StatusChip
+                    status={eventType?.isActive ? 'ACTIVE' : 'INACTIVE'}
+                    glass
+                    sx={{ mt: 0.5 }}
+                />
+            }
+            headerActions={
+                !isEditing ? (
+                    <Button
+                        onClick={() => setIsEditing(true)}
+                        variant="contained"
+                        startIcon={<EditIcon />}
+                        sx={{
+                            bgcolor: 'rgba(255,255,255,0.2)',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.32)' }
+                        }}
+                    >
+                        Edit Settings
+                    </Button>
+                ) : (
+                    <IconButton
+                        onClick={onClose}
+                        sx={{
+                            bgcolor: 'rgba(255,255,255,0.15)',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.28)' },
+                        }}
+                        size="small"
+                    >
+                        <Close />
+                    </IconButton>
+                )
+            }
+            footerActions={
+                <>
+                    <Box>
+                        {isEditing ? (
+                            <Button onClick={() => setIsEditing(false)} variant="outlined" color="inherit" disabled={saving}>
+                                Cancel
                             </Button>
                         ) : (
-                            <IconButton
-                                onClick={onClose}
-                                sx={{ color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
-                            >
-                                <Close />
-                            </IconButton>
+                            <Button onClick={onClose} variant="text">
+                                Close
+                            </Button>
                         )}
                     </Box>
-                </Box>
-            </DialogTitle>
-
-            <DialogContent dividers sx={{ p: 3, bgcolor: '#f5f7fa' }}>
-                <Stack spacing={3}>
-                    {/* Description Card */}
-                    <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                        <CardContent>
-                            <Box display="flex" alignItems="center" gap={1} mb={2}>
-                                <Description color="primary" />
-                                <Typography variant="h6" fontWeight="600">
-                                    Description
-                                </Typography>
-                            </Box>
-                            <Typography variant="body1" color="text.secondary">
-                                {eventType?.description || 'No description provided.'}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-
-                    {/* Auto-Creation Settings Card */}
-                    <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                        <CardContent>
-                            {noSettings && !isEditing && (
-                                <Alert severity="warning" sx={{ mb: 2 }}>
-                                    No event settings provided. Please click "Edit Settings" to create one.
-                                </Alert>
-                            )}
-                            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                <Box display="flex" alignItems="center" gap={1}>
-                                    <Schedule color="primary" />
-                                    <Typography variant="h6" fontWeight="600">
-                                        Auto-Creation Settings
-                                    </Typography>
-                                </Box>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            disabled={!isEditing}
-                                            checked={settings.isActive}
-                                            onChange={(e) => setSettings(prev => ({ ...prev, isActive: e.target.checked }))}
-                                            color="primary"
-                                        />
-                                    }
-                                    label={<Typography variant="body2" fontWeight="600">Active</Typography>}
-                                    labelPlacement="start"
-                                />
-                            </Box>
-
-                            <Box display="grid" gridTemplateColumns="1fr 1fr" gap={3}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight="600" textTransform="uppercase">
-                                        Create At (HH:MM)
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        disabled={!isEditing}
-                                        value={settings.autoCreateAt}
-                                        onChange={(e) => setSettings(prev => ({ ...prev, autoCreateAt: e.target.value }))}
-                                        size="small"
-                                        placeholder="09:00"
-                                        sx={{ mt: 0.5 }}
-                                    />
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight="600" textTransform="uppercase">
-                                        Repeats
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        select={isEditing}
-                                        disabled={!isEditing}
-                                        value={isEditing ? settings.recurrence : recurrenceLabel(settings.recurrence)}
-                                        onChange={(e) => setSettings(prev => ({
-                                            ...prev,
-                                            recurrence: e.target.value as Recurrence
-                                        }))}
-                                        size="small"
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        {RECURRENCE_OPTIONS.map((option) => (
-                                            <MenuItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </MenuItem>
-                                        ))}
-                                    </TextField>
-                                </Box>
-                            </Box>
-
-                            <Box mt={2} display="flex" alignItems="start" gap={1} p={1.5} bgcolor="#eff6ff" borderRadius={1}>
-                                <Info color="info" sx={{ fontSize: 18, mt: 0.2 }} />
-                                <Typography variant="caption" color="blue" sx={{ lineHeight: 1.4 }}>
-                                    When enabled, events of this type will be created automatically based on the schedule above.
-                                </Typography>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Stack>
-            </DialogContent>
-
-            <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f5f7fa', justifyContent: 'space-between' }}>
-                <Box>
-                    {isEditing ? (
+                    {isEditing && (
                         <Button
-                            onClick={() => setIsEditing(false)}
-                            variant="outlined"
-                            color="inherit"
+                            onClick={handleSave}
+                            variant="contained"
                             disabled={saving}
-                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                            startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                            sx={{ px: 3 }}
                         >
-                            Cancel
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={onClose}
-                            variant="text"
-                            color="primary"
-                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                        >
-                            Close
+                            Save Changes
                         </Button>
                     )}
-                </Box>
-                {isEditing && (
-                    <Button
-                        onClick={handleSave}
-                        variant="contained"
-                        color="primary"
-                        disabled={saving}
-                        startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                        sx={{ borderRadius: 2, px: 3, textTransform: 'none', fontWeight: 600 }}
-                    >
-                        Save Changes
-                    </Button>
-                )}
-            </DialogActions>
-        </Dialog>
+                </>
+            }
+            loading={loading}
+        >
+            <Stack spacing={3}>
+                {/* Description Card */}
+                <Card>
+                    <CardContent>
+                        <Box display="flex" alignItems="center" gap={1} mb={2}>
+                            <Description color="primary" />
+                            <Typography variant="h6">
+                                Description
+                            </Typography>
+                        </Box>
+                        <Typography variant="body1" color="text.secondary">
+                            {eventType?.description || 'No description provided.'}
+                        </Typography>
+                    </CardContent>
+                </Card>
+
+                {/* Auto-Creation Settings Card */}
+                <Card>
+                    <CardContent>
+                        {noSettings && !isEditing && (
+                            <Alert severity="warning" sx={{ mb: 2 }}>
+                                No event settings provided. Please click "Edit Settings" to create one.
+                            </Alert>
+                        )}
+                        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                                <Schedule color="primary" />
+                                <Typography variant="h6">
+                                    Auto-Creation Settings
+                                </Typography>
+                            </Box>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        disabled={!isEditing}
+                                        checked={settings.isActive}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, isActive: e.target.checked }))}
+                                        color="primary"
+                                    />
+                                }
+                                label={<Typography variant="body2" fontWeight="600">Active</Typography>}
+                                labelPlacement="start"
+                            />
+                        </Box>
+
+                        <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={3}>
+                            <Box>
+                                <FieldLabel>Create At (HH:MM)</FieldLabel>
+                                <Box sx={{ mt: 0.5 }}>
+                                    <AutoCreateTimePicker
+                                        fullWidth
+                                        disabled={!isEditing}
+                                        value={toAutoCreateTime(settings.autoCreateAt)}
+                                        onChange={(value) => setSettings(prev => ({ ...prev, autoCreateAt: value }))}
+                                    />
+                                </Box>
+                            </Box>
+                            <Box>
+                                <FieldLabel>Repeats</FieldLabel>
+                                <TextField
+                                    fullWidth
+                                    select={isEditing}
+                                    disabled={!isEditing}
+                                    value={isEditing ? settings.recurrence : recurrenceLabel(settings.recurrence)}
+                                    onChange={(e) => setSettings(prev => ({
+                                        ...prev,
+                                        recurrence: e.target.value as Recurrence
+                                    }))}
+                                    size="small"
+                                    sx={{ mt: 0.5 }}
+                                >
+                                    {RECURRENCE_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            </Box>
+                        </Box>
+
+                        <Alert severity="info" icon={false} sx={{ mt: 2 }}>
+                            When enabled, events of this type will be created automatically based on the schedule above.
+                        </Alert>
+                    </CardContent>
+                </Card>
+            </Stack>
+        </DetailDialogShell>
     );
 };
 

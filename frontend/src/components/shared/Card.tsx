@@ -36,9 +36,9 @@ const Card: React.FC<CardProps> = ({
   footer,
 }) => {
   const variantClasses = {
-    default: 'bg-white rounded-lg shadow-md border border-gray-200',
-    elevated: 'bg-white rounded-lg shadow-lg border border-gray-200',
-    outlined: 'bg-white rounded-lg border-2 border-gray-300',
+    default: 'bg-white rounded-xl shadow-soft border border-slate-200',
+    elevated: 'bg-white rounded-xl shadow-raised border border-slate-200',
+    outlined: 'bg-white rounded-xl border border-slate-300',
   };
 
   const cardClasses = [
@@ -49,16 +49,16 @@ const Card: React.FC<CardProps> = ({
   return (
     <div className={cardClasses}>
       {(title || subtitle || headerAction) && (
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <div>
               {title && (
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="text-lg font-semibold text-slate-900">
                   {title}
                 </h2>
               )}
               {subtitle && (
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-slate-500 mt-0.5">
                   {subtitle}
                 </p>
               )}
@@ -71,13 +71,13 @@ const Card: React.FC<CardProps> = ({
           </div>
         </div>
       )}
-      
-      <div className="px-6 py-4">
+
+      <div className="px-6 py-5">
         {children}
       </div>
-      
+
       {footer && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
           {footer}
         </div>
       )}
