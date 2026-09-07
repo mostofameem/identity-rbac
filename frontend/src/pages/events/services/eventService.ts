@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { config } from '../../../config/env';
+import { attachAuthInterceptors } from '../../../services/interceptors';
 import {
   Event,
   EventType,
@@ -22,19 +23,8 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor to include the auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// JWT bearer header + 401 refresh/retry + force-logout on expired sessions
+attachAuthInterceptors(api);
 
 // Helper function to handle API errors
 const handleApiError = (error: any) => {

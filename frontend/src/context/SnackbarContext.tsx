@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Alert, AlertColor, Snackbar, useMediaQuery, useTheme } from '@mui/material';
+import { setApiNotifier } from '../services/interceptors';
 
 // App-wide toast notifications. Replaces the alert() calls that were scattered
 // through the events components. Bottom-right on desktop, bottom-center on
@@ -30,6 +31,13 @@ const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ children })
   const show = useCallback((severity: AlertColor, message: string, autoHideMs: number) => {
     setToast({ message, severity, autoHideMs });
   }, []);
+
+  // Let the axios interceptors raise toasts (e.g. 403 "no permission") without
+  // needing React context.
+  useEffect(() => {
+    setApiNotifier((message) => show('warning', message, 5000));
+    return () => setApiNotifier(null);
+  }, [show]);
 
   const value = useMemo<SnackbarContextValue>(
     () => ({

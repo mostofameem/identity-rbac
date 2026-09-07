@@ -85,10 +85,10 @@ func seedPermissions(db *repo.DB) error {
 		{"event_type.delete", "event_type", "delete", "Event type delete permission"},
 		{"event_type.view", "event_type", "view", "Event type view access"},
 
-		{"perticipent.create", "perticipent", "create", "Perticipent creation access"},
-		{"perticipent.update", "perticipent", "update", "Perticipent update access"},
-		{"perticipent.delete", "perticipent", "delete", "Perticipent delete access"},
-		{"perticipent.view", "perticipent", "view", "perticipent view access"},
+		{"participant.create", "participant", "create", "Participant creation access"},
+		{"participant.update", "participant", "update", "Participant update access"},
+		{"participant.delete", "participant", "delete", "Participant delete access"},
+		{"participant.view", "participant", "view", "Participant view access"},
 
 		{"permission.view", "permission", "view", "Permission view access"},
 		{"permission.assign", "permission", "assign", "Permission assign access"},
@@ -195,13 +195,11 @@ func seedEventTypesAndSettings(db *repo.DB) error {
 	}
 
 	eventTypes := []eventTypesSeed{
-		{"Daily Breakfast", "Daily event type", "08:00", "DAILY"},
-		{"Daily Lunch", "Daily event type", "12:00", "DAILY"},
-		{"Daily Dinner", "Daily event type", "18:00", "DAILY"},
-		{"Weekly Meeting", "Weekly event type", "09:00", "WEEKLY"},
-		{"Monthly Review", "Monthly event type", "09:00", "MONTHLY"},
-		{"Yearly Planning", "Yearly event type", "09:00", "YEARLY"},
-		{"Once-off Event", "Once event type", "09:00", "ONCE"},
+		{"Daily", "Daily event type", "08:00", "DAILY"},
+		{"Weekly", "Weekly event type", "08:00", "WEEKLY"},
+		{"Monthly", "Monthly event type", "09:00", "MONTHLY"},
+		{"Yearly", "Yearly event type", "09:00", "YEARLY"},
+		{"Once", "One time event", "09:00", "ONCE"},
 	}
 
 	for _, et := range eventTypes {

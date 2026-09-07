@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { config } from '../config/env';
+import { attachAuthInterceptors } from './interceptors';
 
 const API_BASE_URL = config.apiBaseUrl;
 
@@ -10,73 +11,8 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor to add JWT token
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor to handle token refresh
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          console.log('🔄 Token expired, attempting refresh...');
-
-          // Backend expects GET request with query parameter
-          const response = await axios.get(`${API_BASE_URL}/api/v1/token/refresh?token=${refreshToken}`);
-
-          const { accessToken } = response.data;
-          localStorage.setItem('token', accessToken);
-
-          console.log('✅ Token refreshed successfully');
-
-          // Update the authorization header and retry the request
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return axiosInstance(originalRequest);
-        } else {
-          console.log('❌ No refresh token available');
-        }
-      } catch (refreshError) {
-        console.error('❌ Token refresh failed:', refreshError);
-
-        // Only redirect to login if refresh token is invalid
-        // For access denied errors, let the component handle it
-        if ((refreshError as any).response?.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
-        }
-        return Promise.reject(refreshError);
-      }
-    }
-
-    // For 403 (Forbidden) or other authorization errors, don't redirect to login
-    // Let the component handle the error gracefully
-    if (error.response?.status === 403) {
-      console.log('❌ Access denied - insufficient permissions');
-      return Promise.reject(error);
-    }
-
-    return Promise.reject(error);
-  }
-);
+// JWT bearer header + 401 refresh/retry + force-logout on expired sessions
+attachAuthInterceptors(axiosInstance);
 
 export interface LoginRequest {
   email: string;

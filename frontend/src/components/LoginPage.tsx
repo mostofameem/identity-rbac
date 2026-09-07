@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Alert, Box, Button, CircularProgress, Divider, IconButton, InputAdornment, TextField, Typography } from '@mui/material';
 import { Visibility, VisibilityOff, Login as LoginIcon, Event as EventIcon } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { config } from '../config/env';
 import BrandPanel from './auth/BrandPanel';
 
@@ -17,6 +17,8 @@ const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get('expired') === '1';
 
   useEffect(() => {
     // Check if we came from registration with a success message
@@ -98,6 +100,12 @@ const LoginPage: React.FC = () => {
           <Typography variant="body1" color="text.secondary" mb={4}>
             Sign in to your admin account
           </Typography>
+
+          {sessionExpired && !success && !error && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Your session has expired. Please log in again.
+            </Alert>
+          )}
 
           {success && (
             <Alert severity="success" sx={{ mb: 2 }}>
