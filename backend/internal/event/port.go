@@ -10,6 +10,7 @@ import (
 
 type Service interface {
 	CreateEvent(ctx context.Context, req CreateEventReq) (*EventResponse, error)
+	UpdateEvent(ctx context.Context, req UpdateEventReq) (*EventResponse, error)
 	GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error)
 	GetPublicEvents(ctx context.Context, req GetPublicEventsReq) ([]EventPublicResponse, util.Pagination, error)
 	GetEventDetails(ctx context.Context, id int) (EventResponse, error)
@@ -34,6 +35,7 @@ type Service interface {
 
 type EventRepo interface {
 	Create(ctx context.Context, req CreateEventReq) (int, error)
+	Update(ctx context.Context, tx *sqlx.Tx, req UpdateEventReq) error
 	GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.Events, error)
 	GetByIDForUpdate(ctx context.Context, tx *sqlx.Tx, id int) (*entity.Events, error)
 	GetEventWithPagination(ctx context.Context, req GetEventsQueryReq) ([]entity.Events, error)

@@ -67,6 +67,51 @@ func (s *service) CreateEvent(ctx context.Context, req CreateEventReq) (*EventRe
 	return response, nil
 }
 
+func (s *service) UpdateEvent(ctx context.Context, req UpdateEventReq) (*EventResponse, error) {
+	// Validate event type exists
+	eventType, err := s.eventTypeRepo.GetByID(ctx, nil, req.EventTypeId)
+	if err != nil {
+		return nil, util.ErrSomethingWentWrong
+	}
+	if eventType == nil {
+		return nil, util.ErrNotFound
+	}
+
+	tx, err := s.transactionRepo.BeginTx(ctx)
+	if err != nil {
+		return nil, util.ErrSomethingWentWrong
+	}
+	defer s.transactionRepo.RollbackTx(ctx, tx)
+
+	// Lock the row so the status check and the update can't race each other
+	existingEvent, err := s.eventRepo.GetByIDForUpdate(ctx, tx, req.EventId)
+	if err != nil {
+		return nil, util.ErrSomethingWentWrong
+	}
+	if existingEvent == nil {
+		return nil, util.ErrNotFound
+	}
+
+	if getEventStatus(existingEvent, req.CurrentTime) == enum.EventStatusOngoing {
+		return nil, util.ErrOngoingEventUpdate
+	}
+
+	if err := s.eventRepo.Update(ctx, tx, req); err != nil {
+		return nil, util.ErrSomethingWentWrong
+	}
+
+	if err := s.transactionRepo.CommitTx(ctx, tx); err != nil {
+		return nil, util.ErrSomethingWentWrong
+	}
+
+	updatedEvent, err := s.GetEventDetails(ctx, req.EventId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedEvent, nil
+}
+
 func (s *service) GetEventDetails(ctx context.Context, id int) (EventResponse, error) {
 
 	event, err := s.eventRepo.GetByID(ctx, nil, id)
@@ -115,11 +160,12 @@ func (s *service) GetEventDetails(ctx context.Context, id int) (EventResponse, e
 func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCustomerResponse, util.Pagination, error) {
 
 	events, err := s.eventRepo.GetEventWithPagination(ctx, GetEventsQueryReq{
-		Title:       req.Title,
-		Page:        req.Page,
-		Limit:       req.Limit,
-		EventStatus: req.EventStatus,
-		CurrentTime: req.CurrentTime,
+		Title:                 req.Title,
+		Page:                  req.Page,
+		Limit:                 req.Limit,
+		EventStatus:           req.EventStatus,
+		ShouldAutoCreateEvent: req.ShouldAutoCreateEvent,
+		CurrentTime:           req.CurrentTime,
 	})
 	if err != nil {
 		return []EventCustomerResponse{}, util.Pagination{}, util.ErrSomethingWentWrong
@@ -156,6 +202,7 @@ func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCusto
 			StartAt:              event.StartAt,
 			RegistrationOpensAt:  event.RegistrationOpensAt,
 			RegistrationClosesAt: event.RegistrationClosesAt,
+			ShouldAutoCreateEvent: event.ShouldAutoCreateEvent,
 			IsActive:             event.IsActive,
 			Status:               getEventStatus(&event, req.CurrentTime),
 			TotalParticipants:    event.TotalParticipants,
@@ -164,9 +211,10 @@ func (s *service) GetEvents(ctx context.Context, req GetEventsReq) ([]EventCusto
 	}
 
 	totalItem, err := s.eventRepo.GetTotalEventCount(ctx, GetEventsQueryReq{
-		Title:       req.Title,
-		EventStatus: req.EventStatus,
-		CurrentTime: req.CurrentTime,
+		Title:                 req.Title,
+		EventStatus:           req.EventStatus,
+		ShouldAutoCreateEvent: req.ShouldAutoCreateEvent,
+		CurrentTime:           req.CurrentTime,
 	})
 	if err != nil {
 		return []EventCustomerResponse{}, util.Pagination{}, util.ErrSomethingWentWrong

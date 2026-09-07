@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Button,
   IconButton,
   Paper,
   TableCell,
@@ -10,13 +9,10 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
   Settings as SettingsIcon,
   PowerSettingsNew as PowerIcon,
 } from '@mui/icons-material';
 import { EventType } from '../types/event.types';
-import EventTypeForm from './EventTypeForm';
 import EventTypeDetailsDialog from './EventTypeDetailsDialog';
 import { eventTypeService } from '../services/eventService';
 import PageHeader from '../../../components/PageHeader';
@@ -33,13 +29,10 @@ const COLUMNS: DataTableColumn[] = [
   { key: 'actions', label: 'Actions', align: 'right' },
 ];
 
-type PendingAction =
-  | { kind: 'delete'; eventType: EventType }
-  | { kind: 'toggle'; eventType: EventType };
+type PendingAction = { kind: 'toggle'; eventType: EventType };
 
 const EventTypeList: React.FC = () => {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [open, setOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [page, setPage] = useState(0);
@@ -71,13 +64,7 @@ const EventTypeList: React.FC = () => {
     fetchEventTypes();
   }, [fetchEventTypes]);
 
-  const handleOpen = (eventType?: EventType) => {
-    setSelectedEventType(eventType || null);
-    setOpen(true);
-  };
-
   const handleClose = () => {
-    setOpen(false);
     setDetailsOpen(false);
     setSelectedEventType(null);
   };
@@ -85,37 +72,6 @@ const EventTypeList: React.FC = () => {
   const handleOpenDetails = (eventType: EventType) => {
     setSelectedEventType(eventType);
     setDetailsOpen(true);
-  };
-
-  const handleSave = async (eventTypeData: Partial<EventType>) => {
-    try {
-      if (selectedEventType) {
-        // Backend doesn't have a general update endpoint for event types.
-        // Settings are updated internally within the EventTypeForm.
-        // We just need to refresh the list to show any potential changes (like status).
-        console.log('Event type settings updated, refreshing list...');
-      } else {
-        await eventTypeService.createEventType(eventTypeData);
-      }
-      await fetchEventTypes();
-      handleClose();
-      snackbar.success(selectedEventType ? 'Event type updated' : 'Event type created');
-    } catch (error: any) {
-      console.error('Error saving event type:', error);
-      snackbar.error(error.message || 'Failed to save event type. Please try again.');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await eventTypeService.deleteEventType(id);
-      await fetchEventTypes();
-      snackbar.success('Event type deleted');
-    } catch (error: any) {
-      console.error('Error deleting event type:', error);
-      snackbar.error(error.message || 'Failed to delete event type. Please try again.');
-      throw error;
-    }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
@@ -173,18 +129,6 @@ const EventTypeList: React.FC = () => {
             <PowerIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton
-            onClick={(e) => {
-              e.stopPropagation();
-              setPending({ kind: 'delete', eventType });
-            }}
-            color="error"
-            size="small"
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
       </TableCell>
     </>
   );
@@ -194,11 +138,6 @@ const EventTypeList: React.FC = () => {
       <PageHeader
         title="Event Types"
         subtitle="Manage event types"
-        actions={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()}>
-            Add Event Type
-          </Button>
-        }
       />
 
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
@@ -210,7 +149,7 @@ const EventTypeList: React.FC = () => {
           loading={loading}
           skeletonRows={rowsPerPage > 8 ? 8 : rowsPerPage}
           emptyTitle="No event types found"
-          emptyDescription="Create an event type to start auto-creating scheduled events."
+          emptyDescription="Event types can only be updated, not created from here."
           onRowClick={handleOpenDetails}
           page={page}
           rowsPerPage={rowsPerPage}
@@ -221,13 +160,6 @@ const EventTypeList: React.FC = () => {
         />
       </Paper>
 
-      <EventTypeForm
-        open={open}
-        onClose={handleClose}
-        onSave={handleSave}
-        eventType={selectedEventType}
-      />
-
       <EventTypeDetailsDialog
         open={detailsOpen}
         onClose={() => {
@@ -235,16 +167,6 @@ const EventTypeList: React.FC = () => {
           fetchEventTypes();
         }}
         eventType={selectedEventType}
-      />
-
-      <ConfirmDialog
-        open={pending?.kind === 'delete'}
-        onClose={() => setPending(null)}
-        onConfirm={() => handleDelete((pending as { kind: 'delete'; eventType: EventType }).eventType.id)}
-        title="Delete event type?"
-        message={`This will permanently remove "${(pending as { kind: 'delete'; eventType: EventType } | null)?.eventType?.name ?? ''}". This action cannot be undone.`}
-        confirmLabel="Delete"
-        tone="danger"
       />
 
       <ConfirmDialog

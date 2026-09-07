@@ -110,7 +110,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
             setSaving(true);
 
             // Save auto-creation settings
-            await eventTypeService.createEventTypeSetting({
+            await eventTypeService.updateEventTypeSetting({
                 eventTypeId: eventType.id,
                 autoCreateAt: settings.autoCreateAt,
                 recurrence: settings.recurrence,
@@ -232,7 +232,7 @@ const EventTypeDetailsDialog: React.FC<EventTypeDetailsDialogProps> = ({ open, o
                     <CardContent>
                         {noSettings && !isEditing && (
                             <Alert severity="warning" sx={{ mb: 2 }}>
-                                No event settings provided. Please click "Edit Settings" to create one.
+                                No auto-creation settings are configured for this event type.
                             </Alert>
                         )}
                         <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>

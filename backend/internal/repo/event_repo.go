@@ -71,6 +71,40 @@ func (r *eventRepo) Create(ctx context.Context, req event.CreateEventReq) (int, 
 	return id, nil
 }
 
+func (r *eventRepo) Update(ctx context.Context, tx *sqlx.Tx, req event.UpdateEventReq) error {
+	query, args, err := r.psql.
+		Update(r.table).
+		Set("title", req.Title).
+		Set("description", req.Description).
+		Set("event_type_id", req.EventTypeId).
+		Set("start_at", req.StartAt).
+		Set("registration_opens_at", req.RegistrationOpensAt).
+		Set("registration_closes_at", req.RegistrationClosesAt).
+		Set("max_participants", req.MaxParticipants).
+		Set("updated_by", req.UpdatedBy).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"id": req.EventId}).
+		ToSql()
+	if err != nil {
+		slog.Error("Failed to build update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"req":   req,
+		}))
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		slog.Error("Failed to execute update query", logger.Extra(map[string]any{
+			"error": err.Error(),
+			"query": query,
+			"args":  args,
+		}))
+		return err
+	}
+
+	return nil
+}
+
 func (r *eventRepo) GetByID(ctx context.Context, tx *sqlx.Tx, id int) (*entity.Events, error) {
 	query, args, err := r.psql.
 		Select("*").
@@ -142,6 +176,9 @@ func (r *eventRepo) GetEventWithPagination(ctx context.Context, req event.GetEve
 	query, args, err := NewQueryBuilder(r.getEventQueryBuilder()).
 		FilterByPrefix("title", req.Title).
 		FilterByMode(string(req.EventStatus), req.CurrentTime).
+		FilterByOptionalBoolean("should_auto_create_event", req.ShouldAutoCreateEvent).
+		OrderBy("startAt", "ASC").
+		OrderBy("id", "ASC").
 		Limit(limit).
 		Offset(Offset).
 		ToSql()
@@ -151,6 +188,11 @@ func (r *eventRepo) GetEventWithPagination(ctx context.Context, req event.GetEve
 		}))
 		return nil, err
 	}
+
+	slog.Info("Query", logger.Extra(map[string]any{
+		"query": query,
+		"args":  args,
+		}))
 
 	var events []entity.Events
 	if err := r.db.SelectContext(ctx, &events, query, args...); err != nil {
@@ -178,6 +220,7 @@ func (r *eventRepo) GetTotalEventCount(
 		FilterByPrefix("title", req.Title).
 		FilterByBoolean("is_active", true).
 		FilterByMode(string(req.EventStatus), req.CurrentTime).
+		FilterByOptionalBoolean("should_auto_create_event", req.ShouldAutoCreateEvent).
 		ToSql()
 	if err != nil {
 		slog.Error("Failed to build query", logger.Extra(map[string]any{

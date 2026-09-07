@@ -14,7 +14,7 @@ import (
 )
 
 type CreateEventTypeRequest struct {
-	Name        string `json:"name" validation:"required"`
+	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 }
 
@@ -25,14 +25,14 @@ type GetEventTypes struct {
 }
 
 type EventTypeSettingsRequest struct {
-	EventTypeId  int    `json:"eventTypeId"  validation:"required"`
-	AutoCreateAt string `json:"autoCreateAt" validation:"required"`
-	Recurrence   string `json:"recurrence"   validation:"required,oneof=DAILY WEEKLY MONTHLY YEARLY ONCE"`
-	IsActive     bool   `json:"isActive"     validation:"required"`
+	EventTypeId  int    `json:"eventTypeId"  validate:"required"`
+	AutoCreateAt string `json:"autoCreateAt" validate:"required"`
+	Recurrence   string `json:"recurrence"   validate:"required,oneof=DAILY WEEKLY MONTHLY YEARLY ONCE"`
+	IsActive     bool   `json:"isActive"`
 }
 
 type EventTypeStatusChangeRequest struct {
-	Status enum.ActiveInactiveStatus `json:"status" validation:"required"`
+	Status enum.ActiveInactiveStatus `json:"status" validate:"required,oneof=ACTIVE INACTIVE"`
 }
 
 func (handlers *Handlers) CreateEventType(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +64,11 @@ func (handlers *Handlers) CreateEventType(w http.ResponseWriter, r *http.Request
 	})
 
 	if err != nil {
-		utils.SendError(w, http.StatusInternalServerError, "Something went wrong. Please try again latter.")
+		if errors.Is(err, util.ErrAlreadyExist) {
+			utils.SendError(w, http.StatusConflict, "An event type with this name already exists.")
+			return
+		}
+		utils.SendError(w, http.StatusInternalServerError, "Something went wrong. Please try again later.")
 		return
 	}
 
@@ -140,12 +144,16 @@ func (handlers *Handlers) UpdateEventTypeSettings(w http.ResponseWriter, r *http
 			utils.SendError(w, http.StatusBadRequest, "Invalid recurrence, must be DAILY, WEEKLY, MONTHLY, YEARLY or ONCE")
 			return
 		}
+		if errors.Is(err, util.ErrNotFound) {
+			utils.SendError(w, http.StatusNotFound, "Event type settings not found")
+			return
+		}
 		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
 		return
 	}
 
 	utils.SendData(w, map[string]any{
-		"message": "Event Type settings created successfully",
+		"message": "Event Type settings updated successfully",
 		"data":    id,
 	})
 }
@@ -191,6 +199,10 @@ func (handlers *Handlers) UpdateEventTypeStatus(w http.ResponseWriter, r *http.R
 
 	err := handlers.eventSvc.UpdateEventTypeStatus(r.Context(), id, fmt.Sprintf("%s", request.Status))
 	if err != nil {
+		if errors.Is(err, util.ErrNotFound) {
+			utils.SendError(w, http.StatusNotFound, "Event type not found")
+			return
+		}
 		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")
 		return
 	}

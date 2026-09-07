@@ -65,20 +65,35 @@ type GetEventTypeDto struct {
 	IsActive bool   `json:"isActive"`
 }
 
+type UpdateEventReq struct {
+	EventId               int
+	Title                 string
+	Description           string
+	EventTypeId           int
+	StartAt               time.Time
+	RegistrationOpensAt   time.Time
+	RegistrationClosesAt  time.Time
+	MaxParticipants       int
+	UpdatedBy             int
+	CurrentTime           time.Time
+}
+
 type GetEventsQueryReq struct {
-	Title       string
-	Page        int
-	Limit       int
-	CurrentTime time.Time
-	EventStatus enum.EventStatusType
+	Title                 string
+	Page                  int
+	Limit                 int
+	CurrentTime           time.Time
+	EventStatus           enum.EventStatusType
+	ShouldAutoCreateEvent *bool
 }
 
 type GetEventsReq struct {
-	Title       string
-	EventStatus enum.EventStatusType
-	Page        int
-	Limit       int
-	CurrentTime time.Time
+	Title                 string
+	EventStatus           enum.EventStatusType
+	ShouldAutoCreateEvent *bool
+	Page                  int
+	Limit                 int
+	CurrentTime           time.Time
 }
 
 type GetPublicEventsReq struct {
@@ -98,6 +113,7 @@ type EventCustomerResponse struct {
 	StartAt              time.Time            `json:"startAt"`
 	RegistrationOpensAt  time.Time            `json:"registrationOpensAt"`
 	RegistrationClosesAt time.Time            `json:"registrationClosesAt"`
+	ShouldAutoCreateEvent bool                `json:"shouldAutoCreateEvent"`
 	TotalParticipants    int                  `json:"totalParticipants"`
 	MaxParticipants      int                  `json:"maxParticipants"`
 	Status               enum.EventStatusType `json:"status"`

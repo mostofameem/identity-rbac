@@ -72,6 +72,7 @@ export interface ListQueryParams {
   search?: string;
   status?: string;
   eventTypeId?: string;
+  shouldAutoCreate?: boolean;
 }
 
 export interface ParticipationDetail {

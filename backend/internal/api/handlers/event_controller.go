@@ -25,11 +25,22 @@ type CreateEventRequest struct {
 	MaxParticipants      int       `json:"maxParticipants"      validation:"required"`
 }
 
+type UpdateEventRequest struct {
+	Title                string    `json:"title"                validate:"required"`
+	Description          string    `json:"description"`
+	EventTypeId          int       `json:"eventTypeId"          validate:"required"`
+	StartAt              time.Time `json:"startAt"              validate:"required"`
+	RegistrationOpensAt  time.Time `json:"registrationOpensAt"  validate:"required"`
+	RegistrationClosesAt time.Time `json:"registrationClosesAt" validate:"required"`
+	MaxParticipants      int       `json:"maxParticipants"      validate:"gte=0"`
+}
+
 type GetEventRequest struct {
-	Title       string               `form:"title" json:"title"`
-	EventStatus enum.EventStatusType `form:"status" json:"status"`
-	Page        int                  `form:"page" json:"page"`
-	Limit       int                  `form:"limit" json:"limit"`
+	Title                 string               `form:"title" json:"title"`
+	EventStatus           enum.EventStatusType `form:"status" json:"status"`
+	ShouldAutoCreateEvent *bool                `form:"shouldAutoCreateEvent" json:"shouldAutoCreateEvent"`
+	Page                  int                  `form:"page" json:"page"`
+	Limit                 int                  `form:"limit" json:"limit"`
 }
 
 type GetEventParticipantsRequest struct {
@@ -63,7 +74,7 @@ func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := utils.Validate(createEventReq); err != nil {
-		utils.SendError(w, http.StatusBadRequest, "Validation error")
+		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -106,6 +117,67 @@ func (handlers *Handlers) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (handlers *Handlers) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+	id, ok := utils.GetIntPathParam(r, "id", w)
+	if !ok {
+		return // Error response already handled by GetIntPathParam
+	}
+
+	var request UpdateEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := utils.Validate(request); err != nil {
+		utils.SendError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if !request.RegistrationOpensAt.Before(request.RegistrationClosesAt) {
+		utils.SendError(w, http.StatusBadRequest, "Registration open time must be before registration close time.")
+		return
+	}
+
+	// Get user ID from context (set by authentication middleware)
+	updatedBy, ok := r.Context().Value(middlewares.UidKey).(int)
+	if !ok {
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized, user not found")
+		return
+	}
+
+	updatedEvent, err := handlers.eventSvc.UpdateEvent(r.Context(), event.UpdateEventReq{
+		EventId:               id,
+		Title:                 request.Title,
+		Description:           request.Description,
+		EventTypeId:           request.EventTypeId,
+		StartAt:               request.StartAt,
+		RegistrationOpensAt:   request.RegistrationOpensAt,
+		RegistrationClosesAt:  request.RegistrationClosesAt,
+		MaxParticipants:       request.MaxParticipants,
+		UpdatedBy:             updatedBy,
+		CurrentTime:           util.GetCurrentTime(),
+	})
+	if err != nil {
+		if errors.Is(err, util.ErrNotFound) {
+			utils.SendError(w, http.StatusNotFound, "Event or event type not found")
+			return
+		}
+		if errors.Is(err, util.ErrOngoingEventUpdate) {
+			utils.SendError(w, http.StatusBadRequest, "Ongoing events cannot be updated.")
+			return
+		}
+		log.Printf("Failed to update event: %v\n", err)
+		utils.SendError(w, http.StatusInternalServerError, "Failed to update event")
+		return
+	}
+
+	utils.SendData(w, map[string]any{
+		"message": "Event updated successfully",
+		"data":    updatedEvent,
+	})
+}
+
 func (handlers *Handlers) GetEvents(w http.ResponseWriter, r *http.Request) {
 	var request GetEventRequest
 
@@ -115,12 +187,20 @@ func (handlers *Handlers) GetEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if raw := r.URL.Query().Get("shouldAutoCreateEvent"); raw != "" {
+		if raw != "true" && raw != "false" {
+			utils.SendError(w, http.StatusBadRequest, "Invalid 'shouldAutoCreateEvent' parameter, must be true or false")
+			return
+		}
+	}
+
 	events, pagination, err := handlers.eventSvc.GetEvents(r.Context(), event.GetEventsReq{
-		Title:       request.Title,
-		EventStatus: request.EventStatus,
-		Page:        request.Page,
-		Limit:       request.Limit,
-		CurrentTime: time.Now(),
+		Title:                 request.Title,
+		EventStatus:           request.EventStatus,
+		ShouldAutoCreateEvent: request.ShouldAutoCreateEvent,
+		Page:                  request.Page,
+		Limit:                 request.Limit,
+		CurrentTime:           time.Now(),
 	})
 	if err != nil {
 		utils.SendError(w, http.StatusInternalServerError, "Something went wrong, please try again.")

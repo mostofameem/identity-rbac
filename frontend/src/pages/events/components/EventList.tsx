@@ -21,6 +21,7 @@ import {
   Visibility as VisibilityIcon,
   PowerSettingsNew as PowerIcon,
   Search as SearchIcon,
+  LocalFireDepartment as FireIcon,
 } from '@mui/icons-material';
 import type { Event as EventType } from '../types/event.types';
 import EventForm from './EventForm';
@@ -57,7 +58,6 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
 
   const [open, setOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [viewEvent, setViewEvent] = useState<EventType | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -65,6 +65,7 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
   const [loading, setLoading] = useState(true);
   const [searchTitle, setSearchTitle] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedAutoCreate, setSelectedAutoCreate] = useState('');
   const [pending, setPending] = useState<PendingAction | null>(null);
 
   const snackbar = useSnackbar();
@@ -78,6 +79,8 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
         limit: rowsPerPage,
         search: debouncedSearch || undefined,
         status: selectedStatus || undefined,
+        shouldAutoCreate:
+          selectedAutoCreate === '' ? undefined : selectedAutoCreate === 'true',
       });
       setEvents(response.data || []);
       setTotal(response.total || 0);
@@ -87,7 +90,7 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, selectedStatus, snackbar]);
+  }, [page, rowsPerPage, debouncedSearch, selectedStatus, selectedAutoCreate, snackbar]);
 
   useEffect(() => {
     fetchEvents();
@@ -96,20 +99,23 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
   // Reset to the first page when a new search settles
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, selectedStatus]);
+  }, [debouncedSearch, selectedStatus, selectedAutoCreate]);
 
   const handleStatusChange = (event: any) => {
     setSelectedStatus(event.target.value);
   };
 
-  const handleOpen = (event?: EventType) => {
-    setSelectedEvent(event || null);
+  const handleAutoCreateChange = (event: any) => {
+    setSelectedAutoCreate(event.target.value);
+  };
+
+  // Event editing happens in the details dialog; the form is create-only
+  const handleOpen = () => {
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setSelectedEvent(null);
   };
 
   const handleOpenDetails = (event: EventType) => {
@@ -124,14 +130,10 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
 
   const handleSave = async (eventData: Partial<EventType>) => {
     try {
-      if (selectedEvent) {
-        await eventService.updateEvent(selectedEvent.id, eventData);
-      } else {
-        await eventService.createEvent(eventData);
-      }
+      await eventService.createEvent(eventData);
       await fetchEvents();
       handleClose();
-      snackbar.success(selectedEvent ? 'Event updated' : 'Event created');
+      snackbar.success('Event created');
     } catch (error: any) {
       console.error('Error saving event:', error);
       snackbar.error(error.message || 'Failed to save event. Please try again.');
@@ -181,9 +183,16 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
     return (
       <>
         <TableCell>
-          <Typography variant="body2" fontWeight={600}>
-            {event.title}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <Typography variant="body2" fontWeight={600}>
+              {event.title}
+            </Typography>
+            {event.shouldAutoCreateEvent && (
+              <Tooltip title="Hot event — auto-created on schedule">
+                <FireIcon fontSize="small" sx={{ color: 'warning.main' }} />
+              </Tooltip>
+            )}
+          </Box>
         </TableCell>
         <TableCell>
           <Chip label={event.eventType?.name || 'N/A'} size="small" variant="outlined" />
@@ -295,6 +304,20 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
             <MenuItem value="INACTIVE">Inactive</MenuItem>
           </Select>
         </FormControl>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel id="auto-create-filter-label">Auto-create</InputLabel>
+          <Select
+            labelId="auto-create-filter-label"
+            id="auto-create-filter"
+            value={selectedAutoCreate}
+            label="Auto-create"
+            onChange={handleAutoCreateChange}
+          >
+            <MenuItem value="">All events</MenuItem>
+            <MenuItem value="true">Auto-created only</MenuItem>
+            <MenuItem value="false">Manual only</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
@@ -321,7 +344,6 @@ const EventList: React.FC<EventListProps> = ({ onEventClick }) => {
         open={open}
         onClose={handleClose}
         onSave={handleSave}
-        event={selectedEvent}
       />
 
       <EventDetailsDialog

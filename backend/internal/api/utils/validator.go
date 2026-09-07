@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"reflect"
+	"strings"
 
 	"github.com/go-playground/locales"
 	"github.com/go-playground/locales/en"
@@ -53,15 +54,31 @@ func Validate(v interface{}) error {
 	if vValue.Kind() == reflect.Slice {
 		for i := 0; i < vValue.Len(); i++ {
 			if err := val.validate.Struct(vValue.Index(i).Interface()); err != nil {
-				return errors.New("validation error: " + err.Error())
+				return validationError(err)
 			}
 		}
 	} else {
 		if err := val.validate.Struct(v); err != nil {
-			return errors.New("validation error: " + err.Error())
+			return validationError(err)
 		}
 	}
 	return nil
+}
+
+// validationError translates the raw validator error into a readable,
+// field-level message, e.g. "validation error: The EventTypeId field is required"
+func validationError(err error) error {
+	translated := TranslateError(err)
+	parts := make([]string, 0, len(translated))
+	for _, msg := range translated {
+		if msg != "" {
+			parts = append(parts, msg)
+		}
+	}
+	if len(parts) == 0 {
+		return errors.New("validation error")
+	}
+	return errors.New("validation error: " + strings.Join(parts, "; "))
 }
 
 func TranslateError(e error) validator.ValidationErrorsTranslations {

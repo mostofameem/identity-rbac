@@ -89,37 +89,6 @@ export const eventTypeService = {
     }
   },
 
-  createEventType: async (data: Partial<EventType>): Promise<EventType> => {
-    try {
-      // Backend expects only name and description
-      const payload = {
-        name: data.name,
-        description: data.description || '',
-      };
-      const response = await api.post('/event-types', payload);
-      const responseData = response.data.data || response.data;
-      return {
-        id: responseData.toString() || Date.now().toString(),
-        name: data.name || '',
-        description: data.description || '',
-        isActive: true,
-        requiresApproval: false,
-      };
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-
-
-  deleteEventType: async (id: string): Promise<void> => {
-    try {
-      // Backend doesn't have delete endpoint, but keeping for compatibility
-      await api.delete(`/event-types/${id}`);
-    } catch (error) {
-      handleApiError(error);
-    }
-  },
-
   changeEventTypeStatus: async (id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> => {
     try {
       await api.put(`/event-type/${id}/change-status`, { status });
@@ -140,27 +109,6 @@ export const eventTypeService = {
     }
   },
 
-  createEventTypeSetting: async (data: {
-    eventTypeId: string;
-    autoCreateAt: string;
-    recurrence: Recurrence;
-    isActive: boolean;
-  }): Promise<any> => {
-    try {
-      const payload = {
-        eventTypeId: parseInt(data.eventTypeId),
-        autoCreateAt: data.autoCreateAt,
-        recurrence: data.recurrence,
-        isActive: data.isActive,
-      };
-
-      const response = await api.put('/event-types/settings', payload);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error);
-    }
-  },
-
   updateEventTypeSetting: async (data: {
     eventTypeId: string;
     autoCreateAt: string;
@@ -168,7 +116,6 @@ export const eventTypeService = {
     isActive: boolean;
   }): Promise<any> => {
     try {
-      // Backend uses PUT for both create and update
       const payload = {
         eventTypeId: parseInt(data.eventTypeId),
         autoCreateAt: data.autoCreateAt,
@@ -179,15 +126,6 @@ export const eventTypeService = {
       return response.data;
     } catch (error) {
       return handleApiError(error);
-    }
-  },
-
-  deleteEventTypeSetting: async (id: string): Promise<void> => {
-    try {
-      // Backend doesn't have delete endpoint for settings
-      console.warn('Delete event type settings not supported by backend');
-    } catch (error) {
-      handleApiError(error);
     }
   },
 };
@@ -202,6 +140,7 @@ export const eventService = {
       if (params.search) queryParams.title = params.search;
       if (params.eventTypeId) queryParams.typeId = params.eventTypeId;
       if (params.status) queryParams.status = params.status;
+      if (params.shouldAutoCreate !== undefined) queryParams.shouldAutoCreateEvent = params.shouldAutoCreate;
 
       const response = await api.get('/events', { params: queryParams });
       // Backend returns {data: [], pagination: {totalItem, totalPage, currentPage}}
@@ -256,7 +195,9 @@ export const eventService = {
         isActive: data.isActive,
         shouldAutoCreateEvent: data.shouldAutoCreateEvent,
         remarks: data.remarks ?? null,
-        eventTypeId: data.eventTypeId?.toString() || '',
+        // The details API nests the type as eventType{id,...}; fall back to it
+        // so updates round-trip a valid eventTypeId.
+        eventTypeId: data.eventTypeId?.toString() || data.eventType?.id?.toString() || '',
         eventType: data.eventType ? {
           id: data.eventType.id?.toString() || '',
           name: data.eventType.name || '',
@@ -305,8 +246,26 @@ export const eventService = {
 
   updateEvent: async (id: string, data: Partial<Event>): Promise<Event> => {
     try {
-      // Backend doesn't have update endpoint, but keeping for compatibility
-      const response = await api.put(`/events/${id}`, data);
+      const eventTypeId = parseInt(data.eventTypeId as string);
+      if (!eventTypeId || Number.isNaN(eventTypeId)) {
+        throw new Error('Event type is missing. Reload the event and try again.');
+      }
+
+      // Backend expects: title, description, eventTypeId, startAt, registrationOpensAt, registrationClosesAt, maxParticipants
+      const payload = {
+        title: data.title,
+        description: data.description || '',
+        eventTypeId,
+        startAt: typeof data.startAt === 'string' ? data.startAt : (data.startAt as Date).toISOString(),
+        registrationOpensAt: typeof data.registrationOpensAt === 'string'
+          ? data.registrationOpensAt
+          : (data.registrationOpensAt as Date).toISOString(),
+        registrationClosesAt: typeof data.registrationClosesAt === 'string'
+          ? data.registrationClosesAt
+          : (data.registrationClosesAt as Date).toISOString(),
+        maxParticipants: parseInt((data.maxParticipants || 0).toString()),
+      };
+      const response = await api.put(`/events/${id}`, payload);
       return response.data.data || response.data;
     } catch (error) {
       return handleApiError(error);

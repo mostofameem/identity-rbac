@@ -51,6 +51,15 @@ func (q *queryBuilder) FilterByBoolean(key string, val bool) *queryBuilder {
 	return q
 }
 
+// FilterByOptionalBoolean only filters when the caller explicitly passed a
+// value, so a nil pointer (filter not requested) leaves the query untouched.
+func (q *queryBuilder) FilterByOptionalBoolean(key string, val *bool) *queryBuilder {
+	if val != nil {
+		q.query = q.query.Where(sq.Eq{key: *val})
+	}
+	return q
+}
+
 func (q *queryBuilder) FilterByFullText(key, val string) *queryBuilder {
 	if val != "" {
 		q.query = q.query.Where(sq.Like{key: "%" + val + "%"})
