@@ -189,11 +189,6 @@ func (r *eventRepo) GetEventWithPagination(ctx context.Context, req event.GetEve
 		return nil, err
 	}
 
-	slog.Info("Query", logger.Extra(map[string]any{
-		"query": query,
-		"args":  args,
-		}))
-
 	var events []entity.Events
 	if err := r.db.SelectContext(ctx, &events, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
